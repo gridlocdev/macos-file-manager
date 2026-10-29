@@ -88,7 +88,7 @@ final class BrowserModel {
     ) {
         self.id = id
         self.services = services
-        let start = (start ?? StartFolder.url(services.preferences)).standardizedFileURL
+        let start = (start ?? StartFolder.url(services.preferences)).canonical
         url = start
         history = NavigationHistory(start: start)
         addressText = PathInput.display(start, home: home)
@@ -120,13 +120,13 @@ final class BrowserModel {
     }
 
     var title: String {
-        url.path == "/" ? (volumeName(of: url) ?? "/") : FileManager.default.displayName(atPath: url.path)
+        url.isFileSystemRoot ? (volumeName(of: url) ?? "/") : FileManager.default.displayName(atPath: url.path)
     }
 
     // MARK: Navigation
 
     func navigate(to target: URL) {
-        let target = target.standardizedFileURL
+        let target = target.canonical
         guard target != url else { return }
         history.visit(target)
         show(target)
@@ -136,7 +136,7 @@ final class BrowserModel {
     func goForward() { if let target = history.goForward() { show(target) } }
 
     func goUp() {
-        guard url.path != "/" else { return }
+        guard !url.isFileSystemRoot else { return }
         navigate(to: url.deletingLastPathComponent())
     }
 
@@ -163,7 +163,7 @@ final class BrowserModel {
         search.close()
         restoreView(for: target)
         // Going up (or back to a parent) selects the folder you came from, like Explorer.
-        let cameFromChild = previous.deletingLastPathComponent().standardizedFileURL == target
+        let cameFromChild = previous.isDirectlyInside(target)
         revealAfterLoad = cameFromChild ? previous.normalized : nil
         pendingSelection = cameFromChild ? [previous.normalized] : []
         pendingRename = nil
@@ -242,7 +242,7 @@ final class BrowserModel {
 
     /// The Trash, or a volume's .Trashes folder.
     var isTrashFolder: Bool {
-        url.path == home.appendingPathComponent(".Trash").path || url.path.contains("/.Trashes/")
+        url.isTrashFolder(home: home)
     }
 
     /// Selected items in list order.
@@ -337,10 +337,9 @@ final class BrowserModel {
     /// Files dropped on the list, a folder in it, or the sidebar.
     func drop(_ sources: [URL], into folder: URL, operation: DropRules.Operation) {
         guard operation != .none else { return }
-        let here = url
         Task {
             let results = await ops.transfer(sources, into: folder, mode: operation == .copy ? .copy : .move, window: window)
-            if folder.path == here.path, here == url { refresh(selecting: results) } else { refresh() }
+            if folder.isSameFile(as: url) { refresh(selecting: results) } else { refresh() }
         }
     }
 
@@ -402,7 +401,7 @@ final class BrowserModel {
         Task {
             let results = await ops.transfer(sources, into: folder, mode: move ? .move : .copy, window: window)
             if wasCut, !results.isEmpty { services.clipboard.finishCut() }
-            if folder == url { refresh(selecting: results) }
+            if folder.isSameFile(as: url) { refresh(selecting: results) }
         }
     }
 
@@ -411,7 +410,7 @@ final class BrowserModel {
         let folder = url
         Task {
             let results = await ops.transfer(sources, into: folder, mode: .copy, window: window)
-            if folder == url { refresh(selecting: results) }
+            if folder.isSameFile(as: url) { refresh(selecting: results) }
         }
     }
 
@@ -425,7 +424,7 @@ final class BrowserModel {
             let outcome = await ops.run(
                 isFolder ? "New Folder" : "New Text File",
                 steps: [isFolder ? .createFolder(target) : .createFile(target)], window: window)
-            if outcome.error == nil, folder == url { refresh(selecting: [target], rename: target) }
+            if outcome.error == nil, folder.isSameFile(as: url) { refresh(selecting: [target], rename: target) }
         }
     }
 
@@ -507,7 +506,7 @@ final class BrowserModel {
     private func undoOrRedo(undo: Bool) {
         Task {
             let results = undo ? await ops.undo(window: window) : await ops.redo(window: window)
-            let here = results.filter { $0.deletingLastPathComponent().path == url.path }
+            let here = results.filter { $0.isDirectlyInside(url) }
             refresh(selecting: here)
         }
     }
@@ -742,7 +741,7 @@ extension BrowserModel: @MainActor ActionState {
     var hasSelection: Bool { !selection.isEmpty }
     var hasItems: Bool { !items.isEmpty }
     var canReadFolder: Bool { listing.error == nil }
-    var isAtRoot: Bool { url.path == "/" }
+    var isAtRoot: Bool { url.isFileSystemRoot }
     var hasOtherPane: Bool { otherPane != nil }
     var tabCount: Int { controls.tabCount }
     var hasClosedTabs: Bool { services.windows.hasClosedTabs }

@@ -89,7 +89,7 @@ private struct Breadcrumbs: View {
             ForEach(visible, id: \.url) { segment in
                 Button(segment.title) { go(segment.url) }
                     .buttonStyle(.borderless)
-                    .foregroundStyle(segment.url.path == model.url.path ? .primary : .secondary)
+                    .foregroundStyle(segment.url.isSameFile(as: model.url) ? .primary : .secondary)
                     .lineLimit(1)
                     .fixedSize()
                     .padding(.horizontal, 3)
@@ -138,7 +138,7 @@ private struct SubfolderMenu: View {
                     go(child)
                 } label: {
                     // Mark the folder that's on the current path.
-                    if current.path == child.path || current.path.hasPrefix(child.path + "/") {
+                    if current.isSameFile(as: child) || current.isInside(child) {
                         Label(child.lastPathComponent, systemImage: "checkmark")
                     } else {
                         Text(child.lastPathComponent)

@@ -59,6 +59,7 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   ServerAddress.swift          Connect to Server addresses (smb, \\server\share, nfs, WebDAV); recents
   Archive.swift                zip names; compress/extract with ditto (run by FileStepExecutor)
   ViewSettings.swift           FolderView (mode, sort, groups, zoom), FolderViewMemory, Grouping, ListRow
+  FilePaths.swift              URL identity: normalized, canonical, isSameFile, isInside, isTrashFolder
   FocusCycle.swift             F6 / Shift+F6 order: list → (right list) → address bar → sidebar
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings

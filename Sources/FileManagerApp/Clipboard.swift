@@ -30,7 +30,7 @@ final class Clipboard {
 
     func cut(_ urls: [URL]) {
         write(urls)
-        cutURLs = Set(urls.map(\.standardizedFileURL))
+        cutURLs = Set(urls.map(\.normalized))
         cutChangeCount = pasteboard.changeCount
     }
 

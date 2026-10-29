@@ -113,9 +113,3 @@ final class DirectoryWatcher: @unchecked Sendable {
         }
     }
 }
-
-extension URL {
-    /// The same file URL without a trailing "/", so a folder compares equal however its URL
-    /// was made (listings add the slash, appendingPathComponent may not). Selection relies on it.
-    var normalized: URL { URL(filePath: path, directoryHint: .notDirectory) }
-}

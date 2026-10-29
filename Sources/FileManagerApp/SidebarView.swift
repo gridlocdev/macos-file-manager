@@ -93,7 +93,7 @@ struct SidebarView: View {
                 return SidebarTag(section: .tree, path: path)
             },
             set: { tag in
-                guard let tag, tag.path != model.url.path else { return }
+                guard let tag, !URL(filePath: tag.path).isSameFile(as: model.url) else { return }
                 model.navigate(to: URL(filePath: tag.path))
                 model.focusList()
             }
