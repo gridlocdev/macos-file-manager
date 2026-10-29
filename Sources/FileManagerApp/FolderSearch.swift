@@ -100,12 +100,14 @@ final class FolderSearch {
         guard let enumerator = FileManager.default.enumerator(
             at: root, includingPropertiesForKeys: DirectoryLoader.keys, options: options, errorHandler: { _, _ in true })
         else { return }
+        let real = root.resolvingSymlinksInPath()
         var batch: [FileItem] = []
         var lastSend = Date()
         let now = Date()
         while let url = enumerator.nextObject() as? URL {
             if Task.isCancelled { return }
-            let item = DirectoryLoader.item(url, showAllExtensions: showAllExtensions)
+            let item = DirectoryLoader.item(
+                url, showAllExtensions: showAllExtensions, shownAs: url.replacingFolder(real, with: root))
             if criteria.matches(item, now: now) { batch.append(item) }
             if !batch.isEmpty, batch.count >= 200 || Date().timeIntervalSince(lastSend) > 0.25 {
                 send(batch)
@@ -166,7 +168,9 @@ final class FolderSearch {
     private nonisolated static func spotlightItems(
         _ paths: [String], root: URL, criteria: SearchCriteria, showHidden: Bool, showAllExtensions: Bool
     ) -> [FileItem] {
-        let rootPath = root.path == "/" ? "" : root.path
+        // Spotlight reports real paths; a root reached through a symlink is matched by its real one.
+        let real = root.resolvingSymlinksInPath()
+        let rootPath = real.path == "/" ? "" : real.path
         var isPackage: [String: Bool] = [:]
         let now = Date()
         return paths.compactMap { path in
@@ -183,7 +187,9 @@ final class FolderSearch {
                 isPackage[folder] = package
                 if package { return nil }
             }
-            let item = DirectoryLoader.item(URL(filePath: path), showAllExtensions: showAllExtensions)
+            let url = URL(filePath: path)
+            let item = DirectoryLoader.item(
+                url, showAllExtensions: showAllExtensions, shownAs: url.replacingFolder(real, with: root))
             if !showHidden, item.isHidden { return nil }
             return criteria.matches(item, now: now) ? item : nil
         }

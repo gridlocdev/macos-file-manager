@@ -24,6 +24,16 @@ extension URL {
     /// Directly in `folder`.
     public func isDirectlyInside(_ folder: URL) -> Bool { deletingLastPathComponent().isSameFile(as: folder) }
 
+    /// This URL with `old` at the start of its path changed to `new`; unchanged if it isn't in
+    /// `old`. Folders reached through a symlink (/tmp is really /private/tmp) list their items
+    /// under the real path, and this puts them back under the path the folder was opened by.
+    public func replacingFolder(_ old: URL, with new: URL) -> URL {
+        if isSameFile(as: old) { return new.normalized }
+        guard isInside(old) else { return self }
+        let base = old.path == "/" ? "" : old.path
+        return new.appending(path: String(path.dropFirst(base.count + 1))).normalized
+    }
+
     /// The top of the startup disk, "/".
     public var isFileSystemRoot: Bool { path == "/" }
 

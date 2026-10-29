@@ -27,6 +27,15 @@ import Testing
         #expect(!URL(filePath: "/Users/me/src/a/x").isDirectlyInside(src))
     }
 
+    @Test func replacingFolder() {
+        let real = URL(filePath: "/private/tmp")
+        let shown = URL(filePath: "/tmp")
+        #expect(URL(filePath: "/private/tmp/a/b.txt").replacingFolder(real, with: shown).path == "/tmp/a/b.txt")
+        #expect(URL(filePath: "/private/tmp").replacingFolder(real, with: shown).path == "/tmp")
+        #expect(URL(filePath: "/Users/me/x").replacingFolder(real, with: shown).path == "/Users/me/x")
+        #expect(URL(filePath: "/private/tmpfile").replacingFolder(real, with: shown).path == "/private/tmpfile")
+    }
+
     @Test func root() {
         #expect(URL(filePath: "/").isFileSystemRoot)
         #expect(!URL(filePath: "/Users").isFileSystemRoot)

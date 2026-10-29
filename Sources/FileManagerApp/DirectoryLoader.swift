@@ -17,14 +17,18 @@ enum DirectoryLoader {
             do {
                 let urls = try FileManager.default.contentsOfDirectory(
                     at: folder, includingPropertiesForKeys: keys, options: [])
-                return .success(urls.map { item($0, showAllExtensions: showAllExtensions) })
+                // Under the folder's path as opened, not the real one if it's through a symlink.
+                return .success(urls.map {
+                    item($0, showAllExtensions: showAllExtensions, shownAs: folder.appending(path: $0.lastPathComponent))
+                })
             } catch {
                 return .failure(error)
             }
         }.value
     }
 
-    static func item(_ url: URL, showAllExtensions: Bool) -> FileItem {
+    /// `shownAs`: the URL the item is listed under, if not `url` (see `URL.replacingFolder`).
+    static func item(_ url: URL, showAllExtensions: Bool, shownAs: URL? = nil) -> FileItem {
         let values = try? url.resourceValues(forKeys: Set(keys))
         var isFolder = (values?.isDirectory ?? false) && !(values?.isPackage ?? false)
         // A symlink to a folder opens like a folder.
@@ -39,7 +43,7 @@ enum DirectoryLoader {
             if CFFileSecurityGetMode(security as CFFileSecurity, &mode) { permissions = Int(mode & 0o7777) }
         }
         var item = FileItem(
-            url: url.normalized,
+            url: (shownAs ?? url).normalized,
             name: name(url, isFolder: isFolder, showAllExtensions: showAllExtensions),
             isFolder: isFolder,
             isHidden: values?.isHidden ?? url.lastPathComponent.hasPrefix("."),
