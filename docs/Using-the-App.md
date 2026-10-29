@@ -140,6 +140,9 @@ of the selected files, and how much space is free on the disk:
 *12 items, 3 selected (4.2 MB), 120 GB available*. As in Explorer, selected folders aren't added
 up there; use Get Info for that.
 
+The **toolbar buttons** on the right switch between the details list and icons, and show or
+hide the preview pane. See [Views and columns](Views-and-Columns.md).
+
 While Find is open it counts what's shown instead: *3 of 40 items*, or *120 found in subfolders*.
 See [Searching and selecting](Searching-and-Selecting.md).
 

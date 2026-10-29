@@ -80,7 +80,7 @@ struct KeyMonitor: NSViewRepresentable {
             if action.menu != nil, keymap.menuChord(for: action) == chord { return event }
             if action.isHandledByMacOS { return event }
             // Return renames and Delete trashes only in the file list, not the sidebar.
-            if action.needsFileListFocus, !(window.firstResponder is FileTableView) { return event }
+            if action.needsFileListFocus, !(window.firstResponder is any FileBrowsingView) { return event }
             model.perform(action)
             return nil
         }

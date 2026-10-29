@@ -51,6 +51,7 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   Navigation.swift             Breadcrumbs, RecentFolders, PinnedFolders, SessionState
   Search.swift                 NamePattern (wildcards, Spotlight predicate), SearchCriteria, Selection
   BatchRename.swift            batch rename options, preview with problems, moves (swaps via temp names)
+  ViewSettings.swift           FolderView (mode, sort, groups, zoom), FolderViewMemory, Grouping, ListRow
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
   AppCommands.swift            the menu bar, built from Action + Keymap
@@ -70,7 +71,13 @@ Sources/FileManagerApp/        the app
   SearchBar.swift              the find bar (Cmd+F): text, This Folder/Subfolders, filters
   FolderSearch.swift           subfolder search: Spotlight + a folder walk, merged, in batches
   BatchRenameView.swift        the batch rename sheet with its live preview
-  FileListView.swift           the details list (NSTableView), icons, type-ahead
+  FileListView.swift           the details list (NSTableView): columns, group rows, zoom, column chooser
+  FileIconView.swift           the icon view (NSCollectionView), thumbnails, Cmd+scroll zoom, type-ahead
+  FileViewSupport.swift        shared by both views: InlineRename, IconCache, FileDrop, FileFormat
+  FileContextMenu.swift        the right-click menu for both views
+  QuickLook.swift              FileBrowsingView (either view has focus) and the Quick Look panel source
+  PreviewPane.swift            the docked preview (Opt+P)
+  FolderViewStore.swift        each folder's view, saved in Application Support
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
                                ActiveBrowser (the key window's model, for the menu bar)
   DebugSnapshot.swift          debug-only: capture the window, print menus (just snapshot)

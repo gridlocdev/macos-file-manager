@@ -5,6 +5,8 @@ import SwiftUI
 struct FileManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    init() { SettingsKey.registerDefaults() }
+
     var body: some Scene {
         WindowGroup(for: WindowSpec.self) { $spec in
             BrowserWindow(spec: spec)

@@ -7,6 +7,7 @@
 **Understanding the app**
 - [Copying and moving files](Copying-and-Moving-Files.md)
 - [Drag and drop](Drag-and-Drop.md)
+- [Views and columns](Views-and-Columns.md)
 - [Searching and selecting](Searching-and-Selecting.md)
 - [Batch rename](Batch-Rename.md)
 - [Tabs and windows](Tabs-and-Windows.md)

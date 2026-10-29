@@ -10,12 +10,21 @@ public struct FileItem: Identifiable, Hashable, Sendable {
     public var size: Int64?
     public var modified: Date?
     public var kind: String
+    public var created: Date?
+    /// When it was put in this folder (Finder's Date Added).
+    public var added: Date?
+    /// POSIX mode bits (0o755), for the Permissions column.
+    public var permissions: Int?
 
     public var id: URL { url }
 
+    /// The extension as shown in the Extension column ("txt"); folders have none.
+    public var fileExtension: String { isFolder ? "" : url.pathExtension.lowercased() }
+
     public init(
         url: URL, name: String, isFolder: Bool, isHidden: Bool = false,
-        size: Int64? = nil, modified: Date? = nil, kind: String = ""
+        size: Int64? = nil, modified: Date? = nil, kind: String = "",
+        created: Date? = nil, added: Date? = nil, permissions: Int? = nil
     ) {
         self.url = url
         self.name = name
@@ -24,12 +33,15 @@ public struct FileItem: Identifiable, Hashable, Sendable {
         self.size = size
         self.modified = modified
         self.kind = kind
+        self.created = created
+        self.added = added
+        self.permissions = permissions
     }
 }
 
 public struct FileSort: Hashable, Sendable {
     public enum Column: String, CaseIterable, Sendable {
-        case name, modified, kind, size
+        case name, modified, kind, size, created, added, ext, permissions
 
         public var title: String {
             switch self {
@@ -37,8 +49,15 @@ public struct FileSort: Hashable, Sendable {
             case .modified: "Date Modified"
             case .kind: "Kind"
             case .size: "Size"
+            case .created: "Date Created"
+            case .added: "Date Added"
+            case .ext: "Extension"
+            case .permissions: "Permissions"
             }
         }
+
+        /// Shown until you choose otherwise (right-click the column headers).
+        public var isShownByDefault: Bool { [.name, .modified, .kind, .size].contains(self) }
     }
 
     public var column: Column
@@ -72,6 +91,14 @@ public struct FileSort: Hashable, Sendable {
             return order(a.modified ?? .distantPast, b.modified ?? .distantPast)
         case .size:
             return order(a.size ?? -1, b.size ?? -1)
+        case .created:
+            return order(a.created ?? .distantPast, b.created ?? .distantPast)
+        case .added:
+            return order(a.added ?? .distantPast, b.added ?? .distantPast)
+        case .ext:
+            return a.fileExtension.localizedStandardCompare(b.fileExtension)
+        case .permissions:
+            return order(a.permissions ?? -1, b.permissions ?? -1)
         }
     }
 

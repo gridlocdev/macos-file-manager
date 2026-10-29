@@ -86,6 +86,12 @@ public struct Keymap: Sendable {
         .focusNextArea: [KeyChord(.function(6))],
         .focusPreviousArea: [KeyChord(.function(6), .shift)],
         .refresh: [.char("r", .command), KeyChord(.function(5))],
+        .viewAsIcons: [.char("2", [.command, .shift])],
+        .viewAsDetails: [.char("6", [.command, .shift])],
+        .zoomIn: [.char("=", .command), .char("=", [.command, .shift])],
+        .zoomOut: [.char("-", .command)],
+        .actualSize: [.char("0", .command)],
+        .togglePreviewPane: [.char("p", .option)],
         .toggleHiddenFiles: [.char("h", .command), .char(".", [.command, .shift])],
         .openTerminal: [.char("t", [.command, .option]), KeyChord(.function(4))],
     ])

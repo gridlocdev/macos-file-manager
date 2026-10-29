@@ -7,7 +7,7 @@ import FileManagerCore
 /// FILEMANAGER_SNAPSHOT_KEYS: key chords ("Cmd+C"), "menu:Title", "type:text", "scope:subfolders"
 /// (Find's This Folder/Subfolders switch, which has no key) and "action:find" (runs an `Action` on
 /// the window's model directly; works even when another app keeps this one from becoming active,
-/// which stops keys from arriving) and "batch:find>replace" (a batch rename of the selection, as the
+/// which stops keys from arriving), "group:kind" (Group By) and "batch:find>replace" (a batch rename of the selection, as the
 /// Rename button in the sheet would run it). For checking the UI
 /// and for docs screenshots without screen-recording permission. See `just snapshot`.
 @MainActor enum DebugSnapshot {
@@ -52,6 +52,8 @@ import FileManagerCore
                     print("snapshot: performed \(action)")
                 } else if chord.hasPrefix("batch:"), let model = ActiveBrowser.shared.model {
                     batchRename(String(chord.dropFirst(6)), model: model)
+                } else if chord.hasPrefix("group:"), let group = GroupBy(rawValue: String(chord.dropFirst(6))) {
+                    ActiveBrowser.shared.model?.view.groupBy = group
                 } else if chord.hasPrefix("scope:") {
                     ActiveBrowser.shared.model?.searchScope = chord.hasSuffix("subfolders") ? .subfolders : .folder
                 } else {
@@ -63,6 +65,7 @@ import FileManagerCore
             if let model = ActiveBrowser.shared.model {
                 print("snapshot: list: \(model.items.map(\.name))")
                 print("snapshot: selected: \(model.selectedURLs.map(\.lastPathComponent))")
+                print("snapshot: folder: \(model.url.lastPathComponent), view: \(model.view.mode), group: \(model.view.groupBy)")
             }
             print("snapshot: windows: \(NSApp.windows.filter(\.isVisible).map(\.title))")
             print("snapshot: tabs in key window: \(NSApp.keyWindow?.tabGroup?.windows.map(\.title) ?? []), key: \(NSApp.keyWindow?.title ?? "-")")

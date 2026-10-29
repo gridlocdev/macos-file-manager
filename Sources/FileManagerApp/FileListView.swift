@@ -1,7 +1,6 @@
 import AppKit
 import FileManagerCore
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Details view: an AppKit table, because SwiftUI's Table takes Return/Backspace for itself, has
 /// weak type-ahead and slows down on large folders.
@@ -24,13 +23,16 @@ struct FileListView: NSViewRepresentable {
             let tableColumn = NSTableColumn(identifier: .init(column.rawValue))
             tableColumn.title = column.title
             tableColumn.sortDescriptorPrototype = NSSortDescriptor(
-                key: column.rawValue, ascending: column == .name || column == .kind)
+                key: column.rawValue, ascending: [.name, .kind, .ext].contains(column))
             switch column {
             case .name: tableColumn.width = 240; tableColumn.minWidth = 120
-            case .modified: tableColumn.width = 170; tableColumn.minWidth = 80
+            case .modified, .created, .added: tableColumn.width = 170; tableColumn.minWidth = 80
             case .kind: tableColumn.width = 130; tableColumn.minWidth = 60
             case .size: tableColumn.width = 70; tableColumn.minWidth = 50
+            case .ext: tableColumn.width = 70; tableColumn.minWidth = 40
+            case .permissions: tableColumn.width = 100; tableColumn.minWidth = 80
             }
+            tableColumn.isHidden = !column.isShownByDefault
             table.addTableColumn(tableColumn)
         }
         // Where each result is, while searching subfolders.
@@ -40,11 +42,13 @@ struct FileListView: NSViewRepresentable {
         folderColumn.minWidth = 60
         folderColumn.isHidden = true
         table.addTableColumn(folderColumn)
+        // Column widths, order and which are shown are remembered.
         table.autosaveName = "FileList"
         table.autosaveTableColumns = true
         table.dataSource = context.coordinator
         table.delegate = context.coordinator
         table.target = context.coordinator
+        table.action = #selector(Coordinator.clicked(_:))
         table.doubleAction = #selector(Coordinator.doubleClicked(_:))
         table.setAccessibilityLabel("Files")
         context.coordinator.configureInteractions(table)
@@ -65,7 +69,7 @@ struct FileListView: NSViewRepresentable {
         let selection = model.selection
         let reveal = model.revealAfterLoad
         let focusRequest = model.listFocusRequest
-        let sort = model.sort
+        let view = model.view
         let renameRequest = model.renameRequest
         let quickLookRequest = model.quickLookRequest
         let contextMenuRequest = model.contextMenuRequest
@@ -76,24 +80,25 @@ struct FileListView: NSViewRepresentable {
             column.isHidden = !showsFolders
         }
 
-        let descriptor = NSSortDescriptor(key: sort.column.rawValue, ascending: sort.ascending)
+        let descriptor = NSSortDescriptor(key: view.sortColumn.rawValue, ascending: view.ascending)
         if table.sortDescriptors.first != descriptor {
             coordinator.isUpdating = true
             table.sortDescriptors = [descriptor]
             coordinator.isUpdating = false
         }
+        // Zoom: bigger icons need taller rows.
+        let iconSize = CGFloat(view.listIconSize)
+        let sizeChanged = iconSize != coordinator.iconSize
+        if sizeChanged {
+            coordinator.iconSize = iconSize
+            table.rowHeight = iconSize + 6
+        }
         // While a name is being edited a reload would throw the edit away; it catches up after.
-        if version != coordinator.version || cut != coordinator.cut, !coordinator.isRenaming {
-            coordinator.version = version
-            coordinator.cut = cut
-            coordinator.items = model.items
-            coordinator.isUpdating = true
-            table.reloadData()
-            coordinator.isUpdating = false
-            if reveal == nil { table.scrollRowToVisible(0) }
+        if version != coordinator.version || cut != coordinator.cut || sizeChanged, !coordinator.rename.isActive {
+            coordinator.reload(scrollToTop: reveal == nil && version != coordinator.version)
         }
         coordinator.applySelection(selection)
-        if let reveal, let row = coordinator.items.firstIndex(where: { $0.url == reveal }) {
+        if let reveal, let row = coordinator.row(of: reveal) {
             table.scrollRowToVisible(row)
             DispatchQueue.main.async { model.didReveal() }
         }
@@ -103,7 +108,7 @@ struct FileListView: NSViewRepresentable {
         }
         if quickLookRequest != coordinator.quickLookRequest {
             coordinator.quickLookRequest = quickLookRequest
-            (table as? FileTableView)?.toggleQuickLook()
+            table.quickLook.toggle()
         }
         if contextMenuRequest != coordinator.contextMenuRequest {
             coordinator.contextMenuRequest = contextMenuRequest
@@ -118,70 +123,109 @@ struct FileListView: NSViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSMenuDelegate {
         static let folderColumn = NSUserInterfaceItemIdentifier("folder")
         let model: BrowserModel
-        weak var table: NSTableView?
-        var items: [FileItem] = []
-        var root = URL(filePath: "/")
+        weak var table: FileTableView?
+        /// Group headings and items, as shown.
+        var rows: [ListRow] = []
         var version = -1
         var cut: Set<URL> = []
+        var iconSize: CGFloat = 16
+        var root = URL(filePath: "/")
         var focusRequest = 0
         var renameRequest = 0
         var quickLookRequest = 0
         var contextMenuRequest = 0
-        var menuFromKeyboard = false
         var isUpdating = false
-        /// The item being renamed and its text field.
-        private var renaming: (url: URL, field: NSTextField, original: String)?
-        var isRenaming: Bool { renaming != nil }
+        let rename: InlineRename
+        let contextMenu: FileContextMenu
         private let icons = IconCache()
 
-        init(model: BrowserModel) { self.model = model }
+        init(model: BrowserModel) {
+            self.model = model
+            rename = InlineRename(model: model)
+            contextMenu = FileContextMenu(model: model)
+            super.init()
+            rename.finished = { [weak self] in self?.renameFinished() }
+        }
+
+        func item(_ row: Int) -> FileItem? { rows.indices.contains(row) ? rows[row].item : nil }
+
+        func row(of url: URL) -> Int? { rows.firstIndex { $0.item?.url == url } }
+
+        func reload(scrollToTop: Bool) {
+            guard let table else { return }
+            version = model.listingVersion
+            cut = Clipboard.shared.cutURLs
+            rows = model.rows
+            isUpdating = true
+            table.reloadData()
+            isUpdating = false
+            if scrollToTop { table.scrollRowToVisible(0) }
+        }
 
         func applySelection(_ selection: Set<URL>) {
             guard let table else { return }
-            let rows = IndexSet(items.indices.filter { selection.contains(items[$0].url) })
-            guard rows != table.selectedRowIndexes else { return }
+            let indexes = IndexSet(rows.indices.filter { rows[$0].item.map { selection.contains($0.url) } ?? false })
+            guard indexes != table.selectedRowIndexes else { return }
             isUpdating = true
-            table.selectRowIndexes(rows, byExtendingSelection: false)
+            table.selectRowIndexes(indexes, byExtendingSelection: false)
             isUpdating = false
         }
 
-        func numberOfRows(in tableView: NSTableView) -> Int { items.count }
+        func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+
+        func tableView(_ tableView: NSTableView, isGroupRow row: Int) -> Bool { rows[row].item == nil }
+
+        func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool { rows[row].item != nil }
+
+        func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
+            rows[row].item == nil ? 28 : tableView.rowHeight
+        }
 
         func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-            if tableColumn?.identifier == Self.folderColumn { return folderCell(tableView, row: row) }
+            guard let item = rows[row].item else {
+                guard case .header(let title, let count) = rows[row] else { return nil }
+                return headerCell(tableView, title: title, count: count)
+            }
+            if tableColumn?.identifier == Self.folderColumn { return folderCell(tableView, item: item) }
             guard let tableColumn, let column = FileSort.Column(rawValue: tableColumn.identifier.rawValue)
             else { return nil }
-            let item = items[row]
             let cell = tableView.makeView(withIdentifier: tableColumn.identifier, owner: nil) as? FileCell
                 ?? FileCell(identifier: tableColumn.identifier, withIcon: column == .name)
             // Hidden files and cut items are dimmed, as in Explorer.
             cell.alphaValue = cut.contains(item.url) ? 0.45 : item.isHidden ? 0.55 : 1
-            switch column {
-            case .name:
-                cell.textField?.stringValue = item.name
+            cell.textField?.stringValue = FileFormat.value(item, column)
+            if column == .name {
                 cell.imageView?.image = icons.icon(for: item)
-            case .modified:
-                cell.textField?.stringValue = item.modified.map(Self.formatDate) ?? "--"
-            case .kind:
-                cell.textField?.stringValue = item.kind
-            case .size:
-                cell.textField?.stringValue = item.size.map {
-                    ByteCountFormatter.string(fromByteCount: $0, countStyle: .file)
-                } ?? "--"
+                cell.iconSize = iconSize
             }
             cell.textField?.alignment = column == .size ? .right : .left
             cell.textField?.textColor = column == .name ? .labelColor : .secondaryLabelColor
+            cell.textField?.font = column == .permissions ? .monospacedSystemFont(ofSize: 0, weight: .regular) : .systemFont(ofSize: 0)
+            return cell
+        }
+
+        /// "Folders  3", spanning the whole row.
+        private func headerCell(_ tableView: NSTableView, title: String, count: Int) -> NSView {
+            let id = NSUserInterfaceItemIdentifier("group")
+            let cell = tableView.makeView(withIdentifier: id, owner: nil) as? FileCell
+                ?? FileCell(identifier: id, withIcon: false)
+            let text = NSMutableAttributedString(
+                string: title, attributes: [.font: NSFont.boldSystemFont(ofSize: 0), .foregroundColor: NSColor.labelColor])
+            text.append(NSAttributedString(
+                string: "   \(count)", attributes: [.font: NSFont.systemFont(ofSize: 0), .foregroundColor: NSColor.secondaryLabelColor]))
+            cell.textField?.attributedStringValue = text
+            cell.alphaValue = 1
             return cell
         }
 
         /// The result's folder relative to the one being searched ("Photos/2024").
-        private func folderCell(_ tableView: NSTableView, row: Int) -> NSView {
+        private func folderCell(_ tableView: NSTableView, item: FileItem) -> NSView {
             let cell = tableView.makeView(withIdentifier: Self.folderColumn, owner: nil) as? FileCell
                 ?? FileCell(identifier: Self.folderColumn, withIcon: false)
-            let folder = items[row].url.deletingLastPathComponent().path
+            let folder = item.url.deletingLastPathComponent().path
             let rootPath = root.path == "/" ? "" : root.path
             let relative = folder.hasPrefix(rootPath + "/") ? String(folder.dropFirst(rootPath.count + 1)) : ""
             cell.textField?.stringValue = relative.isEmpty ? FileManager.default.displayName(atPath: root.path) : relative
@@ -192,96 +236,98 @@ struct FileListView: NSViewRepresentable {
 
         func tableViewSelectionDidChange(_ notification: Notification) {
             guard !isUpdating, let table else { return }
-            model.selection = Set(table.selectedRowIndexes.compactMap {
-                $0 < items.count ? items[$0].url : nil
-            })
-            (table as? FileTableView)?.selectionChangedForQuickLook()
+            model.selection = Set(table.selectedRowIndexes.compactMap { item($0)?.url })
+            table.quickLook.selectionChanged()
         }
 
         func tableView(_ tableView: NSTableView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
             guard !isUpdating, let descriptor = tableView.sortDescriptors.first,
                 let key = descriptor.key, let column = FileSort.Column(rawValue: key)
             else { return }
-            model.sort.column = column
-            model.sort.ascending = descriptor.ascending
+            model.view.sortColumn = column
+            model.view.ascending = descriptor.ascending
         }
 
         /// Type-ahead: typing selects the first name that starts with the letters.
         func tableView(_ tableView: NSTableView, typeSelectStringFor tableColumn: NSTableColumn?, row: Int) -> String? {
-            tableColumn?.identifier.rawValue == FileSort.Column.name.rawValue ? items[row].name : nil
+            tableColumn?.identifier.rawValue == FileSort.Column.name.rawValue ? item(row)?.name : nil
+        }
+
+        // MARK: Columns
+
+        /// Right-click the column headings: choose which columns show.
+        func menuNeedsUpdate(_ menu: NSMenu) {
+            guard let table else { return }
+            menu.removeAllItems()
+            for column in FileSort.Column.allCases where column != .name {
+                guard let tableColumn = table.tableColumn(withIdentifier: .init(column.rawValue)) else { continue }
+                let item = NSMenuItem(title: column.title, action: #selector(toggleColumn(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = column.rawValue
+                item.state = tableColumn.isHidden ? .off : .on
+                menu.addItem(item)
+            }
+        }
+
+        @objc func toggleColumn(_ sender: NSMenuItem) {
+            guard let raw = sender.representedObject as? String,
+                let column = table?.tableColumn(withIdentifier: .init(raw))
+            else { return }
+            column.isHidden.toggle()
         }
 
         // MARK: Rename
 
         /// Edits the name in place, with the name selected without its extension.
         func beginRename(_ url: URL) {
-            guard let table, renaming == nil,
-                let row = items.firstIndex(where: { $0.url == url }),
+            guard let table, !rename.isActive, let row = row(of: url), let item = item(row),
                 let column = table.tableColumns.firstIndex(where: { $0.identifier.rawValue == FileSort.Column.name.rawValue }),
                 let cell = table.view(atColumn: column, row: row, makeIfNecessary: true) as? NSTableCellView,
                 let field = cell.textField
             else { return }
             table.scrollRowToVisible(row)
             table.selectRowIndexes([row], byExtendingSelection: false)
-            let name = url.lastPathComponent
-            renaming = (url, field, field.stringValue)
-            // Edit the real file name, even if the list hides the extension.
-            field.stringValue = name
-            field.isEditable = true
-            field.delegate = self
-            table.window?.makeFirstResponder(field)
-            let length = FileNaming.baseLength(of: name, isFolder: items[row].isFolder)
-            field.currentEditor()?.selectedRange = NSRange(location: 0, length: length)
+            rename.begin(url, field: field, isFolder: item.isFolder)
         }
 
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
-            guard selector == #selector(NSResponder.cancelOperation(_:)), let renaming else { return false }
-            // Esc: put the name back and stop editing without renaming.
-            self.renaming = nil
-            renaming.field.abortEditing()
-            finishEditing(renaming.field, restoring: renaming.original)
-            return true
-        }
-
-        func controlTextDidEndEditing(_ notification: Notification) {
-            guard let renaming, let field = notification.object as? NSTextField, field === renaming.field else { return }
-            self.renaming = nil
-            let newName = field.stringValue
-            finishEditing(field, restoring: renaming.original)
-            model.commitRename(renaming.url, to: newName)
-        }
-
-        private func finishEditing(_ field: NSTextField, restoring original: String) {
-            field.isEditable = false
-            field.delegate = nil
-            field.stringValue = original
+        private func renameFinished() {
             guard let table else { return }
             // Catch up on any listing changes held back while editing.
             if version != model.listingVersion || cut != Clipboard.shared.cutURLs {
-                version = model.listingVersion
-                cut = Clipboard.shared.cutURLs
-                items = model.items
-                isUpdating = true
-                table.reloadData()
-                isUpdating = false
+                reload(scrollToTop: false)
                 applySelection(model.selection)
             }
             table.window?.makeFirstResponder(table)
         }
 
-        @objc func doubleClicked(_ sender: NSTableView) {
-            let row = sender.clickedRow
-            guard row >= 0, row < items.count else { return }
-            model.open([items[row].url])
+        // MARK: Opening
+
+        /// With "Open items with a single click" on, a plain click opens.
+        @objc func clicked(_ sender: NSTableView) {
+            guard ViewPreferences.singleClickOpens, NSEvent.modifierFlags.isDisjoint(with: [.command, .shift, .option, .control]),
+                let item = item(sender.clickedRow)
+            else { return }
+            model.open([item.url])
         }
 
-        private static func formatDate(_ date: Date) -> String {
-            date.formatted(date: .abbreviated, time: .shortened)
+        @objc func doubleClicked(_ sender: NSTableView) {
+            guard !ViewPreferences.singleClickOpens, let item = item(sender.clickedRow) else { return }
+            model.open([item.url])
         }
     }
 }
 
-private final class FileCell: NSTableCellView {
+final class FileCell: NSTableCellView {
+    private var iconWidth: NSLayoutConstraint?
+    private var iconHeight: NSLayoutConstraint?
+
+    var iconSize: CGFloat = 16 {
+        didSet {
+            iconWidth?.constant = iconSize
+            iconHeight?.constant = iconSize
+        }
+    }
+
     init(identifier: NSUserInterfaceItemIdentifier, withIcon: Bool) {
         super.init(frame: .zero)
         self.identifier = identifier
@@ -293,13 +339,17 @@ private final class FileCell: NSTableCellView {
         if withIcon {
             let image = NSImageView()
             image.translatesAutoresizingMaskIntoConstraints = false
+            image.imageScaling = .scaleProportionallyUpOrDown
             addSubview(image)
             imageView = image
+            let width = image.widthAnchor.constraint(equalToConstant: 16)
+            let height = image.heightAnchor.constraint(equalToConstant: 16)
+            iconWidth = width
+            iconHeight = height
             NSLayoutConstraint.activate([
                 image.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
                 image.centerYAnchor.constraint(equalTo: centerYAnchor),
-                image.widthAnchor.constraint(equalToConstant: 16),
-                image.heightAnchor.constraint(equalToConstant: 16),
+                width, height,
                 text.leadingAnchor.constraint(equalTo: image.trailingAnchor, constant: 6),
             ])
         } else {
@@ -312,24 +362,4 @@ private final class FileCell: NSTableCellView {
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
-}
-
-/// Folder and app icons are per item; plain files share one icon per extension.
-@MainActor private final class IconCache {
-    private var byPath: [String: NSImage] = [:]
-    private var byExtension: [String: NSImage] = [:]
-
-    func icon(for item: FileItem) -> NSImage {
-        let ext = item.url.pathExtension.lowercased()
-        if item.isFolder || ext == "app" || ext.isEmpty {
-            if let cached = byPath[item.url.path] { return cached }
-            let icon = NSWorkspace.shared.icon(forFile: item.url.path)
-            byPath[item.url.path] = icon
-            return icon
-        }
-        if let cached = byExtension[ext] { return cached }
-        let icon = NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
-        byExtension[ext] = icon
-        return icon
-    }
 }

@@ -9,11 +9,28 @@ every window.
 column you sort by, as Explorer and the Linux file managers do. Turn it off to mix folders in
 with files, as Finder does by default.
 
+**Show all file extensions** (on by default) shows every name in full, `notes.txt` rather than
+`notes`, as most Explorer and Linux users set it. Apps still show without `.app`. Turn it off to
+follow Finder's choice (Finder → Settings → Advanced) and each file's own *Hide extension*
+setting.
+
+**Open items with a single click** (off by default) opens files and folders with one click, like
+Explorer's single-click option or KDE's default. Shift-click and Cmd-click still select. With it
+on, double-click isn't needed.
+
+**Ask before moving items to the Trash** (off by default) asks before Delete or Cmd+Backspace
+trashes anything. Off, trashing happens straight away; Cmd+Z puts it back.
+
 ## Windows
 
 **Reopen windows and tabs from last time** (on by default) brings back your windows and tabs,
 each in the folder it was showing, when File Manager starts. Turn it off to start with one
-window on your home folder. See [Tabs and windows](Tabs-and-Windows.md#reopening-where-you-left-off).
+window on the start folder. See [Tabs and windows](Tabs-and-Windows.md#reopening-where-you-left-off).
+
+**New windows open** picks that start folder: Home (the default), Desktop, Documents, Downloads,
+or any folder you choose with **Other Folder…**. If that folder isn't there (on a disk that's
+unplugged), Home is used. New windows and tabs opened from a window (Cmd+N, Cmd+T) show the same
+folder as the window you're in, as in Explorer.
 
 ## Open Terminal Here
 

@@ -279,7 +279,7 @@ extension View {
     func folderDropTarget(_ folder: URL, model: BrowserModel) -> some View {
         dropDestination(for: URL.self) { urls, _ in
             let files = urls.filter(\.isFileURL)
-            let operation = FileListView.Coordinator.operation(files, into: folder)
+            let operation = FileDrop.operation(files, into: folder)
             guard !files.isEmpty, operation != .none else { return false }
             model.drop(files, into: folder, operation: operation)
             return true

@@ -46,6 +46,7 @@ snapshot keys="" out="build/snapshot.png": (bundle "debug")
     printf 'x\n' > build/snapshot-demo/Projects/plan.txt
     printf 'x\n' > build/snapshot-demo/Receipts/receipt-01.txt
     printf 'x\n' > build/snapshot-demo/Receipts/receipt-02.txt
+    cp assets/icon/icon.png build/snapshot-demo/drawers.png
     pkill -x FileManagerApp || true
     rm -f build/snapshot.log
     open -W -n --stdout "$PWD/build/snapshot.log" --stderr "$PWD/build/snapshot.log" --env FILEMANAGER_SNAPSHOT="$PWD/{{out}}" --env FILEMANAGER_SNAPSHOT_FOLDER="$PWD/build/snapshot-demo" --env FILEMANAGER_SNAPSHOT_KEYS="{{keys}}" "{{app}}"

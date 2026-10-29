@@ -19,6 +19,7 @@ public enum Action: String, CaseIterable, Sendable {
     case focusNextArea, focusPreviousArea
     case refresh
     case toggleHiddenFiles
+    case viewAsIcons, viewAsDetails, zoomIn, zoomOut, actualSize, togglePreviewPane
     case openTerminal
 
     public enum Menu: Sendable { case file, edit, view, go }
@@ -74,6 +75,12 @@ public enum Action: String, CaseIterable, Sendable {
         case .focusPreviousArea: "Focus Previous Area"
         case .refresh: "Refresh"
         case .toggleHiddenFiles: "Show Hidden Files"
+        case .viewAsIcons: "as Icons"
+        case .viewAsDetails: "as Details"
+        case .zoomIn: "Zoom In"
+        case .zoomOut: "Zoom Out"
+        case .actualSize: "Actual Size"
+        case .togglePreviewPane: "Preview Pane"
         case .openTerminal: "Open Terminal Here"
         }
     }
@@ -87,7 +94,9 @@ public enum Action: String, CaseIterable, Sendable {
         case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
             .find:
             .edit
-        case .refresh, .toggleHiddenFiles: .view
+        case .refresh, .toggleHiddenFiles, .viewAsIcons, .viewAsDetails, .zoomIn, .zoomOut, .actualSize,
+            .togglePreviewPane:
+            .view
         case .focusNextArea, .focusPreviousArea, .showContextMenu, .nextTab, .previousTab, .endSearch: nil
         case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9: nil
         default: .go

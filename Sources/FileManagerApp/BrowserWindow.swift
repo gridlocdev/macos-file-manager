@@ -6,6 +6,8 @@ struct BrowserWindow: View {
     let spec: WindowSpec
     @State private var model: BrowserModel
     @AppStorage(SettingsKey.foldersFirst) private var foldersFirst = true
+    @AppStorage(SettingsKey.showPreviewPane) private var showPreview = false
+    @AppStorage(SettingsKey.showAllExtensions) private var showAllExtensions = true
     @Environment(\.openWindow) private var openWindow
 
     init(spec: WindowSpec) {
@@ -18,14 +20,25 @@ struct BrowserWindow: View {
             SidebarView(model: model)
                 .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 320)
         } detail: {
-            VStack(spacing: 0) {
-                if model.isSearchOpen {
-                    SearchBar(model: model)
-                    Divider()
-                }
-                FileListView(model: model)
+            HSplitView {
+                VStack(spacing: 0) {
+                    if model.isSearchOpen {
+                        SearchBar(model: model)
+                        Divider()
+                    }
+                    Group {
+                        switch model.view.mode {
+                        case .details: FileListView(model: model)
+                        case .icons: FileIconView(model: model)
+                        }
+                    }
                     .overlay { emptyOrError }
-                StatusBar(model: model)
+                    StatusBar(model: model)
+                }
+                .frame(minWidth: 320, maxWidth: .infinity)
+                if showPreview {
+                    PreviewPane(model: model)
+                }
             }
         }
         .navigationTitle(model.title)
@@ -44,15 +57,20 @@ struct BrowserWindow: View {
                     .disabled(!model.canPerform(.goUp))
                     .help("Enclosing folder (Backspace)")
             }
+            // One item, so the address bar and the view buttons share the width rather than the
+            // toolbar pushing the address bar into its overflow menu.
             ToolbarItem(placement: .principal) {
-                AddressBar(model: model)
+                HStack(spacing: 8) {
+                    AddressBar(model: model)
+                    viewButtons
+                }
             }
         }
         .background(KeyMonitor(model: model))
         .frame(minWidth: 640, minHeight: 360)
         .onAppear {
             Windows.shared.register(model, spec: spec)
-            model.sort.foldersFirst = foldersFirst
+            model.foldersFirst = foldersFirst
             model.start()
             model.focusList()
             // The first window at launch reopens the rest of last session's windows and tabs.
@@ -64,7 +82,10 @@ struct BrowserWindow: View {
         .onChange(of: model.openRequestCount) {
             for request in model.takeOpenRequests() { openWindow(value: request) }
         }
-        .onChange(of: foldersFirst) { model.sort.foldersFirst = foldersFirst }
+        .onChange(of: foldersFirst) { model.foldersFirst = foldersFirst }
+        .onChange(of: showAllExtensions) { model.refresh() }
+        // The new view takes over the keyboard focus the old one had.
+        .onChange(of: model.view.mode) { model.focusList() }
         .onChange(of: model.infoRequestCount) {
             openWindow(id: InfoWindow.id, value: model.infoRequest)
         }
@@ -78,6 +99,28 @@ struct BrowserWindow: View {
             if let url = note.object as? URL { model.navigate(to: url) }
         }
         #endif
+    }
+
+    private var viewButtons: some View {
+        HStack(spacing: 6) {
+            ControlGroup {
+                viewButton(.viewAsIcons, mode: .icons, symbol: "square.grid.2x2", keys: "Shift+Cmd+2")
+                viewButton(.viewAsDetails, mode: .details, symbol: "list.bullet", keys: "Shift+Cmd+6")
+            }
+            .fixedSize()
+            Toggle("Preview", systemImage: "sidebar.right", isOn: $showPreview)
+                .toggleStyle(.button)
+                .labelStyle(.iconOnly)
+                .help("Preview pane (Opt+P)")
+        }
+    }
+
+    /// The current view's button is tinted.
+    private func viewButton(_ action: Action, mode: FolderView.Mode, symbol: String, keys: String) -> some View {
+        Button(mode.title, systemImage: symbol) { model.perform(action) }
+            .labelStyle(.iconOnly)
+            .foregroundStyle(model.view.mode == mode ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            .help("\(mode.title) (\(keys))")
     }
 
     @ViewBuilder private var emptyOrError: some View {

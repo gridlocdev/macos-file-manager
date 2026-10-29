@@ -6,6 +6,7 @@ enum DirectoryLoader {
     static let keys: [URLResourceKey] = [
         .isDirectoryKey, .isPackageKey, .isHiddenKey, .isSymbolicLinkKey,
         .fileSizeKey, .contentModificationDateKey, .localizedTypeDescriptionKey,
+        .creationDateKey, .addedToDirectoryDateKey, .fileSecurityKey,
     ]
 
     static func list(_ folder: URL) async -> Result<[FileItem], Error> {
@@ -29,15 +30,33 @@ enum DirectoryLoader {
             let targetValues = try? target.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
             isFolder = (targetValues?.isDirectory ?? false) && !(targetValues?.isPackage ?? false)
         }
+        var permissions: Int?
+        if let security = values?.fileSecurity {
+            var mode: mode_t = 0
+            if CFFileSecurityGetMode(security as CFFileSecurity, &mode) { permissions = Int(mode & 0o7777) }
+        }
         return FileItem(
             url: url.normalized,
-            name: FileManager.default.displayName(atPath: url.path),
+            name: name(url, isFolder: isFolder),
             isFolder: isFolder,
             isHidden: values?.isHidden ?? url.lastPathComponent.hasPrefix("."),
             size: isFolder ? nil : values?.fileSize.map(Int64.init),
             modified: values?.contentModificationDate,
-            kind: values?.localizedTypeDescription ?? ""
+            kind: values?.localizedTypeDescription ?? "",
+            created: values?.creationDate,
+            added: values?.addedToDirectoryDate,
+            permissions: permissions
         )
+    }
+
+    /// With "Show all file extensions" on (the default), the real name ("notes.txt"); apps
+    /// still drop ".app", as everywhere on a Mac. Off, Finder's choice for each file.
+    private static func name(_ url: URL, isFolder: Bool) -> String {
+        let display = FileManager.default.displayName(atPath: url.path)
+        guard UserDefaults.standard.bool(forKey: SettingsKey.showAllExtensions), !isFolder,
+            url.pathExtension.lowercased() != "app", !url.pathExtension.isEmpty
+        else { return display }
+        return url.lastPathComponent
     }
 }
 

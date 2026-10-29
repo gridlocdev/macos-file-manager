@@ -33,6 +33,9 @@ rename.
   moves), spring-loaded folders, and drops onto sidebar places.
 - **A right-click menu** (also Shift+F10) with Open With, Share and Services, **Get Info** with
   folder sizes and permissions (Cmd+I or Opt+Return), and **Quick Look** on Space.
+- **Details or icons** for each folder, remembered per folder: thumbnails, zoom (Cmd+= / Cmd+-
+  or Cmd+scroll), extra columns (Date Created, Date Added, Extension, Permissions), groups by
+  kind, date or size like Explorer, and a preview pane (Opt+P).
 - **Find as you type** (Cmd+F) in the folder or all its subfolders, with wildcards (`*.jpg`)
   and kind, date and size filters; **Invert Selection** and **Select by Pattern**.
 - **Batch rename** with find and replace, regular expressions, case changes and numbering,
@@ -40,7 +43,7 @@ rename.
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-More is planned (icon view, a preview pane, Finder tags); see [PLAN.md](PLAN.md).
+More is planned (Finder tags, compressing, split view); see [PLAN.md](PLAN.md).
 
 ## Requirements
 

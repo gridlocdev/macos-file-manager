@@ -47,4 +47,4 @@ from Photos, an image from Safari. File Manager can't receive those yet; drop th
 or on the Desktop instead.
 
 ---
-Next: [Searching and selecting](Searching-and-Selecting.md)
+Next: [Views and columns](Views-and-Columns.md)

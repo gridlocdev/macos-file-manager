@@ -102,6 +102,19 @@ the keyboard focus, so pressing Return in the sidebar doesn't rename anything.
 While you're typing in the address bar or renaming, Cmd+X, Cmd+C, Cmd+V, Cmd+A, Cmd+Z and
 Cmd+Backspace work on the text instead of on files.
 
+## Views
+
+| Action | Keys | Windows / Linux |
+|---|---|---|
+| as Icons | Shift+Cmd+2 | Ctrl+Shift+2 (Explorer, large icons) |
+| as Details | Shift+Cmd+6 | Ctrl+Shift+6 (Explorer) |
+| Zoom In | Cmd+=, Shift+Cmd+=, Cmd+scroll up (icons) | Ctrl+=, Ctrl+scroll |
+| Zoom Out | Cmd+-, Cmd+scroll down (icons) | Ctrl+-, Ctrl+scroll |
+| Actual Size | Cmd+0 | Ctrl+0 |
+| Preview Pane | Opt+P | Alt+P (Explorer), F3 in Nautilus |
+
+See [Views and columns](Views-and-Columns.md).
+
 ## In the address bar
 
 | Action | Keys |

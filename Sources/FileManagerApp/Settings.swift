@@ -6,6 +6,52 @@ enum SettingsKey {
     static let customTerminalPath = "customTerminalPath"
     static let foldersFirst = "foldersFirst"
     static let reopenSession = "reopenSession"
+    static let showPreviewPane = "showPreviewPane"
+    static let showAllExtensions = "showAllExtensions"
+    static let singleClickOpen = "singleClickOpen"
+    static let confirmTrash = "confirmTrash"
+    static let startFolder = "startFolder"
+    static let customStartPath = "customStartPath"
+
+    /// Defaults for settings that start on.
+    static func registerDefaults() {
+        UserDefaults.standard.register(defaults: [showAllExtensions: true, foldersFirst: true, reopenSession: true])
+    }
+}
+
+/// Where new windows open when there's nothing else to go on (first launch, or reopening
+/// windows is off).
+enum StartFolder: String, CaseIterable, Identifiable {
+    case home, desktop, documents, downloads, custom
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .home: "Home"
+        case .desktop: "Desktop"
+        case .documents: "Documents"
+        case .downloads: "Downloads"
+        case .custom: "Other Folder…"
+        }
+    }
+
+    static var url: URL {
+        let defaults = UserDefaults.standard
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        switch StartFolder(rawValue: defaults.string(forKey: SettingsKey.startFolder) ?? "") ?? .home {
+        case .home: return home
+        case .desktop: return home.appendingPathComponent("Desktop")
+        case .documents: return home.appendingPathComponent("Documents")
+        case .downloads: return home.appendingPathComponent("Downloads")
+        case .custom:
+            // A folder that's gone (an unplugged disk) falls back to Home.
+            guard let path = defaults.string(forKey: SettingsKey.customStartPath),
+                FileManager.default.fileExists(atPath: path)
+            else { return home }
+            return URL(filePath: path)
+        }
+    }
 }
 
 enum TerminalChoice: String, CaseIterable, Identifiable {
@@ -63,14 +109,35 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.customTerminalPath) private var customTerminalPath = ""
     @AppStorage(SettingsKey.foldersFirst) private var foldersFirst = true
     @AppStorage(SettingsKey.reopenSession) private var reopenSession = true
+    @AppStorage(SettingsKey.showAllExtensions) private var showAllExtensions = true
+    @AppStorage(SettingsKey.singleClickOpen) private var singleClickOpen = false
+    @AppStorage(SettingsKey.confirmTrash) private var confirmTrash = false
+    @AppStorage(SettingsKey.startFolder) private var startFolder = StartFolder.home
+    @AppStorage(SettingsKey.customStartPath) private var customStartPath = ""
 
     var body: some View {
         Form {
             Section("Files") {
                 Toggle("Show folders before files", isOn: $foldersFirst)
+                Toggle("Show all file extensions", isOn: $showAllExtensions)
+                Toggle("Open items with a single click", isOn: $singleClickOpen)
+                Toggle("Ask before moving items to the Trash", isOn: $confirmTrash)
             }
             Section("Windows") {
                 Toggle("Reopen windows and tabs from last time", isOn: $reopenSession)
+                Picker("New windows open", selection: $startFolder) {
+                    ForEach(StartFolder.allCases) { Text($0.title).tag($0) }
+                }
+                if startFolder == .custom {
+                    LabeledContent("Folder") {
+                        HStack {
+                            Text(customStartPath.isEmpty
+                                ? "None" : FileManager.default.displayName(atPath: customStartPath))
+                                .foregroundStyle(.secondary)
+                            Button("Choose…", action: chooseStartFolder)
+                        }
+                    }
+                }
             }
             Section("Open Terminal Here") {
                 Picker("Terminal app", selection: $terminal) {
@@ -100,6 +167,16 @@ struct SettingsView: View {
             NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) == nil
         else { return choice.title }
         return "\(choice.title) (not installed)"
+    }
+
+    private func chooseStartFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.prompt = "Choose"
+        if panel.runModal() == .OK, let url = panel.url {
+            customStartPath = url.path
+        }
     }
 
     private func chooseApp() {

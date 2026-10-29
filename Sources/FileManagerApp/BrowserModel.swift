@@ -16,7 +16,21 @@ final class BrowserModel {
     private(set) var history: NavigationHistory
 
     var selection: Set<URL> = []
-    var sort = FileSort() { didSet { if sort != oldValue { applyFilterAndSort() } } }
+    /// How this folder is shown (icons or details, sort, groups, zoom); remembered per folder.
+    var view = FolderView() {
+        didSet {
+            guard view != oldValue else { return }
+            if view.sort != oldValue.sort || view.groupBy != oldValue.groupBy { applyFilterAndSort() }
+            if !restoringView { FolderViewStore.shared.remember(view, for: url.path) }
+        }
+    }
+    /// The Settings choice, applied to every folder's sort.
+    var foldersFirst = true { didSet { if foldersFirst != oldValue { applyFilterAndSort() } } }
+    var sort: FileSort {
+        FileSort(column: view.sortColumn, ascending: view.ascending, foldersFirst: foldersFirst)
+    }
+    /// What the list shows: group headings (when grouping) and items, in order.
+    private(set) var rows: [ListRow] = []
     var showHiddenFiles = false {
         didSet {
             guard showHiddenFiles != oldValue else { return }
@@ -79,11 +93,12 @@ final class BrowserModel {
     private var folderSearch: FolderSearch?
     private var searchDelay: Task<Void, Never>?
     private var lastSelectPattern = ""
+    private var restoringView = false
 
     /// Cheap: SwiftUI may create throwaway models. Nothing is read until `start()`.
     init(start: URL? = nil, id: UUID = UUID()) {
         self.id = id
-        let start = (start ?? FileManager.default.homeDirectoryForCurrentUser).standardizedFileURL
+        let start = (start ?? StartFolder.url).standardizedFileURL
         url = start
         history = NavigationHistory(start: start)
         addressText = PathInput.display(start, home: home)
@@ -93,6 +108,7 @@ final class BrowserModel {
     func start() {
         guard !started else { return }
         started = true
+        restoreView(for: url)
         SidebarStore.shared.visited(url.path)
         load()
     }
@@ -139,6 +155,7 @@ final class BrowserModel {
         addressText = PathInput.display(target, home: home)
         selection = []
         closeSearch()
+        restoreView(for: target)
         // Going up (or back to a parent) selects the folder you came from, like Explorer.
         let cameFromChild = previous.deletingLastPathComponent().standardizedFileURL == target
         revealAfterLoad = cameFromChild ? previous.normalized : nil
@@ -274,6 +291,14 @@ final class BrowserModel {
             SidebarStore.shared.pin(folders.isEmpty ? [url.path] : folders)
         case .refresh: refresh()
         case .toggleHiddenFiles: showHiddenFiles.toggle()
+        case .viewAsIcons: view.mode = .icons
+        case .viewAsDetails: view.mode = .details
+        case .zoomIn: if !view.zoom(in: true) { NSSound.beep() }
+        case .zoomOut: if !view.zoom(in: false) { NSSound.beep() }
+        case .actualSize: view.resetZoom()
+        case .togglePreviewPane:
+            let defaults = UserDefaults.standard
+            defaults.set(!defaults.bool(forKey: SettingsKey.showPreviewPane), forKey: SettingsKey.showPreviewPane)
         case .openTerminal: TerminalLauncher.open(url)
         case .goTrash: navigate(to: home.appendingPathComponent(".Trash"))
         case .selectAll: selection = Set(items.map(\.url))
@@ -352,7 +377,7 @@ final class BrowserModel {
     private func moveFocus(forward: Bool) {
         guard let window else { return }
         let responder = window.firstResponder
-        let inList = responder is FileTableView
+        let inList = responder is any FileBrowsingView
         let inAddress = responder is NSText
         let sidebar = Self.sidebarView(in: window.contentView)
         func focusSidebar() {
@@ -443,6 +468,24 @@ final class BrowserModel {
 
     private func moveToTrash() {
         let targets = selectedURLs
+        if UserDefaults.standard.bool(forKey: SettingsKey.confirmTrash) {
+            let alert = NSAlert()
+            alert.messageText =
+                targets.count == 1
+                ? "Move “\(targets[0].lastPathComponent)” to the Trash?" : "Move \(targets.count) items to the Trash?"
+            alert.informativeText = "You can undo this, or put them back from the Trash."
+            alert.addButton(withTitle: "Move to Trash")
+            alert.addButton(withTitle: "Cancel")
+            Task {
+                guard await ops.present(alert, window: window) == .alertFirstButtonReturn else { return }
+                trash(targets)
+            }
+            return
+        }
+        trash(targets)
+    }
+
+    private func trash(_ targets: [URL]) {
         // Select whatever is next, so pressing Delete again keeps going down the list.
         let next = items.drop { !selection.contains($0.url) }.first { !selection.contains($0.url) }?.url
         let title = targets.count == 1 ? "Move “\(targets[0].lastPathComponent)” to Trash" : "Move \(targets.count) items to Trash"
@@ -552,7 +595,8 @@ final class BrowserModel {
         let source = isSearchingSubfolders ? searchResults : allItems
         var visible = showHiddenFiles ? source : source.filter { !$0.isHidden }
         if isSearchOpen { visible = criteria.filter(visible) }
-        items = sort.sorted(visible)
+        rows = Grouping.rows(sort.sorted(visible), by: view.groupBy)
+        items = rows.compactMap(\.item)
         listingVersion += 1
         // Nothing hidden by a filter stays selected (it would be trashed unseen).
         let shown = Set(items.map(\.url))
@@ -699,6 +743,13 @@ final class BrowserModel {
             let outcome = await ops.run(title, steps: moves.map { .move($0.from, to: $0.to) }, window: window)
             if outcome.error == nil { refresh(selecting: targets) } else { refresh() }
         }
+    }
+
+    /// The folder's remembered view, or the default for folders not set up yet.
+    private func restoreView(for folder: URL) {
+        restoringView = true
+        view = FolderViewStore.shared.view(for: folder.path)
+        restoringView = false
     }
 
     /// Clears the one-shot reveal once the table has scrolled to it.

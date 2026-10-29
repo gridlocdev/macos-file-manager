@@ -63,11 +63,25 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(before: .sidebar) {
+            button(.viewAsIcons)
+            button(.viewAsDetails)
+            Divider()
             Menu("Sort By") {
                 ForEach(FileSort.Column.allCases, id: \.self) { column in
-                    Button(column.title) { browser?.sort.column = column }
+                    Button(column.title) { browser?.view.sortColumn = column }
                 }
             }
+            Menu("Group By") {
+                ForEach(GroupBy.allCases, id: \.self) { group in
+                    Button(group.title) { browser?.view.groupBy = group }
+                }
+            }
+            Divider()
+            button(.zoomIn)
+            button(.zoomOut)
+            button(.actualSize)
+            Divider()
+            button(.togglePreviewPane)
             // A plain button: a menu Toggle (or a Show/Hide title) would go stale, and a stale
             // Toggle writes itself back, undoing Cmd+H. The status bar says when they're shown.
             button(.toggleHiddenFiles)
