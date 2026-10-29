@@ -33,6 +33,13 @@ struct FileListView: NSViewRepresentable {
             }
             table.addTableColumn(tableColumn)
         }
+        // Where each result is, while searching subfolders.
+        let folderColumn = NSTableColumn(identifier: Coordinator.folderColumn)
+        folderColumn.title = "Folder"
+        folderColumn.width = 160
+        folderColumn.minWidth = 60
+        folderColumn.isHidden = true
+        table.addTableColumn(folderColumn)
         table.autosaveName = "FileList"
         table.autosaveTableColumns = true
         table.dataSource = context.coordinator
@@ -63,6 +70,11 @@ struct FileListView: NSViewRepresentable {
         let quickLookRequest = model.quickLookRequest
         let contextMenuRequest = model.contextMenuRequest
         let cut = Clipboard.shared.cutURLs
+        let showsFolders = model.isSearchingSubfolders
+        coordinator.root = model.url
+        if let column = table.tableColumn(withIdentifier: Coordinator.folderColumn), column.isHidden == showsFolders {
+            column.isHidden = !showsFolders
+        }
 
         let descriptor = NSSortDescriptor(key: sort.column.rawValue, ascending: sort.ascending)
         if table.sortDescriptors.first != descriptor {
@@ -107,9 +119,11 @@ struct FileListView: NSViewRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
+        static let folderColumn = NSUserInterfaceItemIdentifier("folder")
         let model: BrowserModel
         weak var table: NSTableView?
         var items: [FileItem] = []
+        var root = URL(filePath: "/")
         var version = -1
         var cut: Set<URL> = []
         var focusRequest = 0
@@ -137,6 +151,7 @@ struct FileListView: NSViewRepresentable {
         func numberOfRows(in tableView: NSTableView) -> Int { items.count }
 
         func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+            if tableColumn?.identifier == Self.folderColumn { return folderCell(tableView, row: row) }
             guard let tableColumn, let column = FileSort.Column(rawValue: tableColumn.identifier.rawValue)
             else { return nil }
             let item = items[row]
@@ -159,6 +174,19 @@ struct FileListView: NSViewRepresentable {
             }
             cell.textField?.alignment = column == .size ? .right : .left
             cell.textField?.textColor = column == .name ? .labelColor : .secondaryLabelColor
+            return cell
+        }
+
+        /// The result's folder relative to the one being searched ("Photos/2024").
+        private func folderCell(_ tableView: NSTableView, row: Int) -> NSView {
+            let cell = tableView.makeView(withIdentifier: Self.folderColumn, owner: nil) as? FileCell
+                ?? FileCell(identifier: Self.folderColumn, withIcon: false)
+            let folder = items[row].url.deletingLastPathComponent().path
+            let rootPath = root.path == "/" ? "" : root.path
+            let relative = folder.hasPrefix(rootPath + "/") ? String(folder.dropFirst(rootPath.count + 1)) : ""
+            cell.textField?.stringValue = relative.isEmpty ? FileManager.default.displayName(atPath: root.path) : relative
+            cell.textField?.textColor = .secondaryLabelColor
+            cell.toolTip = folder
             return cell
         }
 

@@ -88,11 +88,15 @@ Settings → Keyboard.
 | Action | Keys | Windows / Linux |
 |---|---|---|
 | Select All | Cmd+A | Ctrl+A |
+| Invert Selection | Shift+Cmd+I | Ctrl+Shift+I (Nautilus), Ctrl+I (Total Commander) |
+| Select by Pattern… | Cmd+S | Ctrl+S (Nautilus), Num+ (Total Commander) |
 | Select by typing | type the start of a name | same |
+| Find | Cmd+F | Ctrl+F, Ctrl+E |
+| Clear Search | Esc | Esc |
 | Show Hidden Files | Cmd+H, Shift+Cmd+. | Ctrl+H (Linux) |
 | Open Terminal Here | Opt+Cmd+T, F4 | F4 (Dolphin), Ctrl+Alt+T |
 
-Return, F2, Space, Delete, Shift+Delete and Shift+F10 only act on files while the file list has
+Return, F2, Space, Delete, Shift+Delete, Shift+F10 and Esc only act on files while the file list has
 the keyboard focus, so pressing Return in the sidebar doesn't rename anything.
 
 While you're typing in the address bar or renaming, Cmd+X, Cmd+C, Cmd+V, Cmd+A, Cmd+Z and
@@ -105,6 +109,16 @@ Cmd+Backspace work on the text instead of on files.
 | Go to the typed path | Return |
 | Complete a folder name | Tab |
 | Cancel | Esc |
+
+## In the find bar
+
+| Action | Keys |
+|---|---|
+| Go to the results | Down arrow, Return |
+| Select the typed text again | Cmd+F |
+| Close it | Esc |
+
+See [Searching and selecting](Searching-and-Selecting.md).
 
 ## While renaming
 

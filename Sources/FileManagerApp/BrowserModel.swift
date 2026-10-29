@@ -17,7 +17,25 @@ final class BrowserModel {
 
     var selection: Set<URL> = []
     var sort = FileSort() { didSet { if sort != oldValue { applyFilterAndSort() } } }
-    var showHiddenFiles = false { didSet { if showHiddenFiles != oldValue { applyFilterAndSort() } } }
+    var showHiddenFiles = false {
+        didSet {
+            guard showHiddenFiles != oldValue else { return }
+            if isSearchingSubfolders { startSubfolderSearch() }
+            applyFilterAndSort()
+        }
+    }
+
+    /// Find (Cmd+F): the bar is open, what it looks for, and where.
+    private(set) var isSearchOpen = false
+    var criteria = SearchCriteria() { didSet { if criteria != oldValue { searchChanged() } } }
+    var searchScope = SearchScope.folder { didSet { if searchScope != oldValue { searchChanged() } } }
+    /// A subfolder search is still finding things.
+    private(set) var isSearching = false
+    private(set) var searchHitLimit = false
+    /// Bumped to put the cursor in the find field.
+    private(set) var searchFocusRequest = 0
+    /// Rename with several items selected opens the batch rename sheet.
+    var batchRename: BatchRenameRequest?
 
     /// Address bar text while editing; reset to the current folder on navigation or cancel.
     var addressText = ""
@@ -54,6 +72,13 @@ final class BrowserModel {
     private var pendingSelection: Set<URL> = []
     private var pendingRename: URL?
     private var started = false
+    private var searchResults: [FileItem] = []
+    /// The last search's results stay up until the new one finds something, so refreshing or
+    /// typing another letter doesn't blank the list.
+    private var resultsAreStale = false
+    private var folderSearch: FolderSearch?
+    private var searchDelay: Task<Void, Never>?
+    private var lastSelectPattern = ""
 
     /// Cheap: SwiftUI may create throwaway models. Nothing is read until `start()`.
     init(start: URL? = nil, id: UUID = UUID()) {
@@ -93,7 +118,10 @@ final class BrowserModel {
         navigate(to: url.deletingLastPathComponent())
     }
 
-    func refresh() { load(keepSelection: true) }
+    func refresh() {
+        if isSearchingSubfolders { startSubfolderSearch() }
+        load(keepSelection: true)
+    }
 
     /// Reloads, then selects `urls` (and starts renaming `rename`) once they're listed.
     func refresh(selecting urls: [URL], rename: URL? = nil) {
@@ -101,6 +129,7 @@ final class BrowserModel {
         pendingSelection = Set(urls)
         pendingRename = rename?.normalized
         revealAfterLoad = urls.first
+        if isSearchingSubfolders { startSubfolderSearch() }
         load()
     }
 
@@ -109,6 +138,7 @@ final class BrowserModel {
         url = target
         addressText = PathInput.display(target, home: home)
         selection = []
+        closeSearch()
         // Going up (or back to a parent) selects the folder you came from, like Explorer.
         let cameFromChild = previous.deletingLastPathComponent().standardizedFileURL == target
         revealAfterLoad = cameFromChild ? previous.normalized : nil
@@ -188,6 +218,7 @@ final class BrowserModel {
         let ops = FileOperations.shared
         switch action {
         case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately, .quickLook: return !selection.isEmpty
+        case .invertSelection, .selectByPattern: return !items.isEmpty
         case .openInNewTab: return items.contains { selection.contains($0.url) && $0.isFolder }
         case .reopenClosedTab: return Windows.shared.hasClosedTabs
         case .nextTab, .previousTab: return (window?.tabGroup?.windows.count ?? 1) > 1
@@ -246,6 +277,10 @@ final class BrowserModel {
         case .openTerminal: TerminalLauncher.open(url)
         case .goTrash: navigate(to: home.appendingPathComponent(".Trash"))
         case .selectAll: selection = Set(items.map(\.url))
+        case .invertSelection: selection = Selection.inverted(selection, in: items.map(\.url))
+        case .selectByPattern: selectByPattern()
+        case .find: openSearch()
+        case .endSearch: endSearch()
         case .copy: Clipboard.shared.copy(selectedURLs)
         case .cut: Clipboard.shared.cut(selectedURLs)
         case .copyPath:
@@ -253,7 +288,8 @@ final class BrowserModel {
             Clipboard.shared.copyText(paths.joined(separator: "\n"))
         case .paste: paste(move: Clipboard.shared.isCut)
         case .pasteMove: paste(move: true)
-        case .rename: startRename(selectedURLs[0])
+        case .rename:
+            if selection.count > 1 { startBatchRename() } else { startRename(selectedURLs[0]) }
         case .duplicate: duplicate()
         case .newFolder: create(folder: true)
         case .newTextFile: create(folder: false)
@@ -513,9 +549,156 @@ final class BrowserModel {
     }
 
     private func applyFilterAndSort() {
-        let visible = showHiddenFiles ? allItems : allItems.filter { !$0.isHidden }
+        let source = isSearchingSubfolders ? searchResults : allItems
+        var visible = showHiddenFiles ? source : source.filter { !$0.isHidden }
+        if isSearchOpen { visible = criteria.filter(visible) }
         items = sort.sorted(visible)
         listingVersion += 1
+        // Nothing hidden by a filter stays selected (it would be trashed unseen).
+        let shown = Set(items.map(\.url))
+        if !selection.isSubset(of: shown) { selection.formIntersection(shown) }
+    }
+
+    // MARK: Find
+
+    enum SearchScope: Hashable { case folder, subfolders }
+
+    /// Results come from the whole tree under this folder rather than its listing.
+    var isSearchingSubfolders: Bool { isSearchOpen && searchScope == .subfolders && !criteria.isEmpty }
+    /// The list shows only matching items.
+    var isFiltering: Bool { isSearchOpen && !criteria.isEmpty }
+    /// Items in the folder itself, before any filter (for "3 of 40 items").
+    var folderItemCount: Int { showHiddenFiles ? allItems.count : allItems.count(where: { !$0.isHidden }) }
+
+    func openSearch() {
+        isSearchOpen = true
+        searchFocusRequest += 1
+    }
+
+    /// Esc or the bar's close button: back to the whole folder.
+    func endSearch() {
+        guard isSearchOpen else { return }
+        closeSearch()
+        applyFilterAndSort()
+        focusList()
+    }
+
+    private func closeSearch() {
+        guard isSearchOpen else { return }
+        isSearchOpen = false
+        criteria = SearchCriteria()
+        stopSubfolderSearch()
+    }
+
+    private func searchChanged() {
+        if isSearchingSubfolders {
+            // Wait for a pause in typing before walking a whole tree.
+            searchDelay?.cancel()
+            searchDelay = Task {
+                try? await Task.sleep(for: .milliseconds(250))
+                if !Task.isCancelled { startSubfolderSearch() }
+            }
+        } else {
+            stopSubfolderSearch()
+        }
+        applyFilterAndSort()
+    }
+
+    private func startSubfolderSearch() {
+        stopSubfolderSearch(keepingResults: true)
+        resultsAreStale = true
+        isSearching = true
+        let search = FolderSearch(
+            root: url, criteria: criteria, showHidden: showHiddenFiles,
+            onResults: { [weak self] found in self?.addSearchResults(found) },
+            onFinish: { [weak self] in
+                guard let self else { return }
+                isSearching = false
+                searchHitLimit = folderSearch?.hitLimit ?? false
+                if resultsAreStale {
+                    resultsAreStale = false
+                    searchResults = []
+                    applyFilterAndSort()
+                }
+            })
+        folderSearch = search
+        search.start()
+    }
+
+    private func stopSubfolderSearch(keepingResults: Bool = false) {
+        if !keepingResults { searchDelay?.cancel() }
+        folderSearch?.cancel()
+        folderSearch = nil
+        if !keepingResults { searchResults = [] }
+        isSearching = false
+        searchHitLimit = false
+    }
+
+    private func addSearchResults(_ found: [FileItem]) {
+        if resultsAreStale {
+            resultsAreStale = false
+            searchResults = []
+        }
+        searchResults += found
+        applyFilterAndSort()
+        // Renamed or pasted items show up here rather than in the folder's listing.
+        let wanted = pendingSelection.intersection(found.map(\.url))
+        if !wanted.isEmpty {
+            selection.formUnion(wanted)
+            pendingSelection.subtract(wanted)
+        }
+    }
+
+    /// Down arrow or Return in the find field: on to the results.
+    func focusResults() {
+        if selection.isEmpty, let first = items.first { selection = [first.url] }
+        focusList()
+    }
+
+    // MARK: Selecting
+
+    /// Select by Pattern (Cmd+S): "*.jpg" selects every JPEG, like Total Commander's Num+.
+    private func selectByPattern() {
+        let alert = NSAlert()
+        alert.messageText = "Select by Pattern"
+        alert.informativeText = "Select items whose names match. Use * for any text and ? for one character; separate several patterns with “;”."
+        let field = NSTextField(string: lastSelectPattern)
+        field.placeholderString = "*.jpg; *.png"
+        field.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Select")
+        alert.addButton(withTitle: "Add to Selection")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        Task {
+            let response = await ops.present(alert, window: window)
+            guard response != .alertThirdButtonReturn else { return }
+            lastSelectPattern = field.stringValue
+            let pattern = NamePattern(field.stringValue)
+            let matching = Set(items.filter { pattern.matches($0.name) }.map(\.url))
+            if matching.isEmpty { NSSound.beep() }
+            selection = response == .alertSecondButtonReturn ? selection.union(matching) : matching
+            if let first = items.first(where: { matching.contains($0.url) }) { revealAfterLoad = first.url }
+            focusList()
+        }
+    }
+
+    // MARK: Batch rename
+
+    private func startBatchRename() {
+        let chosen = items.filter { selection.contains($0.url) }
+        batchRename = BatchRenameRequest(items: chosen.map { BatchRename.Item(url: $0.url, isFolder: $0.isFolder) })
+    }
+
+    /// Runs a batch rename as one job, so a single Undo puts every name back.
+    func commitBatchRename(_ entries: [BatchRename.Entry]) {
+        let moves = BatchRename.moves(entries)
+        let targets = entries.filter(\.isChanged).map(\.target)
+        let title = "Rename \(targets.count) items"
+        Task {
+            let outcome = await ops.run(title, steps: moves.map { .move($0.from, to: $0.to) }, window: window)
+            if outcome.error == nil { refresh(selecting: targets) } else { refresh() }
+        }
     }
 
     /// Clears the one-shot reveal once the table has scrolled to it.
@@ -524,4 +707,9 @@ final class BrowserModel {
     private func volumeName(of url: URL) -> String? {
         try? url.resourceValues(forKeys: [.volumeNameKey]).volumeName
     }
+}
+
+struct BatchRenameRequest: Identifiable {
+    let id = UUID()
+    var items: [BatchRename.Item]
 }

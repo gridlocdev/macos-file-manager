@@ -12,6 +12,7 @@ public enum Action: String, CaseIterable, Sendable {
     case moveToTrash, deleteImmediately, putBack
     case undo, redo
     case cut, copy, paste, pasteMove, copyPath, selectAll
+    case invertSelection, selectByPattern, find, endSearch
     case goBack, goForward, goUp
     case goHome, goDesktop, goDocuments, goDownloads, goApplications, goTrash
     case focusAddressBar
@@ -55,6 +56,10 @@ public enum Action: String, CaseIterable, Sendable {
         case .pasteMove: "Move Items Here"
         case .copyPath: "Copy Path"
         case .selectAll: "Select All"
+        case .invertSelection: "Invert Selection"
+        case .selectByPattern: "Select by Pattern…"
+        case .find: "Find"
+        case .endSearch: "Clear Search"
         case .goBack: "Back"
         case .goForward: "Forward"
         case .goUp: "Enclosing Folder"
@@ -79,9 +84,11 @@ public enum Action: String, CaseIterable, Sendable {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
             .getInfo, .quickLook, .showInFinder, .newWindow, .newTab, .openInNewTab, .reopenClosedTab, .addToSidebar:
             .file
-        case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll: .edit
+        case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
+            .find:
+            .edit
         case .refresh, .toggleHiddenFiles: .view
-        case .focusNextArea, .focusPreviousArea, .showContextMenu, .nextTab, .previousTab: nil
+        case .focusNextArea, .focusPreviousArea, .showContextMenu, .nextTab, .previousTab, .endSearch: nil
         case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9: nil
         default: .go
         }
@@ -93,7 +100,7 @@ public enum Action: String, CaseIterable, Sendable {
     public var actsOnFiles: Bool {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
-            .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll,
+            .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
             .getInfo, .quickLook, .showInFinder, .showContextMenu, .openInNewTab, .addToSidebar:
             true
         default:
@@ -140,7 +147,7 @@ public enum Action: String, CaseIterable, Sendable {
     /// sidebar doesn't rename and Delete there doesn't trash the list's selection.
     public var needsFileListFocus: Bool {
         switch self {
-        case .rename, .moveToTrash, .deleteImmediately, .open, .quickLook, .showContextMenu, .openInNewTab: true
+        case .rename, .moveToTrash, .deleteImmediately, .open, .quickLook, .showContextMenu, .openInNewTab, .endSearch: true
         default: false
         }
     }

@@ -56,6 +56,10 @@ struct AppCommands: Commands {
             Divider()
             button(.copyPath)
             button(.selectAll)
+            button(.invertSelection)
+            button(.selectByPattern)
+            Divider()
+            button(.find)
         }
 
         CommandGroup(before: .sidebar) {

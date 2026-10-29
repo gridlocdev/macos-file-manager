@@ -49,6 +49,8 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   FileStepExecutor.swift       runs FileSteps with FileManager (Trash injectable for tests)
   DropRules.swift              drag-and-drop move/copy rules; FolderSize; Permissions
   Navigation.swift             Breadcrumbs, RecentFolders, PinnedFolders, SessionState
+  Search.swift                 NamePattern (wildcards, Spotlight predicate), SearchCriteria, Selection
+  BatchRename.swift            batch rename options, preview with problems, moves (swaps via temp names)
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
   AppCommands.swift            the menu bar, built from Action + Keymap
@@ -65,11 +67,13 @@ Sources/FileManagerApp/        the app
   SidebarView.swift            pinned, recent, locations (eject), folder tree; drop targets
   SidebarStore.swift           pinned and recent folders in UserDefaults
   DirectoryLoader.swift        background folder reads; DirectoryWatcher (live updates)
+  SearchBar.swift              the find bar (Cmd+F): text, This Folder/Subfolders, filters
+  FolderSearch.swift           subfolder search: Spotlight + a folder walk, merged, in batches
+  BatchRenameView.swift        the batch rename sheet with its live preview
   FileListView.swift           the details list (NSTableView), icons, type-ahead
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
                                ActiveBrowser (the key window's model, for the menu bar)
   DebugSnapshot.swift          debug-only: capture the window, print menus (just snapshot)
-  SidebarView.swift            favorites and mounted volumes
   Settings.swift               settings keys, Settings window, Open Terminal Here
 Tests/FileManagerCoreTests/    Swift Testing tests, including the docs check below
 Resources/Info.plist           bundle info; also embedded in the executable
@@ -224,7 +228,8 @@ sees entries added, removed or renamed, not edits inside files.
 ## Tests
 
 `just test` runs Swift Testing suites for everything in `FileManagerCore`: keymap lookups and
-conflicts, history, path resolution and completion, and sorting. Put new pure logic in
+conflicts, history, path resolution and completion, sorting, file operation planning, name
+patterns and search filters, and batch rename previews and moves. Put new pure logic in
 `FileManagerCore` and test it there; keep AppKit in the app target.
 
 ### Snapshots
@@ -239,7 +244,12 @@ just snapshot "Backspace,Opt+Left,Cmd+H" out.png # press keys first, then captur
 just snapshot "menu:New Folder,type:Reports,Return,Cmd+Z" out.png
 ```
 
-Steps are key chords, `menu:<item title>` and `type:<text>`. Keys go through the normal event
+Steps are key chords, `menu:<item title>`, `type:<text>`, `action:<Action raw value>` (runs it
+on the window's model directly), `scope:subfolders` (Find's switch) and `batch:<find>><replace>`
+(a batch rename of the selection, as the sheet's Rename button runs it). When you're using
+another app, macOS may not let File Manager become active; then nothing is key, Cmd shortcuts
+don't reach the menu bar, and the hook falls back to the first window, so use `action:` steps.
+The output lists the items shown and selected at the end. Keys go through the normal event
 queue, so they exercise `KeyMonitor` and the menu bar like real key presses. Shifted Cmd
 shortcuts (Shift+Cmd+N) don't match menus when synthesized; use `menu:` for those. The demo
 folder (`build/snapshot-demo`) is recreated each run, and the hook refuses to press anything

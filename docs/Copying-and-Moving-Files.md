@@ -68,6 +68,9 @@ so typing replaces `notes` and keeps `.txt`. Press **Return** (or click elsewher
 
 Names can't be empty, contain `/` or `:`, or be the same as another item in the folder.
 
+With several items selected, Return or F2 opens [batch rename](Batch-Rename.md) instead, to
+rename them all at once with find and replace or numbers.
+
 ## Trash and deleting
 
 - **Move to Trash**: **Cmd+Backspace**, or **Delete** (forward delete, fn+delete on a MacBook).

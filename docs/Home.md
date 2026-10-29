@@ -21,6 +21,8 @@ These pages explain **how to use the app** and **where it differs from what you'
 | [Using the app](Using-the-App.md) | What are the parts of the window? How do I type a path? How do I go back? |
 | [Copying and moving files](Copying-and-Moving-Files.md) | How do cut and paste work? What happens when names clash? Can I undo? Where's Put Back? |
 | [Drag and drop](Drag-and-Drop.md) | When does a drag move and when does it copy? Can I drop on the sidebar? |
+| [Searching and selecting](Searching-and-Selecting.md) | How do I find a file in subfolders? Can I filter by kind or date? How do I select every .jpg? |
+| [Batch rename](Batch-Rename.md) | How do I rename many files at once? Can I number them? Does undo put the names back? |
 | [Tabs and windows](Tabs-and-Windows.md) | How do I open a folder in a new tab? Can I get a closed tab back? Do my tabs come back after quitting? |
 | [The sidebar](Sidebar.md) | How do I pin a folder? What's Recent? How do I eject a drive? |
 | [Keyboard shortcuts](Keyboard-Shortcuts.md) | What's the shortcut for…? What's the Windows or Linux equivalent? |

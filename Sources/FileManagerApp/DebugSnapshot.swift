@@ -1,13 +1,20 @@
 #if DEBUG
 import AppKit
+import FileManagerCore
 
 /// `FILEMANAGER_SNAPSHOT=out.png` (debug builds): after launch, draws the front window (toolbar
 /// included) into a PNG, prints the menu bar with its shortcuts, and quits. Steps in
-/// FILEMANAGER_SNAPSHOT_KEYS: key chords ("Cmd+C"), "menu:Title" and "type:text". For checking the UI
+/// FILEMANAGER_SNAPSHOT_KEYS: key chords ("Cmd+C"), "menu:Title", "type:text", "scope:subfolders"
+/// (Find's This Folder/Subfolders switch, which has no key) and "action:find" (runs an `Action` on
+/// the window's model directly; works even when another app keeps this one from becoming active,
+/// which stops keys from arriving) and "batch:find>replace" (a batch rename of the selection, as the
+/// Rename button in the sheet would run it). For checking the UI
 /// and for docs screenshots without screen-recording permission. See `just snapshot`.
 @MainActor enum DebugSnapshot {
     static func runIfRequested() {
         guard let path = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT"] else { return }
+        // Unbuffered, so the log shows how far a run got if it never finishes.
+        setvbuf(stdout, nil, _IONBF, 0)
         let start = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_FOLDER"]
         Task {
             try? await Task.sleep(for: .seconds(1))
@@ -16,6 +23,14 @@ import AppKit
                 NotificationCenter.default.post(name: .debugNavigate, object: URL(fileURLWithPath: start))
             }
             try? await Task.sleep(for: .seconds(1.5))
+            // Keys only reach the key window of the active app; when another app is in use,
+            // the polite NSApp.activate() at launch isn't enough.
+            if NSApp.keyWindow == nil {
+                NSApp.activate(ignoringOtherApps: true)
+                NSApp.windows.first { $0.isVisible && $0.contentView != nil }?.makeKeyAndOrderFront(nil)
+                try? await Task.sleep(for: .seconds(0.5))
+            }
+            if ActiveBrowser.shared.model == nil { ActiveBrowser.shared.model = Windows.shared.firstModel }
             // FILEMANAGER_SNAPSHOT_KEYS="Backspace,Opt+Left": posted through the event queue, so
             // they go through KeyMonitor like real key presses.
             for chord in (ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_KEYS"] ?? "")
@@ -32,17 +47,54 @@ import AppKit
                     clickMenu(String(chord.dropFirst(5)))
                 } else if chord.hasPrefix("type:") {
                     typeText(String(chord.dropFirst(5)))
+                } else if chord.hasPrefix("action:"), let action = Action(rawValue: String(chord.dropFirst(7))) {
+                    ActiveBrowser.shared.model?.perform(action)
+                    print("snapshot: performed \(action)")
+                } else if chord.hasPrefix("batch:"), let model = ActiveBrowser.shared.model {
+                    batchRename(String(chord.dropFirst(6)), model: model)
+                } else if chord.hasPrefix("scope:") {
+                    ActiveBrowser.shared.model?.searchScope = chord.hasSuffix("subfolders") ? .subfolders : .folder
                 } else {
                     postKey(String(chord))
                 }
                 try? await Task.sleep(for: .seconds(1))
             }
             capture(to: path)
+            if let model = ActiveBrowser.shared.model {
+                print("snapshot: list: \(model.items.map(\.name))")
+                print("snapshot: selected: \(model.selectedURLs.map(\.lastPathComponent))")
+            }
             print("snapshot: windows: \(NSApp.windows.filter(\.isVisible).map(\.title))")
             print("snapshot: tabs in key window: \(NSApp.keyWindow?.tabGroup?.windows.map(\.title) ?? []), key: \(NSApp.keyWindow?.title ?? "-")")
             printMenus()
+            // An open sheet stops the app from quitting.
+            if let window = ActiveBrowser.shared.model?.window, let sheet = window.attachedSheet {
+                window.endSheet(sheet)
+            }
             NSApp.terminate(nil)
+            // Still here: something (a SwiftUI sheet) stopped the quit.
+            exit(0)
         }
+    }
+
+    /// The key window, or (when the app couldn't become active) the browser window or its sheet.
+    private static var targetWindow: NSWindow? {
+        let browser = ActiveBrowser.shared.model?.window
+        return NSApp.keyWindow ?? browser?.attachedSheet ?? browser
+    }
+
+    private static func batchRename(_ spec: String, model: BrowserModel) {
+        let parts = spec.split(separator: ">", omittingEmptySubsequences: false).map(String.init)
+        var options = BatchRenameOptions()
+        options.find = parts[0]
+        options.replace = parts.count > 1 ? parts[1] : ""
+        let items = model.items.filter { model.selection.contains($0.url) }
+            .map { BatchRename.Item(url: $0.url, isFolder: $0.isFolder) }
+        let preview = BatchRename.preview(items, options: options) { folder in
+            Set((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
+        }
+        print("snapshot: batch rename \(preview.entries.map { "\($0.name) > \($0.newName)" }), can rename: \(preview.canRename)")
+        if preview.canRename { model.commitBatchRename(preview.entries) }
     }
 
     private static func postKey(_ spelling: String) {
@@ -106,7 +158,7 @@ import AppKit
 
     /// "type:Reports" types into whatever has focus (a rename field).
     private static func typeText(_ text: String) {
-        guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView else {
+        guard let editor = targetWindow?.firstResponder as? NSTextView else {
             print("snapshot: nothing to type into")
             return
         }
@@ -116,7 +168,7 @@ import AppKit
 
     private static func capture(to path: String) {
         // The key window, so a Get Info window that just opened is captured.
-        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
+        guard let window = targetWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
             let frameView = window.contentView?.superview
         else {
             print("snapshot: no window")

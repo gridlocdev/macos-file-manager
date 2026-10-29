@@ -3,7 +3,7 @@ import FileManagerCore
 
 /// Reads a folder off the main thread.
 enum DirectoryLoader {
-    private static let keys: [URLResourceKey] = [
+    static let keys: [URLResourceKey] = [
         .isDirectoryKey, .isPackageKey, .isHiddenKey, .isSymbolicLinkKey,
         .fileSizeKey, .contentModificationDateKey, .localizedTypeDescriptionKey,
     ]
@@ -20,7 +20,7 @@ enum DirectoryLoader {
         }.value
     }
 
-    private static func item(_ url: URL) -> FileItem {
+    static func item(_ url: URL) -> FileItem {
         let values = try? url.resourceValues(forKeys: Set(keys))
         var isFolder = (values?.isDirectory ?? false) && !(values?.isPackage ?? false)
         // A symlink to a folder opens like a folder.

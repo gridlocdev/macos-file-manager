@@ -89,6 +89,11 @@ final class Windows {
 
     func model(withID id: UUID) -> BrowserModel? { entries[id]?.model }
 
+    #if DEBUG
+    /// The first open window's model, for the snapshot hook when no window is key.
+    var firstModel: BrowserModel? { order.lazy.compactMap { self.entries[$0]?.model }.first }
+    #endif
+
     var hasClosedTabs: Bool { !closedTabs.isEmpty }
 
     func popClosedTab() -> String? { closedTabs.popLast() }

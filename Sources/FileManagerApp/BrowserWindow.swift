@@ -19,6 +19,10 @@ struct BrowserWindow: View {
                 .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 320)
         } detail: {
             VStack(spacing: 0) {
+                if model.isSearchOpen {
+                    SearchBar(model: model)
+                    Divider()
+                }
                 FileListView(model: model)
                     .overlay { emptyOrError }
                 StatusBar(model: model)
@@ -54,6 +58,9 @@ struct BrowserWindow: View {
             // The first window at launch reopens the rest of last session's windows and tabs.
             for other in Windows.shared.takeRestoreQueue() { openWindow(value: other) }
         }
+        .sheet(item: $model.batchRename) { request in
+            BatchRenameView(request: request, model: model)
+        }
         .onChange(of: model.openRequestCount) {
             for request in model.takeOpenRequests() { openWindow(value: request) }
         }
@@ -76,8 +83,8 @@ struct BrowserWindow: View {
     @ViewBuilder private var emptyOrError: some View {
         if let message = model.errorMessage {
             ContentUnavailableView("Can't Open Folder", systemImage: "lock", description: Text(message))
-        } else if model.items.isEmpty && !model.isLoading {
-            Text("This folder is empty").foregroundStyle(.secondary)
+        } else if model.items.isEmpty && !model.isLoading && !model.isSearching {
+            Text(model.isFiltering ? "No items match" : "This folder is empty").foregroundStyle(.secondary)
         }
     }
 }
@@ -88,7 +95,7 @@ struct StatusBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(summary)
-            if model.isLoading { ProgressView().controlSize(.small) }
+            if model.isLoading || model.isSearching { ProgressView().controlSize(.small) }
             Spacer()
             if model.showHiddenFiles { Text("Showing hidden files") }
         }
@@ -99,10 +106,17 @@ struct StatusBar: View {
         .background(.bar)
     }
 
-    /// "12 items, 3 selected (4.2 MB), 120 GB available", like Explorer's status bar.
+    /// "12 items, 3 selected (4.2 MB), 120 GB available", like Explorer's status bar. While
+    /// finding: "3 of 40 items" in the folder, "120 found" in subfolders.
     private var summary: String {
         let count = model.items.count
         var text = count == 1 ? "1 item" : "\(count) items"
+        if model.isSearchingSubfolders {
+            text = model.isSearching ? "Searching… \(count) found" : "\(count) found in subfolders"
+            if model.searchHitLimit { text += " (stopped at \(FolderSearch.limit))" }
+        } else if model.isFiltering {
+            text = "\(count) of \(model.folderItemCount) items"
+        }
         if !model.selection.isEmpty {
             text += ", \(model.selection.count) selected"
             let size = model.selectionSize

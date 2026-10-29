@@ -75,6 +75,13 @@ Dolphin's F4 opens a terminal panel inside the window. Here F4 opens the current
 separate terminal app: Terminal, iTerm, Ghostty or another app you choose in
 [Settings](Settings.md).
 
+### Find is Cmd+F, not F3
+
+In Explorer, F3 and Ctrl+E also start a search. Here search is **Cmd+F** only, and it filters
+the list as you type rather than opening a results page. F3 is kept for a split view, as in
+Dolphin (planned). Cmd+S selects by pattern, like Ctrl+S in Nautilus, since there's nothing to
+save. See [Searching and selecting](Searching-and-Selecting.md).
+
 ### No Alt+Home
 
 Home is **Shift+Cmd+H**, as in Finder. Shift+Cmd+D, Shift+Cmd+O, Opt+Cmd+L and Shift+Cmd+A go to
