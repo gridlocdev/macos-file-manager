@@ -5,6 +5,7 @@ import SwiftUI
 struct BrowserWindow: View {
     @State private var model = BrowserModel()
     @AppStorage(SettingsKey.foldersFirst) private var foldersFirst = true
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         NavigationSplitView {
@@ -44,6 +45,11 @@ struct BrowserWindow: View {
             model.focusList()
         }
         .onChange(of: foldersFirst) { model.sort.foldersFirst = foldersFirst }
+        .onChange(of: FileOperations.shared.showProgress) {
+            if FileOperations.shared.showProgress, ActiveBrowser.shared.model === model {
+                openWindow(id: OperationsWindow.id)
+            }
+        }
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .debugNavigate)) { note in
             if let url = note.object as? URL { model.navigate(to: url) }

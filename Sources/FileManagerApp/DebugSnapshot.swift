@@ -2,7 +2,8 @@
 import AppKit
 
 /// `FILEMANAGER_SNAPSHOT=out.png` (debug builds): after launch, draws the front window (toolbar
-/// included) into a PNG, prints the menu bar with its shortcuts, and quits. For checking the UI
+/// included) into a PNG, prints the menu bar with its shortcuts, and quits. Steps in
+/// FILEMANAGER_SNAPSHOT_KEYS: key chords ("Cmd+C"), "menu:Title" and "type:text". For checking the UI
 /// and for docs screenshots without screen-recording permission. See `just snapshot`.
 @MainActor enum DebugSnapshot {
     static func runIfRequested() {
@@ -20,17 +21,33 @@ import AppKit
             for chord in (ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_KEYS"] ?? "")
                 .split(separator: ",")
             {
-                postKey(String(chord))
+                // Keys can rename and trash: only ever press them inside the demo folder.
+                guard let start, let current = ActiveBrowser.shared.model?.url.path,
+                    current == start || current.hasPrefix(start + "/")
+                else {
+                    print("snapshot: not inside FILEMANAGER_SNAPSHOT_FOLDER, not pressing \(chord)")
+                    break
+                }
+                if chord.hasPrefix("menu:") {
+                    clickMenu(String(chord.dropFirst(5)))
+                } else if chord.hasPrefix("type:") {
+                    typeText(String(chord.dropFirst(5)))
+                } else {
+                    postKey(String(chord))
+                }
                 try? await Task.sleep(for: .seconds(1))
             }
             capture(to: path)
+            print("snapshot: windows: \(NSApp.windows.filter(\.isVisible).map(\.title))")
             printMenus()
             NSApp.terminate(nil)
         }
     }
 
     private static func postKey(_ spelling: String) {
-        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { return }
+        // The key window, so keys reach an alert sheet when one is up.
+        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil })
+        else { return }
         var parts = spelling.split(separator: "+").map(String.init)
         let keyName = parts.removeLast()
         var flags: NSEvent.ModifierFlags = []
@@ -44,13 +61,19 @@ import AppKit
             }
         }
         let codes: [String: UInt16] = [
-            "Backspace": 51, "Return": 36, "Up": 126, "Down": 125, "Left": 123, "Right": 124,
-            "F4": 118, "F5": 96, "F6": 97, "Tab": 48, "Esc": 53,
+            "Backspace": 51, "Delete": 117, "Return": 36, "Up": 126, "Down": 125, "Left": 123, "Right": 124,
+            "F2": 120, "F4": 118, "F5": 96, "F6": 97, "Tab": 48, "Esc": 53,
         ]
-        let chars = codes[keyName] == nil ? keyName.lowercased() : ""
-        // Letter keys: virtual key codes for the few the snapshot needs.
-        let letterCodes: [String: UInt16] = ["h": 4, "l": 37, "d": 2, "r": 15, "o": 31]
-        let code = codes[keyName] ?? letterCodes[chars] ?? 0
+        // US-layout virtual key codes, so characters(byApplyingModifiers:) works as for real keys.
+        let letterCodes: [String: UInt16] = [
+            "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7, "c": 8, "v": 9, "b": 11,
+            "q": 12, "w": 13, "e": 14, "r": 15, "y": 16, "t": 17, "o": 31, "u": 32, "i": 34, "p": 35,
+            "l": 37, "j": 38, "k": 40, "n": 45, "m": 46, ".": 47, "[": 33, "]": 30,
+        ]
+        let lower = codes[keyName] == nil ? keyName.lowercased() : ""
+        let code = codes[keyName] ?? letterCodes[lower] ?? 0
+        // Real Shift+letter events carry the capital letter; menus match on it.
+        let chars = flags.contains(.shift) ? lower.uppercased() : lower
         guard let event = NSEvent.keyEvent(
             with: .keyDown, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
             windowNumber: window.windowNumber, context: nil, characters: chars,
@@ -58,6 +81,35 @@ import AppKit
         else { return }
         NSApp.postEvent(event, atStart: false)
         print("snapshot: pressed \(spelling)")
+    }
+
+    /// "menu:New Folder" picks that menu item, as a click would (shifted synthetic key
+    /// events don't match menu shortcuts the way real ones do).
+    private static func clickMenu(_ title: String) {
+        func find(_ menu: NSMenu) -> (NSMenu, Int)? {
+            for (index, item) in menu.items.enumerated() {
+                if item.title == title { return (menu, index) }
+                if let sub = item.submenu, let found = find(sub) { return found }
+            }
+            return nil
+        }
+        guard let main = NSApp.mainMenu, let (menu, index) = find(main) else {
+            print("snapshot: no menu item \(title)")
+            return
+        }
+        menu.update()
+        menu.performActionForItem(at: index)
+        print("snapshot: chose \(title)")
+    }
+
+    /// "type:Reports" types into whatever has focus (a rename field).
+    private static func typeText(_ text: String) {
+        guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView else {
+            print("snapshot: nothing to type into")
+            return
+        }
+        editor.insertText(text, replacementRange: editor.selectedRange())
+        print("snapshot: typed \(text)")
     }
 
     private static func capture(to path: String) {

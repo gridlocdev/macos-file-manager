@@ -11,6 +11,12 @@ struct FileManagerApp: App {
         }
         .commands { AppCommands() }
 
+        Window("File Operations", id: OperationsWindow.id) {
+            OperationsWindow()
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.topTrailing)
+
         Settings {
             SettingsView()
         }

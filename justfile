@@ -38,6 +38,7 @@ install: (bundle "release")
 
 # Debug bundle: open a demo folder, press keys (e.g. "Backspace,Cmd+H"), save a PNG, print menus
 snapshot keys="" out="build/snapshot.png": (bundle "debug")
+    rm -rf build/snapshot-demo
     mkdir -p build/snapshot-demo/Projects build/snapshot-demo/Receipts build/snapshot-demo/.config
     printf 'hi\n' > build/snapshot-demo/notes.txt
     printf 'x\n' > build/snapshot-demo/file2.txt

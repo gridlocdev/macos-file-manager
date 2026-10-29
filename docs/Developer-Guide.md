@@ -43,11 +43,18 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   NavigationHistory.swift      back/forward stacks
   PathInput.swift              address bar: resolve typed paths, Tab completion, ~ display
   FileItem.swift               a listing row, and FileSort (folders first, natural names)
+  FileNaming.swift             Keep Both / Duplicate / New Folder names, name checks
+  FileStep.swift               FileStep (one change), ExecutedStep (what it did), FileUndo
+  TransferPlanner.swift        paste/duplicate planning: conflicts, folder merges; DiskFileTree
+  FileStepExecutor.swift       runs FileSteps with FileManager (Trash injectable for tests)
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
   AppCommands.swift            the menu bar, built from Action + Keymap
   BrowserWindow.swift          window layout: sidebar, toolbar, address bar, list, status bar
   BrowserModel.swift           one folder view: navigation, listing, selection, perform(Action)
+  FileOperations.swift         jobs with progress/cancel, conflict prompts, undo/redo, TrashLog
+  Clipboard.swift              files on the system clipboard; cut state
+  OperationsWindow.swift       the File Operations progress window
   DirectoryLoader.swift        background folder reads; DirectoryWatcher (live updates)
   FileListView.swift           the details list (NSTableView), icons, type-ahead
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
@@ -105,6 +112,37 @@ focus.) SwiftUI doesn't re-evaluate menu items when that model's properties chan
 
 `KeymapTests.noChordIsBoundTwice` catches clashes.
 
+## File operations
+
+Every change to files is a list of `FileStep`s (copy, move, create, trash, delete) run by
+`FileStepExecutor`, and nothing else touches the file system. That gives undo for free:
+
+1. The executor returns `ExecutedStep`s: what actually happened, including the name the Trash
+   chose.
+2. `FileUndo.inverse(of:)` turns those into the steps that reverse them (copies and new items go
+   to the Trash rather than being deleted). Permanent deletes have no inverse.
+3. Running an undo produces executed steps too, and their inverse is the redo.
+
+`FileOperations` (app target) wraps this: each run is a `FileJob` on a detached task with
+progress and Cancel, pushed onto one app-wide undo stack (like Explorer). It also writes
+`TrashLog` (`~/Library/Application Support/File Manager/trash-log.json`), which maps Trash paths
+to original paths for Put Back; macOS doesn't share Finder's own record.
+
+Paste and duplicate go through `TransferPlanner`, which is pure (it reads through the `FileTree`
+protocol): first `conflicts(…)` lists the clashes, the app asks about each (Replace / Keep Both /
+Skip / Stop, with "do this for the rest"), then `plan(…)` produces the steps. Folders with the
+same name merge; Replace trashes the existing item first; copying into the same folder
+duplicates. The planner tests use an in-memory `FakeTree`; the executor tests run in a temp
+folder with a fake Trash.
+
+Text editing wins over file actions: `AppCommands.run` sends Cut/Copy/Paste/Undo/Redo/Select All
+(and Cmd+Backspace as "delete to line start") to the text field when one is being edited, and
+ignores other file actions. `KeyMonitor` only lets Return, F2 and forward Delete act on files
+when the list (`FileTableView`) has focus.
+
+Rename edits the name cell in place (`FileListView.Coordinator.beginRename`). The list holds
+back reloads while the field is open, since a reload would throw the edit away.
+
 ## The file list
 
 `FileListView` wraps an `NSTableView`, because SwiftUI's `Table` takes Return and Backspace for
@@ -133,10 +171,15 @@ permission, so it's also how the docs screenshot is made:
 ```bash
 just snapshot                                    # build/snapshot.png of a demo folder
 just snapshot "Backspace,Opt+Left,Cmd+H" out.png # press keys first, then capture
+just snapshot "menu:New Folder,type:Reports,Return,Cmd+Z" out.png
 ```
 
-Keys go through the normal event queue, so they exercise `KeyMonitor` and the menu bar like real
-key presses. The app is launched with `open`, so it becomes the active app; Cmd shortcuts only
+Steps are key chords, `menu:<item title>` and `type:<text>`. Keys go through the normal event
+queue, so they exercise `KeyMonitor` and the menu bar like real key presses. Shifted Cmd
+shortcuts (Shift+Cmd+N) don't match menus when synthesized; use `menu:` for those. The demo
+folder (`build/snapshot-demo`) is recreated each run, and the hook refuses to press anything
+once the window has left it, so a test can't touch real files. Undoing a copy or a new folder
+moves it to the real Trash. The app is launched with `open`, so it becomes the active app; Cmd shortcuts only
 reach the menu bar of the active app.
 
 ## App icon

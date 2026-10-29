@@ -11,7 +11,7 @@ struct FileListView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let table = NSTableView()
+        let table = FileTableView()
         table.style = .inset
         table.allowsMultipleSelection = true
         table.allowsEmptySelection = true
@@ -58,6 +58,8 @@ struct FileListView: NSViewRepresentable {
         let reveal = model.revealAfterLoad
         let focusRequest = model.listFocusRequest
         let sort = model.sort
+        let renameRequest = model.renameRequest
+        let cut = Clipboard.shared.cutURLs
 
         let descriptor = NSSortDescriptor(key: sort.column.rawValue, ascending: sort.ascending)
         if table.sortDescriptors.first != descriptor {
@@ -65,8 +67,10 @@ struct FileListView: NSViewRepresentable {
             table.sortDescriptors = [descriptor]
             coordinator.isUpdating = false
         }
-        if version != coordinator.version {
+        // While a name is being edited a reload would throw the edit away; it catches up after.
+        if version != coordinator.version || cut != coordinator.cut, !coordinator.isRenaming {
             coordinator.version = version
+            coordinator.cut = cut
             coordinator.items = model.items
             coordinator.isUpdating = true
             table.reloadData()
@@ -82,16 +86,27 @@ struct FileListView: NSViewRepresentable {
             coordinator.focusRequest = focusRequest
             DispatchQueue.main.async { table.window?.makeFirstResponder(table) }
         }
+        if renameRequest != coordinator.renameRequest {
+            coordinator.renameRequest = renameRequest
+            if let target = model.renameTarget {
+                DispatchQueue.main.async { coordinator.beginRename(target) }
+            }
+        }
     }
 
     @MainActor
-    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
         let model: BrowserModel
         weak var table: NSTableView?
         var items: [FileItem] = []
         var version = -1
+        var cut: Set<URL> = []
         var focusRequest = 0
+        var renameRequest = 0
         var isUpdating = false
+        /// The item being renamed and its text field.
+        private var renaming: (url: URL, field: NSTextField, original: String)?
+        var isRenaming: Bool { renaming != nil }
         private let icons = IconCache()
 
         init(model: BrowserModel) { self.model = model }
@@ -113,7 +128,8 @@ struct FileListView: NSViewRepresentable {
             let item = items[row]
             let cell = tableView.makeView(withIdentifier: tableColumn.identifier, owner: nil) as? FileCell
                 ?? FileCell(identifier: tableColumn.identifier, withIcon: column == .name)
-            cell.alphaValue = item.isHidden ? 0.55 : 1
+            // Hidden files and cut items are dimmed, as in Explorer.
+            cell.alphaValue = cut.contains(item.url) ? 0.45 : item.isHidden ? 0.55 : 1
             switch column {
             case .name:
                 cell.textField?.stringValue = item.name
@@ -152,6 +168,64 @@ struct FileListView: NSViewRepresentable {
             tableColumn?.identifier.rawValue == FileSort.Column.name.rawValue ? items[row].name : nil
         }
 
+        // MARK: Rename
+
+        /// Edits the name in place, with the name selected without its extension.
+        func beginRename(_ url: URL) {
+            guard let table, renaming == nil,
+                let row = items.firstIndex(where: { $0.url == url }),
+                let column = table.tableColumns.firstIndex(where: { $0.identifier.rawValue == FileSort.Column.name.rawValue }),
+                let cell = table.view(atColumn: column, row: row, makeIfNecessary: true) as? NSTableCellView,
+                let field = cell.textField
+            else { return }
+            table.scrollRowToVisible(row)
+            table.selectRowIndexes([row], byExtendingSelection: false)
+            let name = url.lastPathComponent
+            renaming = (url, field, field.stringValue)
+            // Edit the real file name, even if the list hides the extension.
+            field.stringValue = name
+            field.isEditable = true
+            field.delegate = self
+            table.window?.makeFirstResponder(field)
+            let length = FileNaming.baseLength(of: name, isFolder: items[row].isFolder)
+            field.currentEditor()?.selectedRange = NSRange(location: 0, length: length)
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            guard selector == #selector(NSResponder.cancelOperation(_:)), let renaming else { return false }
+            // Esc: put the name back and stop editing without renaming.
+            self.renaming = nil
+            renaming.field.abortEditing()
+            finishEditing(renaming.field, restoring: renaming.original)
+            return true
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard let renaming, let field = notification.object as? NSTextField, field === renaming.field else { return }
+            self.renaming = nil
+            let newName = field.stringValue
+            finishEditing(field, restoring: renaming.original)
+            model.commitRename(renaming.url, to: newName)
+        }
+
+        private func finishEditing(_ field: NSTextField, restoring original: String) {
+            field.isEditable = false
+            field.delegate = nil
+            field.stringValue = original
+            guard let table else { return }
+            // Catch up on any listing changes held back while editing.
+            if version != model.listingVersion || cut != Clipboard.shared.cutURLs {
+                version = model.listingVersion
+                cut = Clipboard.shared.cutURLs
+                items = model.items
+                isUpdating = true
+                table.reloadData()
+                isUpdating = false
+                applySelection(model.selection)
+            }
+            table.window?.makeFirstResponder(table)
+        }
+
         @objc func doubleClicked(_ sender: NSTableView) {
             let row = sender.clickedRow
             guard row >= 0, row < items.count else { return }
@@ -163,6 +237,10 @@ struct FileListView: NSViewRepresentable {
         }
     }
 }
+
+/// The file list's table. `KeyMonitor` checks for it: Return renames and Delete trashes only
+/// while the list has focus.
+final class FileTableView: NSTableView {}
 
 private final class FileCell: NSTableCellView {
     init(identifier: NSUserInterfaceItemIdentifier, withIcon: Bool) {

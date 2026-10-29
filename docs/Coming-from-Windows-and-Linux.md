@@ -17,6 +17,13 @@ different, and why.
 - **F4** opens a terminal in the current folder, like Dolphin.
 - **Ctrl+H** shows hidden files (here Cmd+H), as in Nautilus and Dolphin.
 - Going up a folder selects the folder you came from, as Explorer does.
+- **Cut and paste moves files** (Cmd+X, Cmd+V). Finder can't do that.
+- Pasting a folder onto one with the same name **merges** them, and clashing files offer
+  Replace, Keep Both or Skip. Finder would replace the whole folder.
+- **F2** renames, **Ctrl+Shift+N** (here Shift+Cmd+N) makes a new folder, duplicates are named
+  `name - Copy`, and **Shift+Delete** deletes without the Trash (after asking).
+- One undo history for the whole app, like Explorer's: Cmd+Z undoes copies, moves, renames,
+  new folders and trashing.
 - Folders are listed before files, and names with numbers sort by value (`file2` before
   `file10`).
 
@@ -30,9 +37,21 @@ where every other Mac app expects them, and Ctrl+arrow keys belong to macOS (swi
 
 ### Return renames, it doesn't open
 
-On a Mac, Return renames the selected file, and File Manager keeps that. To open, use **Cmd+O**,
-**Cmd+Down** or **Cmd+Return**, or double-click. (Renaming arrives with file operations; until
-then Return does nothing in the list.)
+On a Mac, Return renames the selected file, and File Manager keeps that (F2 works too). To open,
+use **Cmd+O**, **Cmd+Down** or **Cmd+Return**, or double-click.
+
+### Which key deletes
+
+Mac keyboards label Backspace as *delete* (⌫). Here, as in Explorer and Linux, **Backspace goes
+up a folder**, so it can't also be the delete key. To move items to the Trash, press
+**Cmd+Backspace** (the Finder shortcut) or **forward Delete** (⌦; **fn+delete** on a MacBook),
+which is where Delete sits on a PC keyboard. **Shift+Delete** deletes immediately, after asking.
+
+### Put Back only for items File Manager trashed
+
+Explorer's Recycle Bin can restore anything. macOS keeps that information private to Finder, so
+File Manager can only put back items it moved to the Trash itself. See
+[Copying and moving files](Copying-and-Moving-Files.md#the-trash-and-put-back).
 
 ### Cmd+H shows hidden files instead of hiding the app
 

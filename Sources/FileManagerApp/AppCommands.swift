@@ -18,7 +18,31 @@ struct AppCommands: Commands {
 
         CommandGroup(after: .newItem) {
             Divider()
+            button(.newFolder)
+            button(.newTextFile)
+            Divider()
             button(.open)
+            button(.rename)
+            button(.duplicate)
+            Divider()
+            button(.moveToTrash)
+            button(.deleteImmediately)
+            button(.putBack)
+        }
+
+        // Edit acts on files in the list and on text while typing (address bar, rename).
+        CommandGroup(replacing: .undoRedo) {
+            button(.undo)
+            button(.redo)
+        }
+        CommandGroup(replacing: .pasteboard) {
+            button(.cut)
+            button(.copy)
+            button(.paste)
+            button(.pasteMove)
+            Divider()
+            button(.copyPath)
+            button(.selectAll)
         }
 
         CommandGroup(before: .sidebar) {
@@ -44,6 +68,7 @@ struct AppCommands: Commands {
             button(.goDocuments)
             button(.goDownloads)
             button(.goApplications)
+            button(.goTrash)
             Divider()
             button(.focusAddressBar)
             button(.openTerminal)
@@ -58,10 +83,25 @@ struct AppCommands: Commands {
     /// Always enabled: SwiftUI doesn't re-evaluate menu items when the key window's model
     /// changes, and a stale disabled item swallows its shortcut. `perform` beeps instead.
     private func button(_ action: Action) -> some View {
-        Button(action.title) {
-            if let browser { browser.perform(action) } else { NSSound.beep() }
+        Button(action.title) { run(action) }
+            .keyboardShortcut(keymap.menuChord(for: action)?.keyboardShortcut)
+    }
+
+    /// Menu shortcuts reach here even while text is being edited (menus see keys first), so
+    /// Cmd+C in the address bar must copy text, not files, and Cmd+Backspace must not trash.
+    private func run(_ action: Action) {
+        let keyWindow = NSApp.keyWindow
+        let editingText = keyWindow?.firstResponder is NSText
+        let inBrowser = keyWindow != nil && keyWindow === browser?.window
+        if action.actsOnFiles, editingText || !inBrowser {
+            if let selector = action.textSelector {
+                NSApp.sendAction(Selector(selector), to: nil, from: nil)
+            } else if editingText {
+                NSSound.beep()
+            }
+            return
         }
-        .keyboardShortcut(keymap.menuChord(for: action)?.keyboardShortcut)
+        if let browser { browser.perform(action) } else { NSSound.beep() }
     }
 
     /// The docs ship inside the .app; when running from the build folder, use the repo's.

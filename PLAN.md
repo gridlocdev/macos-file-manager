@@ -23,7 +23,7 @@ Foundations everything else builds on (all in M1–M2):
 - Pure logic testable w/o I/O: keymap, history, path parsing/autocomplete, conflict naming, folder-merge planning, sort/group, pattern match, batch-rename preview.
 
 ## Milestones
-Status: M1 done (2026-10-29).
+Status: M1, M2 done (2026-10-29).
 
 Ordered by how essential to everyday file management, then by what later features need.
 

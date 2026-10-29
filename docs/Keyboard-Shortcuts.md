@@ -4,9 +4,10 @@ Every shortcut File Manager has. Where there's more than one, they all work; the
 the first one with Cmd in it. The last column is what you'd press in Windows Explorer or a Linux
 file manager (Nautilus, Dolphin) for the same thing.
 
-On a Mac keyboard, **Opt** is the Option (⌥) key, which sits where Alt is on a PC keyboard, and
-**Backspace** is the key labelled *delete* (⌫). On a MacBook, the F keys may need the **fn** key
-held down, depending on System Settings → Keyboard.
+On a Mac keyboard, **Opt** is the Option (⌥) key, which sits where Alt is on a PC keyboard.
+**Backspace** is the key labelled *delete* (⌫), and **Delete** is forward delete (⌦), which is
+**fn+delete** on a MacBook. The F keys may need **fn** held down too, depending on System
+Settings → Keyboard.
 
 ## Opening and moving around
 
@@ -30,15 +31,41 @@ held down, depending on System Settings → Keyboard.
 | Documents | Shift+Cmd+O | |
 | Downloads | Opt+Cmd+L | |
 | Applications | Shift+Cmd+A | |
+| Trash | Go menu | Recycle Bin |
+
+## Working with files
+
+| Action | Keys | Windows / Linux |
+|---|---|---|
+| New Folder | Shift+Cmd+N | Ctrl+Shift+N |
+| New Text File | Opt+Cmd+N | New → Text Document |
+| Rename | Return, F2 | F2 |
+| Duplicate | Cmd+D | Ctrl+C then Ctrl+V |
+| Cut | Cmd+X | Ctrl+X |
+| Copy | Cmd+C | Ctrl+C |
+| Paste | Cmd+V | Ctrl+V |
+| Move Items Here | Opt+Cmd+V | |
+| Copy Path | Shift+Cmd+C, Opt+Cmd+C | Ctrl+Shift+C (Windows 11) |
+| Move to Trash | Cmd+Backspace, Delete | Delete |
+| Delete Immediately… | Opt+Cmd+Backspace, Shift+Delete | Shift+Delete |
+| Put Back | File menu, in the Trash | Restore, in the Recycle Bin |
+| Undo | Cmd+Z | Ctrl+Z |
+| Redo | Shift+Cmd+Z | Ctrl+Y, Ctrl+Shift+Z |
 
 ## In the file list
 
 | Action | Keys | Windows / Linux |
 |---|---|---|
-| Select all | Cmd+A | Ctrl+A |
+| Select All | Cmd+A | Ctrl+A |
 | Select by typing | type the start of a name | same |
 | Show Hidden Files | Cmd+H, Shift+Cmd+. | Ctrl+H (Linux) |
 | Open Terminal Here | Opt+Cmd+T, F4 | F4 (Dolphin), Ctrl+Alt+T |
+
+Return, F2, Delete and Shift+Delete only act on files while the file list has the keyboard
+focus, so pressing Return in the sidebar doesn't rename anything.
+
+While you're typing in the address bar or renaming, Cmd+X, Cmd+C, Cmd+V, Cmd+A, Cmd+Z and
+Cmd+Backspace work on the text instead of on files.
 
 ## In the address bar
 
@@ -46,6 +73,13 @@ held down, depending on System Settings → Keyboard.
 |---|---|
 | Go to the typed path | Return |
 | Complete a folder name | Tab |
+| Cancel | Esc |
+
+## While renaming
+
+| Action | Keys |
+|---|---|
+| Save the new name | Return, or click elsewhere |
 | Cancel | Esc |
 
 ## Window

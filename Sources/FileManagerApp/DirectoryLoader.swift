@@ -30,7 +30,7 @@ enum DirectoryLoader {
             isFolder = (targetValues?.isDirectory ?? false) && !(targetValues?.isPackage ?? false)
         }
         return FileItem(
-            url: url,
+            url: url.normalized,
             name: FileManager.default.displayName(atPath: url.path),
             isFolder: isFolder,
             isHidden: values?.isHidden ?? url.lastPathComponent.hasPrefix("."),
@@ -77,4 +77,10 @@ final class DirectoryWatcher: @unchecked Sendable {
             action()
         }
     }
+}
+
+extension URL {
+    /// The same file URL without a trailing "/", so a folder compares equal however its URL
+    /// was made (listings add the slash, appendingPathComponent may not). Selection relies on it.
+    var normalized: URL { URL(filePath: path, directoryHint: .notDirectory) }
 }

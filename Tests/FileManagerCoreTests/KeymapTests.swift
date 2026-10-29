@@ -10,10 +10,27 @@ import Testing
         #expect(keymap.conflicts.isEmpty, "\(keymap.conflicts)")
     }
 
-    @Test func everyActionHasAShortcut() {
-        for action in Action.allCases {
+    /// Put Back and Trash are menu-only, as in Finder.
+    @Test func everyOtherActionHasAShortcut() {
+        for action in Action.allCases where ![.putBack, .goTrash].contains(action) {
             #expect(!keymap.chords(for: action).isEmpty, "\(action) has no shortcut")
         }
+    }
+
+    @Test func fileShortcuts() {
+        #expect(keymap.action(for: KeyChord(.returnKey)) == .rename)
+        #expect(keymap.action(for: KeyChord(.function(2))) == .rename)
+        #expect(keymap.action(for: KeyChord(.forwardDelete)) == .moveToTrash)
+        #expect(keymap.menuChord(for: .moveToTrash) == KeyChord(.delete, .command))
+        #expect(keymap.action(for: KeyChord(.forwardDelete, .shift)) == .deleteImmediately)
+        #expect(keymap.action(for: .char("v", [.command, .option])) == .pasteMove)
+    }
+
+    @Test func textEditingFallbacks() {
+        #expect(Action.copy.textSelector == "copy:")
+        #expect(Action.moveToTrash.textSelector == "deleteToBeginningOfLine:")
+        #expect(Action.duplicate.actsOnFiles && Action.duplicate.textSelector == nil)
+        #expect(!Action.goBack.actsOnFiles)
     }
 
     @Test func looksUpExplorerAndLinuxKeys() {
@@ -24,7 +41,6 @@ import Testing
         #expect(keymap.action(for: KeyChord(.function(5))) == .refresh)
         #expect(keymap.action(for: .char("h", .command)) == .toggleHiddenFiles)
         #expect(keymap.action(for: KeyChord(.returnKey, .command)) == .open)
-        #expect(keymap.action(for: KeyChord(.returnKey)) == nil, "Return is reserved for rename")
     }
 
     @Test func menuShowsTheFirstCommandChord() {

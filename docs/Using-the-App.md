@@ -58,7 +58,7 @@ updates when you connect or eject one. Click an item to open it.
 
 - **Open** a folder or file by double-clicking it, or select it and press Cmd+O, Cmd+Down or
   Cmd+Return. Folders open in the same window; files open in their default app. Return doesn't
-  open: it's kept for renaming, as in Finder.
+  open: it renames, as in Finder.
 - **Select** with the arrow keys, Shift for a range, Cmd+click to add or remove one item, and
   Cmd+A for everything.
 - **Type a name** to jump to it: typing `rec` selects the first item starting with "rec".
@@ -73,6 +73,14 @@ status bar says when they're shown.
 The list updates by itself when files are added, removed or renamed in the folder. **F5** or
 **Cmd+R** refreshes it by hand.
 
+## Working with files
+
+The File and Edit menus have everything for changing files: **New Folder**, **New Text File**,
+**Rename** (Return or F2), **Duplicate**, **Cut**, **Copy**, **Paste**, **Copy Path**,
+**Move to Trash** (Cmd+Backspace or Delete), **Delete Immediately…** and **Put Back**, and
+**Undo** for all of them. [Copying and moving files](Copying-and-Moving-Files.md) explains each
+one, what happens when names clash, and how folders merge.
+
 ## Moving around with the keyboard
 
 **F6** moves the keyboard focus between the sidebar, the address bar and the file list, like F6
@@ -84,4 +92,4 @@ in Explorer; **Shift+F6** goes the other way. Tab works too, as in any Mac windo
 It's Terminal unless you pick another one in [Settings](Settings.md).
 
 ---
-Next: [Keyboard shortcuts](Keyboard-Shortcuts.md)
+Next: [Copying and moving files](Copying-and-Moving-Files.md)

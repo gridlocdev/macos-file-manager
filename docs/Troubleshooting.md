@@ -20,6 +20,27 @@ On a MacBook, hold **fn**, or switch the top row to standard function keys. See
 [Coming from Windows and Linux](Coming-from-Windows-and-Linux.md#function-keys-on-a-macbook).
 Every one also has a Cmd shortcut: Opt+Cmd+T, Cmd+R, and Tab.
 
+**Go → Trash says it needs Full Disk Access.**
+macOS only lets apps look inside the Trash with Full Disk Access. Turn it on for File Manager
+in System Settings → Privacy & Security → Full Disk Access, or use Finder for the Trash.
+
+**Put Back says it can't put an item back.**
+It only knows where items came from if File Manager moved them to the Trash. Use Put Back in
+Finder for the others.
+
+**Move to Trash failed on a network drive or USB stick.**
+Some drives have no Trash. Use **Delete Immediately…** (Opt+Cmd+Backspace) instead, which
+deletes for good after asking.
+
+**Cmd+Z didn't undo what I expected.**
+There's one undo history for the whole app, so it undoes the most recent change in any window.
+While you're typing in the address bar or renaming, Cmd+Z undoes typing instead.
+
+**Delete doesn't trash anything.**
+The key labelled *delete* on a Mac is Backspace, which goes up a folder. Use Cmd+Backspace, or
+forward Delete (fn+delete on a MacBook). Forward Delete only works while the file list has the
+focus.
+
 **Cmd+H showed hidden files instead of hiding the app.**
 That's on purpose. Use File Manager → Hide File Manager, or click another app.
 

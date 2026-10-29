@@ -22,11 +22,14 @@ rename.
   names.
 - **A details list that behaves.** Folders first, natural number sorting (`file2` before
   `file10`), type-ahead, resizable columns, and live updates when files change.
+- **Cut and paste that moves files**, folder merging like Explorer, Replace / Keep Both / Skip
+  when names clash, F2 to rename, and one undo history for everything (copies, moves, renames,
+  new folders, trashing).
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-More is planned (cut and paste that really moves files, drag and drop, tabs, search, Quick Look);
-see [PLAN.md](PLAN.md).
+More is planned (drag and drop, a right-click menu, tabs, search, Quick Look); see
+[PLAN.md](PLAN.md).
 
 ## Requirements
 
@@ -51,6 +54,7 @@ That puts **File Manager.app** in `~/Applications` and opens it. The
 - [What are all the keyboard shortcuts?](docs/Keyboard-Shortcuts.md)
 - [Why does Return rename instead of open?](docs/Coming-from-Windows-and-Linux.md#return-renames-it-doesnt-open)
 - [How do I type a path, and what does Tab do?](docs/Using-the-App.md#typing-a-path)
+- [What happens when I paste a folder onto one with the same name?](docs/Copying-and-Moving-Files.md#folders-merge)
 - [A folder says "Can't Open Folder"](docs/Troubleshooting.md)
 
 ## For developers
