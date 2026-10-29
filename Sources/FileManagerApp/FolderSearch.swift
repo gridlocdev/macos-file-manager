@@ -14,6 +14,7 @@ final class FolderSearch {
     private let root: URL
     private let criteria: SearchCriteria
     private let showHidden: Bool
+    private let showAllExtensions: Bool
     private let onResults: ([FileItem]) -> Void
     private let onFinish: () -> Void
     private var seen: Set<String> = []
@@ -23,12 +24,13 @@ final class FolderSearch {
     private var running = 0
 
     init(
-        root: URL, criteria: SearchCriteria, showHidden: Bool,
+        root: URL, criteria: SearchCriteria, showHidden: Bool, showAllExtensions: Bool,
         onResults: @escaping ([FileItem]) -> Void, onFinish: @escaping () -> Void
     ) {
         self.root = root
         self.criteria = criteria
         self.showHidden = showHidden
+        self.showAllExtensions = showAllExtensions
         self.onResults = onResults
         self.onFinish = onFinish
     }
@@ -74,11 +76,13 @@ final class FolderSearch {
 
     private func startWalk() {
         running += 1
-        let root = root, criteria = criteria, showHidden = showHidden
+        let root = root, criteria = criteria, showHidden = showHidden, showAllExtensions = showAllExtensions
         tasks.append(Task {
             let batches = AsyncStream<[FileItem]> { continuation in
                 let walker = Task.detached(priority: .userInitiated) {
-                    Self.walk(root, criteria: criteria, showHidden: showHidden) { continuation.yield($0) }
+                    Self.walk(root, criteria: criteria, showHidden: showHidden, showAllExtensions: showAllExtensions) {
+                        continuation.yield($0)
+                    }
                     continuation.finish()
                 }
                 continuation.onTermination = { _ in walker.cancel() }
@@ -89,7 +93,7 @@ final class FolderSearch {
     }
 
     private nonisolated static func walk(
-        _ root: URL, criteria: SearchCriteria, showHidden: Bool, send: ([FileItem]) -> Void
+        _ root: URL, criteria: SearchCriteria, showHidden: Bool, showAllExtensions: Bool, send: ([FileItem]) -> Void
     ) {
         var options: FileManager.DirectoryEnumerationOptions = [.skipsPackageDescendants]
         if !showHidden { options.insert(.skipsHiddenFiles) }
@@ -101,7 +105,7 @@ final class FolderSearch {
         let now = Date()
         while let url = enumerator.nextObject() as? URL {
             if Task.isCancelled { return }
-            let item = DirectoryLoader.item(url)
+            let item = DirectoryLoader.item(url, showAllExtensions: showAllExtensions)
             if criteria.matches(item, now: now) { batch.append(item) }
             if !batch.isEmpty, batch.count >= 200 || Date().timeIntervalSince(lastSend) > 0.25 {
                 send(batch)
@@ -145,10 +149,12 @@ final class FolderSearch {
             }
         }
         stopSpotlight()
-        let root = root, criteria = criteria, showHidden = showHidden, found = paths
+        let root = root, criteria = criteria, showHidden = showHidden, showAllExtensions = showAllExtensions
+        let found = paths
         tasks.append(Task {
             let items = await Task.detached(priority: .userInitiated) {
-                Self.spotlightItems(found, root: root, criteria: criteria, showHidden: showHidden)
+                Self.spotlightItems(
+                    found, root: root, criteria: criteria, showHidden: showHidden, showAllExtensions: showAllExtensions)
             }.value
             if !Task.isCancelled { deliver(items) }
             finishedOne()
@@ -158,7 +164,7 @@ final class FolderSearch {
     /// Spotlight also reports items inside packages (an app's contents) and, with hidden files
     /// off, should match what the walk would find, so those are dropped.
     private nonisolated static func spotlightItems(
-        _ paths: [String], root: URL, criteria: SearchCriteria, showHidden: Bool
+        _ paths: [String], root: URL, criteria: SearchCriteria, showHidden: Bool, showAllExtensions: Bool
     ) -> [FileItem] {
         let rootPath = root.path == "/" ? "" : root.path
         var isPackage: [String: Bool] = [:]
@@ -177,7 +183,7 @@ final class FolderSearch {
                 isPackage[folder] = package
                 if package { return nil }
             }
-            let item = DirectoryLoader.item(URL(filePath: path))
+            let item = DirectoryLoader.item(URL(filePath: path), showAllExtensions: showAllExtensions)
             if !showHidden, item.isHidden { return nil }
             return criteria.matches(item, now: now) ? item : nil
         }

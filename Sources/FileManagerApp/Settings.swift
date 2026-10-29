@@ -20,6 +20,33 @@ enum SettingsKey {
     }
 }
 
+/// The Settings window's choices, typed, for code that isn't a view (views use `@AppStorage`
+/// with the same `SettingsKey`s). Reads `defaults` each time, so changes apply at once.
+struct Preferences {
+    var defaults: UserDefaults = .standard
+
+    static var standard: Preferences { Preferences() }
+
+    var showAllExtensions: Bool { defaults.bool(forKey: SettingsKey.showAllExtensions) }
+    var singleClickOpen: Bool { defaults.bool(forKey: SettingsKey.singleClickOpen) }
+    var confirmTrash: Bool { defaults.bool(forKey: SettingsKey.confirmTrash) }
+    /// On unless turned off, even before the defaults are registered.
+    var reopenSession: Bool { defaults.object(forKey: SettingsKey.reopenSession) as? Bool ?? true }
+
+    var showPreviewPane: Bool {
+        get { defaults.bool(forKey: SettingsKey.showPreviewPane) }
+        nonmutating set { defaults.set(newValue, forKey: SettingsKey.showPreviewPane) }
+    }
+
+    var startFolder: StartFolder { StartFolder(rawValue: defaults.string(forKey: SettingsKey.startFolder) ?? "") ?? .home }
+    var customStartPath: String? { defaults.string(forKey: SettingsKey.customStartPath) }
+
+    var terminal: TerminalChoice {
+        TerminalChoice(rawValue: defaults.string(forKey: SettingsKey.terminal) ?? "") ?? .terminal
+    }
+    var customTerminalPath: String? { defaults.string(forKey: SettingsKey.customTerminalPath) }
+}
+
 /// Where new windows open when there's nothing else to go on (first launch, or reopening
 /// windows is off).
 enum StartFolder: String, CaseIterable, Identifiable {
@@ -37,19 +64,18 @@ enum StartFolder: String, CaseIterable, Identifiable {
         }
     }
 
-    static var url: URL {
+    static func url(_ preferences: Preferences = .standard) -> URL {
         // Snapshot runs start in their demo folder, never reading Home.
         if let demo = Windows.snapshotFolder { return URL(filePath: demo) }
-        let defaults = UserDefaults.standard
         let home = FileManager.default.homeDirectoryForCurrentUser
-        switch StartFolder(rawValue: defaults.string(forKey: SettingsKey.startFolder) ?? "") ?? .home {
+        switch preferences.startFolder {
         case .home: return home
         case .desktop: return home.appendingPathComponent("Desktop")
         case .documents: return home.appendingPathComponent("Documents")
         case .downloads: return home.appendingPathComponent("Downloads")
         case .custom:
             // A folder that's gone (an unplugged disk) falls back to Home.
-            guard let path = defaults.string(forKey: SettingsKey.customStartPath),
+            guard let path = preferences.customStartPath,
                 FileManager.default.fileExists(atPath: path)
             else { return home }
             return URL(filePath: path)
@@ -84,12 +110,11 @@ enum TerminalChoice: String, CaseIterable, Identifiable {
 /// Open Terminal Here: hands the folder to the terminal app chosen in Settings.
 @MainActor enum TerminalLauncher {
     static func appURL() -> URL? {
-        let defaults = UserDefaults.standard
-        let choice = TerminalChoice(rawValue: defaults.string(forKey: SettingsKey.terminal) ?? "") ?? .terminal
-        if let bundleID = choice.bundleID {
+        let preferences = Preferences.standard
+        if let bundleID = preferences.terminal.bundleID {
             return NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
         }
-        return defaults.string(forKey: SettingsKey.customTerminalPath).map { URL(fileURLWithPath: $0) }
+        return preferences.customTerminalPath.map { URL(fileURLWithPath: $0) }
     }
 
     static func open(_ folder: URL) {

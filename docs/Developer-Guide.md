@@ -97,7 +97,8 @@ Sources/FileManagerApp/        the app
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
                                ActiveBrowser (the key window's model, for the menu bar)
   DebugSnapshot.swift          debug-only: capture the window, print menus (just snapshot)
-  Settings.swift               settings keys, Settings window, Open Terminal Here
+  Settings.swift               settings keys, Preferences (typed reads for non-view code),
+                               Settings window, Open Terminal Here
 Tests/FileManagerCoreTests/    Swift Testing tests, including the docs check below
 Resources/Info.plist           bundle info; also embedded in the executable
 Resources/AppIcon.icns         app icon, generated from assets/icon.svg

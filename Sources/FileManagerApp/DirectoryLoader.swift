@@ -11,19 +11,20 @@ enum DirectoryLoader {
         .ubiquitousItemIsUploadingKey,
     ]
 
-    static func list(_ folder: URL) async -> Result<[FileItem], Error> {
+    /// `showAllExtensions`: the Settings choice (see `name`).
+    static func list(_ folder: URL, showAllExtensions: Bool) async -> Result<[FileItem], Error> {
         await Task.detached(priority: .userInitiated) {
             do {
                 let urls = try FileManager.default.contentsOfDirectory(
                     at: folder, includingPropertiesForKeys: keys, options: [])
-                return .success(urls.map(item))
+                return .success(urls.map { item($0, showAllExtensions: showAllExtensions) })
             } catch {
                 return .failure(error)
             }
         }.value
     }
 
-    static func item(_ url: URL) -> FileItem {
+    static func item(_ url: URL, showAllExtensions: Bool) -> FileItem {
         let values = try? url.resourceValues(forKeys: Set(keys))
         var isFolder = (values?.isDirectory ?? false) && !(values?.isPackage ?? false)
         // A symlink to a folder opens like a folder.
@@ -39,7 +40,7 @@ enum DirectoryLoader {
         }
         var item = FileItem(
             url: url.normalized,
-            name: name(url, isFolder: isFolder),
+            name: name(url, isFolder: isFolder, showAllExtensions: showAllExtensions),
             isFolder: isFolder,
             isHidden: values?.isHidden ?? url.lastPathComponent.hasPrefix("."),
             size: isFolder ? nil : values?.fileSize.map(Int64.init),
@@ -66,9 +67,9 @@ enum DirectoryLoader {
 
     /// With "Show all file extensions" on (the default), the real name ("notes.txt"); apps
     /// still drop ".app", as everywhere on a Mac. Off, Finder's choice for each file.
-    private static func name(_ url: URL, isFolder: Bool) -> String {
+    private static func name(_ url: URL, isFolder: Bool, showAllExtensions: Bool) -> String {
         let display = FileManager.default.displayName(atPath: url.path)
-        guard UserDefaults.standard.bool(forKey: SettingsKey.showAllExtensions), !isFolder,
+        guard showAllExtensions, !isFolder,
             url.pathExtension.lowercased() != "app", !url.pathExtension.isEmpty
         else { return display }
         return url.lastPathComponent

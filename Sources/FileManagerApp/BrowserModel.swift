@@ -88,14 +88,18 @@ final class BrowserModel {
     ) {
         self.id = id
         self.services = services
-        let start = (start ?? StartFolder.url).standardizedFileURL
+        let start = (start ?? StartFolder.url(services.preferences)).standardizedFileURL
         url = start
         history = NavigationHistory(start: start)
         addressText = PathInput.display(start, home: home)
         let controls = WindowControls()
         self.controls = controls
         self.presenter = presenter ?? AlertPresenter(controls: controls, operations: services.operations)
-        search.context = { [weak self] in (self?.url ?? start, self?.showHiddenFiles ?? false) }
+        search.context = { [weak self] in
+            SearchSession.Context(
+                root: self?.url ?? start, showHidden: self?.showHiddenFiles ?? false,
+                showAllExtensions: services.preferences.showAllExtensions)
+        }
         search.onUpdate = { [weak self] found in self?.searchUpdated(found) }
     }
 
@@ -288,9 +292,7 @@ final class BrowserModel {
         case .zoomIn: if !view.zoom(in: true) { presenter.beep() }
         case .zoomOut: if !view.zoom(in: false) { presenter.beep() }
         case .actualSize: view.resetZoom()
-        case .togglePreviewPane:
-            let defaults = UserDefaults.standard
-            defaults.set(!defaults.bool(forKey: SettingsKey.showPreviewPane), forKey: SettingsKey.showPreviewPane)
+        case .togglePreviewPane: services.preferences.showPreviewPane.toggle()
         case .openTerminal: TerminalLauncher.open(url)
         case .goTrash: navigate(to: home.appendingPathComponent(".Trash"))
         case .selectAll: selection = Set(items.map(\.url))
@@ -453,7 +455,7 @@ final class BrowserModel {
 
     private func moveToTrash() {
         let targets = selectedURLs
-        if UserDefaults.standard.bool(forKey: SettingsKey.confirmTrash) {
+        if services.preferences.confirmTrash {
             let title =
                 targets.count == 1
                 ? "Move “\(targets[0].lastPathComponent)” to the Trash?" : "Move \(targets.count) items to the Trash?"
@@ -513,7 +515,7 @@ final class BrowserModel {
     // MARK: Loading
 
     private func load(keepSelection: Bool = false) {
-        listing.load(url, changed: { [weak self] in self?.refresh() }) { [weak self] in
+        listing.load(url, showAllExtensions: services.preferences.showAllExtensions, changed: { [weak self] in self?.refresh() }) { [weak self] in
             self?.listed(keepSelection: keepSelection)
         }
     }

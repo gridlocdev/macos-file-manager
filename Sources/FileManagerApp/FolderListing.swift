@@ -20,13 +20,16 @@ final class FolderListing {
 
     /// Reads `folder`, replacing any load still running, then calls `loaded`. `changed` is called
     /// whenever the folder changes on disk afterwards.
-    func load(_ folder: URL, changed: @escaping @MainActor () -> Void, loaded: @escaping @MainActor () -> Void) {
+    func load(
+        _ folder: URL, showAllExtensions: Bool, changed: @escaping @MainActor () -> Void,
+        loaded: @escaping @MainActor () -> Void
+    ) {
         loadTask?.cancel()
         self.folder = folder
         isLoading = true
         watcher = DirectoryWatcher(url: folder, onChange: changed)
         loadTask = Task {
-            let result = await DirectoryLoader.list(folder)
+            let result = await DirectoryLoader.list(folder, showAllExtensions: showAllExtensions)
             guard !Task.isCancelled else { return }
             isLoading = false
             updateFreeSpace(folder)

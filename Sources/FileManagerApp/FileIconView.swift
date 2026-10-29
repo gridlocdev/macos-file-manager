@@ -367,7 +367,7 @@ final class FileCollectionView: NSCollectionView, FileBrowsingView {
         super.mouseDown(with: event)
         guard let path, let item = itemAt(path) else { return }
         let plain = event.modifierFlags.isDisjoint(with: [.command, .shift, .option, .control])
-        let opens = ViewPreferences.singleClickOpens ? event.clickCount == 1 && plain : event.clickCount == 2
+        let opens = Preferences.standard.singleClickOpen ? event.clickCount == 1 && plain : event.clickCount == 2
         if opens { open(item.url) }
     }
 

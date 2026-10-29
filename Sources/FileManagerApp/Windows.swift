@@ -109,7 +109,7 @@ final class Windows {
         guard !launchSpecTaken else { return WindowSpec() }
         launchSpecTaken = true
         let snapshotRestore = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_RESTORE"] != nil
-        guard !Self.isSnapshotRun || snapshotRestore, UserDefaults.standard.object(forKey: SettingsKey.reopenSession) as? Bool ?? true,
+        guard !Self.isSnapshotRun || snapshotRestore, Preferences.standard.reopenSession,
             let data = UserDefaults.standard.data(forKey: Self.sessionKey),
             let saved = try? JSONDecoder().decode(SessionState.self, from: data)
         else { return WindowSpec() }

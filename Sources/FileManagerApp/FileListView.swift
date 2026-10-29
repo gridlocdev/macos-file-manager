@@ -298,14 +298,14 @@ struct FileListView: NSViewRepresentable {
 
         /// With "Open items with a single click" on, a plain click opens.
         @objc func clicked(_ sender: NSTableView) {
-            guard ViewPreferences.singleClickOpens, NSEvent.modifierFlags.isDisjoint(with: [.command, .shift, .option, .control]),
+            guard Preferences.standard.singleClickOpen, NSEvent.modifierFlags.isDisjoint(with: [.command, .shift, .option, .control]),
                 let item = item(sender.clickedRow)
             else { return }
             model.open([item.url])
         }
 
         @objc func doubleClicked(_ sender: NSTableView) {
-            guard !ViewPreferences.singleClickOpens, let item = item(sender.clickedRow) else { return }
+            guard !Preferences.standard.singleClickOpen, let item = item(sender.clickedRow) else { return }
             model.open([item.url])
         }
     }

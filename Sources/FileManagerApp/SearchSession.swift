@@ -17,8 +17,13 @@ final class SearchSession {
     /// What a subfolder search has found so far.
     private(set) var results: [FileItem] = []
 
-    /// Where a subfolder search starts, and whether it includes hidden files.
-    @ObservationIgnored var context: () -> (root: URL, showHidden: Bool) = { (URL(filePath: "/"), false) }
+    /// Where a subfolder search starts, and how it lists what it finds.
+    struct Context {
+        var root: URL
+        var showHidden: Bool
+        var showAllExtensions: Bool
+    }
+    @ObservationIgnored var context: () -> Context = { Context(root: URL(filePath: "/"), showHidden: false, showAllExtensions: true) }
     /// Called when what the list should show changes: the criteria, or results came in (`found`,
     /// empty when results were dropped).
     @ObservationIgnored var onUpdate: (_ found: [FileItem]) -> Void = { _ in }
@@ -51,9 +56,10 @@ final class SearchSession {
         stop(keepingResults: true)
         resultsAreStale = true
         isSearching = true
-        let (root, showHidden) = context()
+        let context = context()
         let search = FolderSearch(
-            root: root, criteria: criteria, showHidden: showHidden,
+            root: context.root, criteria: criteria, showHidden: context.showHidden,
+            showAllExtensions: context.showAllExtensions,
             onResults: { [weak self] found in self?.add(found) },
             onFinish: { [weak self] in
                 guard let self else { return }

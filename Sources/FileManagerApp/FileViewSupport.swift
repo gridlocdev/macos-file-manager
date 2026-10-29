@@ -130,11 +130,6 @@ enum FileFormat {
     }
 }
 
-/// Settings that change how files are opened and shown.
-enum ViewPreferences {
-    static var singleClickOpens: Bool { UserDefaults.standard.bool(forKey: SettingsKey.singleClickOpen) }
-}
-
 /// Finder-style overlapping coloured dots for an item's tags (tags without a standard colour
 /// are grey). At most three show, as in Finder.
 final class TagDots: NSView {
