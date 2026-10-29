@@ -11,10 +11,14 @@ final class FolderViewStore {
     private var saveTask: Task<Void, Never>?
     private let file: URL
 
-    init() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    static var defaultFile: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("File Manager", isDirectory: true)
-        file = support.appendingPathComponent("FolderViews.json")
+            .appendingPathComponent("FolderViews.json")
+    }
+
+    init(file: URL = defaultFile) {
+        self.file = file
         memory = (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode(FolderViewMemory.self, from: $0) }
             ?? FolderViewMemory()
     }

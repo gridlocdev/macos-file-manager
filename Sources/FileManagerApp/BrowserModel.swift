@@ -19,7 +19,7 @@ final class BrowserModel {
         didSet {
             guard view != oldValue else { return }
             if view.sort != oldValue.sort || view.groupBy != oldValue.groupBy { applyFilterAndSort() }
-            if !restoringView { FolderViewStore.shared.remember(view, for: url.path) }
+            if !restoringView { services.folderViews.remember(view, for: url.path) }
         }
     }
     /// The Settings choice, applied to every folder's sort.
@@ -94,16 +94,23 @@ final class BrowserModel {
     private var lastSelectPattern = ""
     private var restoringView = false
 
+    private let services: BrowserServices
+
     /// Cheap: SwiftUI may create throwaway models. Nothing is read until `start()`.
-    init(start: URL? = nil, id: UUID = UUID()) {
+    /// `presenter` defaults to alerts on the model's window.
+    init(
+        start: URL? = nil, id: UUID = UUID(), services: BrowserServices = .live,
+        presenter: (any BrowserPresenter)? = nil
+    ) {
         self.id = id
+        self.services = services
         let start = (start ?? StartFolder.url).standardizedFileURL
         url = start
         history = NavigationHistory(start: start)
         addressText = PathInput.display(start, home: home)
         let controls = WindowControls()
         self.controls = controls
-        presenter = AlertPresenter(controls: controls, operations: .shared)
+        self.presenter = presenter ?? AlertPresenter(controls: controls, operations: services.operations)
         search.context = { [weak self] in (self?.url ?? start, self?.showHiddenFiles ?? false) }
         search.onUpdate = { [weak self] found in self?.searchUpdated(found) }
     }
@@ -113,7 +120,7 @@ final class BrowserModel {
         guard !started else { return }
         started = true
         restoreView(for: url)
-        SidebarStore.shared.visited(url.path)
+        services.sidebar.visited(url.path)
         load()
     }
 
@@ -165,8 +172,8 @@ final class BrowserModel {
         revealAfterLoad = cameFromChild ? previous.normalized : nil
         pendingSelection = cameFromChild ? [previous.normalized] : []
         pendingRename = nil
-        SidebarStore.shared.visited(target.path)
-        Windows.shared.scheduleSave()
+        services.sidebar.visited(target.path)
+        services.windows.scheduleSave()
         load()
     }
 
@@ -237,7 +244,6 @@ final class BrowserModel {
     var selectedItems: [FileItem] { items.filter { selection.contains($0.url) } }
 
     func canPerform(_ action: Action) -> Bool {
-        let ops = FileOperations.shared
         switch action {
         case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately, .quickLook: return !selection.isEmpty
         case .invertSelection, .selectByPattern: return !items.isEmpty
@@ -247,14 +253,14 @@ final class BrowserModel {
         case .downloadNow: return selectedItems.contains { $0.cloud == .notDownloaded }
         case .removeDownload: return selectedItems.contains { $0.cloud == .current }
         case .openInNewTab: return items.contains { selection.contains($0.url) && $0.isFolder }
-        case .reopenClosedTab: return Windows.shared.hasClosedTabs
+        case .reopenClosedTab: return services.windows.hasClosedTabs
         case .nextTab, .previousTab: return controls.tabCount > 1
         case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9:
             let count = controls.tabCount
             return action == .showTab9 ? count > 1 : (action.tabNumber ?? 0) <= count
         case .moveToTrash: return !selection.isEmpty && !isTrashFolder
         case .putBack: return !selection.isEmpty && isTrashFolder
-        case .paste, .pasteMove: return Clipboard.shared.hasFiles && errorMessage == nil
+        case .paste, .pasteMove: return services.clipboard.hasFiles && errorMessage == nil
         case .newFolder, .newTextFile: return errorMessage == nil
         case .undo: return ops.canUndo
         case .redo: return ops.canRedo
@@ -287,7 +293,7 @@ final class BrowserModel {
         case .newTab: requestOpen(WindowSpec(path: url.path, tabParent: windowID, select: true))
         case .openInNewTab: openInNewTabs(items.filter { selection.contains($0.url) && $0.isFolder }.map(\.url))
         case .reopenClosedTab:
-            if let path = Windows.shared.popClosedTab() {
+            if let path = services.windows.popClosedTab() {
                 requestOpen(WindowSpec(path: path, tabParent: windowID, select: true))
             }
         // The Ctrl+Tab keys themselves are left to macOS (see `Action.isHandledByMacOS`).
@@ -297,7 +303,7 @@ final class BrowserModel {
             controls.showTab(at: action == .showTab9 ? controls.tabCount - 1 : (action.tabNumber ?? 1) - 1)
         case .addToSidebar:
             let folders = items.filter { selection.contains($0.url) && $0.isFolder }.map(\.url.path)
-            SidebarStore.shared.pin(folders.isEmpty ? [url.path] : folders)
+            services.sidebar.pin(folders.isEmpty ? [url.path] : folders)
         case .refresh: refresh()
         case .toggleHiddenFiles: showHiddenFiles.toggle()
         case .viewAsIcons: view.mode = .icons
@@ -323,12 +329,12 @@ final class BrowserModel {
         case .removeDownload: setDownloaded(false)
         case .find: openSearch()
         case .endSearch: endSearch()
-        case .copy: Clipboard.shared.copy(selectedURLs)
-        case .cut: Clipboard.shared.cut(selectedURLs)
+        case .copy: services.clipboard.copy(selectedURLs)
+        case .cut: services.clipboard.cut(selectedURLs)
         case .copyPath:
             let paths = selection.isEmpty ? [url.path] : selectedURLs.map(\.path)
-            Clipboard.shared.copyText(paths.joined(separator: "\n"))
-        case .paste: paste(move: Clipboard.shared.isCut)
+            services.clipboard.copyText(paths.joined(separator: "\n"))
+        case .paste: paste(move: services.clipboard.isCut)
         case .pasteMove: paste(move: true)
         case .rename:
             if selection.count > 1 { startBatchRename() } else { startRename(selectedURLs[0]) }
@@ -416,15 +422,15 @@ final class BrowserModel {
 
     // MARK: File operations
 
-    private var ops: FileOperations { .shared }
+    private var ops: FileOperations { services.operations }
 
     private func paste(move: Bool) {
-        let sources = Clipboard.shared.fileURLs
+        let sources = services.clipboard.fileURLs
         let folder = url
-        let wasCut = move && Clipboard.shared.isCut
+        let wasCut = move && services.clipboard.isCut
         Task {
             let results = await ops.transfer(sources, into: folder, mode: move ? .move : .copy, window: window)
-            if wasCut, !results.isEmpty { Clipboard.shared.finishCut() }
+            if wasCut, !results.isEmpty { services.clipboard.finishCut() }
             if folder == url { refresh(selecting: results) }
         }
     }
@@ -748,7 +754,7 @@ final class BrowserModel {
     /// The folder's remembered view, or the default for folders not set up yet.
     private func restoreView(for folder: URL) {
         restoringView = true
-        view = FolderViewStore.shared.view(for: folder.path)
+        view = services.folderViews.view(for: folder.path)
         restoringView = false
     }
 

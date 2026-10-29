@@ -10,9 +10,11 @@ final class Clipboard {
     /// Items cut in this app and not yet pasted; shown dimmed.
     private(set) var cutURLs: Set<URL> = []
     private var cutChangeCount = -1
-    private var pasteboard: NSPasteboard { .general }
+    private let pasteboard: NSPasteboard
 
-    init() {
+    /// `pasteboard`: the system clipboard, or a private one in tests.
+    init(pasteboard: NSPasteboard = .general) {
+        self.pasteboard = pasteboard
         // Anything copied elsewhere replaces a pending cut.
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main

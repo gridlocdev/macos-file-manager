@@ -13,8 +13,10 @@ final class SidebarStore {
     private static let pinsKey = "sidebarPins"
     private static let recentKey = "recentFolders"
 
-    init() {
-        let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         pins = defaults.data(forKey: Self.pinsKey).flatMap { try? JSONDecoder().decode(PinnedFolders.self, from: $0) }
             ?? PinnedFolders(paths: Self.defaultPins())
         recent = defaults.data(forKey: Self.recentKey).flatMap { try? JSONDecoder().decode(RecentFolders.self, from: $0) }
@@ -57,7 +59,6 @@ final class SidebarStore {
     }
 
     private func save() {
-        let defaults = UserDefaults.standard
         defaults.set(try? JSONEncoder().encode(pins), forKey: Self.pinsKey)
         defaults.set(try? JSONEncoder().encode(recent), forKey: Self.recentKey)
     }

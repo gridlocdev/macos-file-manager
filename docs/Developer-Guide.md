@@ -61,6 +61,7 @@ Sources/FileManagerApp/        the app
   AppCommands.swift            the menu bar, built from Action + Keymap
   BrowserWindow.swift          window layout: sidebar, toolbar, panes (split view), status bars
   BrowserModel.swift           one folder view: navigation, filter/sort, selection, perform(Action)
+  BrowserServices.swift        the shared objects a BrowserModel is given (operations, windows, stores, clipboard)
   FolderListing.swift          a folder as read from disk: items, error, free space, watcher
   SearchSession.swift          Find for one pane: criteria, scope, subfolder search results
   BrowserPresenter.swift       what the model asks the user (confirm, problems, pattern); NSAlert version

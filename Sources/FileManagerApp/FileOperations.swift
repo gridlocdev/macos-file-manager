@@ -47,7 +47,9 @@ final class FileOperations {
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
 
-    let trashLog = TrashLog()
+    let trashLog: TrashLog
+
+    init(trashLog: TrashLog = TrashLog()) { self.trashLog = trashLog }
 
     // MARK: Running steps
 
@@ -259,10 +261,14 @@ final class TrashLog {
     private var originals: [String: String] = [:]
     private let file: URL
 
-    init() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    static var defaultFile: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("File Manager", isDirectory: true)
-        file = support.appendingPathComponent("trash-log.json")
+            .appendingPathComponent("trash-log.json")
+    }
+
+    init(file: URL = defaultFile) {
+        self.file = file
         if let data = try? Data(contentsOf: file),
             let saved = try? JSONDecoder().decode([String: String].self, from: data)
         {
