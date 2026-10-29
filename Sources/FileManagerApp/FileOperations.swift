@@ -66,16 +66,15 @@ final class FileOperations {
             if !Task.isCancelled { showProgress = true }
         }
 
+        // Progress comes back through one stream, so it arrives in order.
+        let (progress, reporter) = AsyncStream.makeStream(of: Int.self)
         let executor = FileStepExecutor()
         let task = Task.detached(priority: .userInitiated) {
-            executor.run(steps) { index in
-                let step = steps[index]
-                Task { @MainActor in job.advance(units[index], name: step.subject.lastPathComponent) }
-            } isCancelled: {
-                Task.isCancelled
-            }
+            defer { reporter.finish() }
+            return executor.run(steps) { reporter.yield($0) } isCancelled: { Task.isCancelled }
         }
         job.task = task
+        for await index in progress { job.advance(units[index], name: steps[index].subject.lastPathComponent) }
         let outcome = await task.value
 
         reveal.cancel()

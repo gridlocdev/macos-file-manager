@@ -44,7 +44,7 @@ struct SearchBar: View {
             guard case .focusSearch = command else { return }
             focused = true
             // Cmd+F again selects what's typed, ready to type over it.
-            DispatchQueue.main.async { NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil) }
+            Task { NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil) }
         }
     }
 

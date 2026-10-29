@@ -70,7 +70,10 @@ struct KeyMonitor: NSViewRepresentable {
             if ActiveBrowser.shared.model === model || ActiveBrowser.shared.model === active {
                 ActiveBrowser.shared.model = nil
             }
-            if let model { Windows.shared.closed(model) }
+            if let model {
+                Windows.shared.closed(model)
+                model.stop()
+            }
         }
 
         private func handle(_ event: NSEvent) -> NSEvent? {

@@ -127,6 +127,7 @@ struct BrowserWindow: View {
         if let right = split {
             if right === active { model.navigate(to: right.url) }
             model.otherPane = nil
+            right.stop()
             split = nil
             activeID = model.id
             model.focusList()

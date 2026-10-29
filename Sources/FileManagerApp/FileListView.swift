@@ -98,7 +98,7 @@ struct FileListView: NSViewRepresentable {
         coordinator.applySelection(selection)
         if let reveal, let row = coordinator.row(of: reveal) {
             table.scrollRowToVisible(row)
-            DispatchQueue.main.async { model.didReveal() }
+            Task { model.didReveal() }
         }
         // Focus, the menu and rename wait until this update is done.
         var later: [PaneCommand] = []
@@ -106,7 +106,7 @@ struct FileListView: NSViewRepresentable {
             if case .quickLook = command { table.quickLook.toggle() } else { later.append(command) }
         }
         if !later.isEmpty {
-            DispatchQueue.main.async {
+            Task {
                 for command in later {
                     switch command {
                     case .focusList: table.window?.makeFirstResponder(table)

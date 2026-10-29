@@ -45,6 +45,13 @@ final class FolderListing {
         }
     }
 
+    /// Stops loading and watching.
+    func stop() {
+        loadTask?.cancel()
+        freeSpaceTask?.cancel()
+        watcher = nil
+    }
+
     /// Applies tags changed by a file operation. Returns true if any item here changed.
     func updateTags(_ tags: [String: [String]]) -> Bool { items.updateTags(tags) }
 

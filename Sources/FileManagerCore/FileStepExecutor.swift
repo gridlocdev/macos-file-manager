@@ -1,7 +1,8 @@
 import Foundation
 
 /// Runs `FileStep`s in order and reports what each actually did. Stops at the first error or
-/// when cancelled, so the caller can still undo the part that ran.
+/// when cancelled, so the caller can still undo the part that ran. A folder being copied stops
+/// between the items inside it; a single large file still copies to the end.
 public struct FileStepExecutor: Sendable {
     /// Moves an item to the Trash and returns where it went. Injected so tests don't touch the
     /// real Trash.
@@ -30,8 +31,22 @@ public struct FileStepExecutor: Sendable {
         _ steps: [FileStep], progress: (Int) -> Void = { _ in },
         isCancelled: () -> Bool = { false }
     ) -> Outcome {
+        // The copy delegate holds the check only while this runs.
+        withoutActuallyEscaping(isCancelled) { isCancelled in
+            run(steps, progress: progress, escapingIsCancelled: isCancelled)
+        }
+    }
+
+    private func run(
+        _ steps: [FileStep], progress: (Int) -> Void, escapingIsCancelled isCancelled: @escaping () -> Bool
+    ) -> Outcome {
         var outcome = Outcome()
         let fm = FileManager.default
+        // Its own FileManager, whose delegate skips the rest of a folder once cancelled.
+        let copier = FileManager()
+        let copyDelegate = CopyDelegate(isCancelled: isCancelled)
+        copier.delegate = copyDelegate
+        defer { copier.delegate = nil }
         for (index, step) in steps.enumerated() {
             if isCancelled() {
                 outcome.cancelled = true
@@ -40,8 +55,13 @@ public struct FileStepExecutor: Sendable {
             do {
                 switch step {
                 case .copy(let from, let to):
-                    try fm.copyItem(at: from, to: to)
+                    try copier.copyItem(at: from, to: to)
+                    // Recorded even if cancelled partway, so undo removes the partial copy.
                     outcome.executed.append(.copied(from, to: to))
+                    if isCancelled() {
+                        outcome.cancelled = true
+                        return outcome
+                    }
                 case .move(let from, let to):
                     try move(from, to)
                     outcome.executed.append(.moved(from, to: to))
@@ -101,5 +121,15 @@ public struct FileStepExecutor: Sendable {
             try fm.createDirectory(at: parent, withIntermediateDirectories: true)
         }
         try fm.moveItem(at: from, to: to)
+    }
+}
+
+/// Says no to the rest of a folder copy once the job is cancelled.
+private final class CopyDelegate: NSObject, FileManagerDelegate {
+    let isCancelled: () -> Bool
+    init(isCancelled: @escaping () -> Bool) { self.isCancelled = isCancelled }
+
+    func fileManager(_ fileManager: FileManager, shouldCopyItemAt srcURL: URL, to dstURL: URL) -> Bool {
+        !isCancelled()
     }
 }

@@ -164,7 +164,8 @@ Every change to files is a list of `FileStep`s (copy, move, create, trash, delet
 3. Running an undo produces executed steps too, and their inverse is the redo.
 
 `FileOperations` (app target) wraps this: each run is a `FileJob` on a detached task with
-progress and Cancel, pushed onto one app-wide `UndoHistory` (like Explorer). Tags it sets are
+progress (an `AsyncStream`, so it arrives in order) and Cancel (checked between steps, and
+between the items of a folder being copied; a single large file still copies to the end), pushed onto one app-wide `UndoHistory` (like Explorer). Tags it sets are
 posted as a `TagsChanged` message, which every `BrowserModel` observes. It also writes
 `TrashLog` (`~/Library/Application Support/File Manager/trash-log.json`), which maps Trash paths
 to original paths for Put Back; macOS doesn't share Finder's own record.
@@ -233,7 +234,8 @@ exists, in either order, then calls `addTabbedWindow` on the parent's last tab. 
 restoring, tabs can appear before their parent; they wait in `waiting` until it does.
 
 `BrowserModel` can't call `openWindow`, so it sends `.open(spec)` (`requestOpen`) and
-`BrowserWindow` opens them. `BrowserModel.init` does no work, because SwiftUI may create throwaway copies when
+`BrowserWindow` opens them. When a window or split pane closes, `BrowserModel.stop()` ends its
+loading, watching and searching; file operations it started carry on. `BrowserModel.init` does no work, because SwiftUI may create throwaway copies when
 it re-creates `BrowserWindow`; loading starts in `start()` from `onAppear`.
 
 Session restore: `Windows.save()` groups windows by `tabGroup` and stores a `SessionState` in

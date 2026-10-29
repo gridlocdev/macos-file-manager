@@ -264,6 +264,26 @@ struct FakeTree: FileTree {
         #expect(done.executed.count == 1)
     }
 
+    @Test func cancelStopsInsideAFolderCopy() throws {
+        for n in 1...5 { _ = try file("big/\(n).txt") }
+        let target = root.appendingPathComponent("copy")
+        var calls = 0
+        // Not cancelled for the step check, the folder and its first item; cancelled after.
+        let done = executor.run(
+            [.copy(root.appendingPathComponent("big"), to: target)],
+            isCancelled: {
+                calls += 1
+                return calls > 3
+            })
+        #expect(done.cancelled)
+        #expect(done.executed == [.copied(root.appendingPathComponent("big"), to: target)])
+        let copied = try FileManager.default.contentsOfDirectory(atPath: target.path)
+        #expect(copied.count < 5)
+        // Undo removes the partial copy.
+        _ = executor.run(try #require(FileUndo.inverse(of: done.executed)))
+        #expect(!exists(target))
+    }
+
     @Test func movePutsBackIntoMissingFolder() throws {
         let item = try file("t/x.txt")
         let original = root.appendingPathComponent("gone/deeper/x.txt")

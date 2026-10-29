@@ -77,6 +77,9 @@ final class BrowserModel {
     private var lastSelectPattern = ""
     private var restoringView = false
     @ObservationIgnored private var tagsObserver: NotificationCenter.ObservationToken?
+    @ObservationIgnored private var downloadCheck: Task<Void, Never>?
+    /// The window or pane closed; nothing more is loaded.
+    private var stopped = false
 
     private let services: BrowserServices
 
@@ -105,6 +108,16 @@ final class BrowserModel {
 
     isolated deinit {
         if let tagsObserver { NotificationCenter.default.removeObserver(tagsObserver) }
+    }
+
+    /// The window or split pane closed: stop loading, watching and searching. File operations
+    /// already started carry on. A window's main pane also stops its split pane.
+    func stop() {
+        stopped = true
+        listing.stop()
+        search.close()
+        downloadCheck?.cancel()
+        if hostID == nil { otherPane?.stop() }
     }
 
     /// Loads the first folder. Called once the window appears.
@@ -514,6 +527,7 @@ final class BrowserModel {
     // MARK: Loading
 
     private func load(keepSelection: Bool = false) {
+        guard !stopped else { return }
         listing.load(url, showAllExtensions: services.preferences.showAllExtensions, changed: { [weak self] in self?.refresh() }) { [weak self] in
             self?.listed(keepSelection: keepSelection)
         }
@@ -696,10 +710,12 @@ final class BrowserModel {
             }
         }
         // The folder doesn't change, so its watcher won't notice; check back a few times.
-        Task {
+        downloadCheck?.cancel()
+        downloadCheck = Task { [weak self] in
             for delay in [1, 3, 8] {
                 try? await Task.sleep(for: .seconds(delay))
-                refresh()
+                guard !Task.isCancelled else { return }
+                self?.refresh()
             }
         }
     }
