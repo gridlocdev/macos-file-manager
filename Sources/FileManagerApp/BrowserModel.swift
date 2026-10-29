@@ -229,13 +229,18 @@ final class BrowserModel {
     }
 
     /// Selected items in list order.
-    var selectedURLs: [URL] { items.filter { selection.contains($0.url) }.map(\.url) }
+    var selectedURLs: [URL] { selectedItems.map(\.url) }
+    var selectedItems: [FileItem] { items.filter { selection.contains($0.url) } }
 
     func canPerform(_ action: Action) -> Bool {
         let ops = FileOperations.shared
         switch action {
         case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately, .quickLook: return !selection.isEmpty
         case .invertSelection, .selectByPattern: return !items.isEmpty
+        case .compress: return !selection.isEmpty && !isTrashFolder
+        case .extract: return selectedItems.contains { !$0.isFolder && Archive.isArchive($0.url) }
+        case .downloadNow: return selectedItems.contains { $0.cloud == .notDownloaded }
+        case .removeDownload: return selectedItems.contains { $0.cloud == .current }
         case .openInNewTab: return items.contains { selection.contains($0.url) && $0.isFolder }
         case .reopenClosedTab: return Windows.shared.hasClosedTabs
         case .nextTab, .previousTab: return (window?.tabGroup?.windows.count ?? 1) > 1
@@ -304,6 +309,10 @@ final class BrowserModel {
         case .selectAll: selection = Set(items.map(\.url))
         case .invertSelection: selection = Selection.inverted(selection, in: items.map(\.url))
         case .selectByPattern: selectByPattern()
+        case .compress: compress()
+        case .extract: extract()
+        case .downloadNow: setDownloaded(true)
+        case .removeDownload: setDownloaded(false)
         case .find: openSearch()
         case .endSearch: endSearch()
         case .copy: Clipboard.shared.copy(selectedURLs)
@@ -611,6 +620,8 @@ final class BrowserModel {
     var isSearchingSubfolders: Bool { isSearchOpen && searchScope == .subfolders && !criteria.isEmpty }
     /// The list shows only matching items.
     var isFiltering: Bool { isSearchOpen && !criteria.isEmpty }
+    /// Tags used in this folder, for the find bar's Tag filter.
+    var folderTags: [String] { Array(Set(allItems.flatMap(\.tags))) }
     /// Items in the folder itself, before any filter (for "3 of 40 items").
     var folderItemCount: Int { showHiddenFiles ? allItems.count : allItems.count(where: { !$0.isHidden }) }
 
@@ -724,6 +735,90 @@ final class BrowserModel {
             selection = response == .alertSecondButtonReturn ? selection.union(matching) : matching
             if let first = items.first(where: { matching.contains($0.url) }) { revealAfterLoad = first.url }
             focusList()
+        }
+    }
+
+    // MARK: Archives, tags, iCloud
+
+    /// Compress: one item gives "name.zip", several give "Archive.zip", next to them.
+    private func compress() {
+        let sources = selectedURLs
+        guard let folder = sources.first?.deletingLastPathComponent() else { return }
+        let existing = Set((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
+        let archive = folder.appendingPathComponent(
+            Archive.archiveName(for: sources.map(\.lastPathComponent), existing: existing))
+        Task {
+            let outcome = await ops.run("Compress", steps: [.compress(sources, to: archive)], window: window)
+            if outcome.error == nil { refresh(selecting: [archive]) }
+        }
+    }
+
+    /// Extract: each selected zip opens next to itself.
+    private func extract() {
+        let archives = selectedURLs.filter(Archive.isArchive)
+        let steps: [FileStep] = archives.map {
+            .extract($0, suggested: $0.deletingLastPathComponent().appendingPathComponent(Archive.folderName(for: $0.lastPathComponent)))
+        }
+        Task {
+            let outcome = await ops.run("Extract", steps: steps, window: window)
+            refresh(selecting: outcome.executed.compactMap(\.resultURL))
+        }
+    }
+
+    /// Adds or removes a Finder tag on the selection, as one undoable change.
+    func toggleTag(_ tag: String) {
+        let chosen = selectedItems
+        guard !chosen.isEmpty else { return }
+        // Like Finder: if every item has it, take it off; otherwise put it on all of them.
+        let remove = chosen.allSatisfy { $0.tags.contains(tag) }
+        let steps: [FileStep] = chosen.map { item in
+            .setTags(item.url, remove ? item.tags.filter { $0 != tag } : item.tags.contains(tag) ? item.tags : item.tags + [tag])
+        }
+        Task {
+            await ops.run(remove ? "Remove Tag “\(tag)”" : "Tag “\(tag)”", steps: steps, window: window)
+            refresh(selecting: chosen.map(\.url))
+        }
+    }
+
+    /// Tags changed by a file operation (in any window), keyed by path.
+    func tagsChanged(_ tags: [String: [String]]) {
+        func update(_ list: inout [FileItem]) -> Bool {
+            var changed = false
+            for i in list.indices {
+                if let new = tags[list[i].url.path], new != list[i].tags {
+                    list[i].tags = new
+                    changed = true
+                }
+            }
+            return changed
+        }
+        let inFolder = update(&allItems)
+        let inResults = update(&searchResults)
+        if inFolder || inResults { applyFilterAndSort() }
+    }
+
+    /// Download Now / Remove Download for iCloud Drive items. Only their local copy changes,
+    /// so this isn't a file operation and can't be undone.
+    private func setDownloaded(_ download: Bool) {
+        let fm = FileManager.default
+        for item in selectedItems where item.cloud != nil {
+            do {
+                if download {
+                    try fm.startDownloadingUbiquitousItem(at: item.url)
+                } else {
+                    try fm.evictUbiquitousItem(at: item.url)
+                }
+            } catch {
+                ops.showError(error, title: "Can't change “\(item.name)”", window: window)
+                return
+            }
+        }
+        // The folder doesn't change, so its watcher won't notice; check back a few times.
+        Task {
+            for delay in [1, 3, 8] {
+                try? await Task.sleep(for: .seconds(delay))
+                refresh()
+            }
         }
     }
 

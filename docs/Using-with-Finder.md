@@ -1,0 +1,47 @@
+# Using with Finder
+
+File Manager works alongside Finder rather than replacing it. macOS doesn't let another app
+take over everything Finder does, so some things always open in Finder. This page says which,
+and the ways to get folders into File Manager instead.
+
+## Opening folders in File Manager
+
+| From | How |
+|---|---|
+| Finder | right-click a folder → **Open With → File Manager** |
+| Finder and other apps | select files or folders, then **Services → Open in File Manager** (in the app's menu or the right-click menu) |
+| The Dock | drag a folder onto File Manager's Dock icon |
+| Terminal | `open -a "File Manager" .` (or any path) |
+
+Each folder opens in a new window. A file opens its folder, with the file selected.
+
+If **Open in File Manager** isn't in the Services menu, turn it on in System Settings →
+Keyboard → Keyboard Shortcuts → Services → Files and Folders. You can give it a shortcut there
+too, which makes it work from any app.
+
+File Manager is listed under Open With but isn't made the default for folders, so
+double-clicking a folder on the desktop still opens Finder.
+
+## What still opens in Finder
+
+| Where | Why |
+|---|---|
+| The desktop and its icons | the desktop is drawn by Finder |
+| Folders and stacks in the Dock ("Open in Finder") | the Dock always hands these to Finder |
+| **Show in Finder** / **Reveal** in other apps, Spotlight's Cmd+Return, downloads in Safari | these ask for Finder by name |
+| Double-clicking a folder in Finder or on the desktop | Finder handles its own windows |
+| AirDrop, Network browsing, Connect to Server | not in File Manager yet |
+
+## Going the other way
+
+**File → Show in Finder** (also on the right-click menu) opens the selected items in a Finder
+window, for the few things only Finder does, such as burning a disc or using Finder extensions
+from other apps.
+
+Everything File Manager does to files (copy, move, rename, trash, tags) is a normal change on
+disk, so Finder shows the result straight away, and the other way round. Put Back, though, only
+knows about items File Manager trashed; see
+[Copying and moving files](Copying-and-Moving-Files.md#the-trash-and-put-back).
+
+---
+Next: [iCloud and tags](iCloud-and-Tags.md)

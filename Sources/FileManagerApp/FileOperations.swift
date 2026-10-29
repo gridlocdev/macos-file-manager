@@ -101,6 +101,10 @@ final class FileOperations {
         if let error = outcome.error {
             showError(error, title: "\(title) stopped", window: window)
         }
+        // Tags just set can read back stale for a moment, so windows are told what they are.
+        var tags: [String: [String]] = [:]
+        for case .tagged(let url, _, let to) in outcome.executed { tags[url.normalized.path] = to }
+        if !tags.isEmpty { Windows.shared.allModels.forEach { $0.tagsChanged(tags) } }
         return outcome
     }
 

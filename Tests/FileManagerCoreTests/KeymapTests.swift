@@ -10,9 +10,13 @@ import Testing
         #expect(keymap.conflicts.isEmpty, "\(keymap.conflicts)")
     }
 
-    /// Put Back, Trash and Show in Finder are menu-only, as in Finder.
+    /// Menu-only, as in Finder (you can give them shortcuts in your shortcuts file).
+    static let menuOnly: [Action] = [
+        .putBack, .goTrash, .showInFinder, .compress, .extract, .downloadNow, .removeDownload,
+    ]
+
     @Test func everyOtherActionHasAShortcut() {
-        for action in Action.allCases where ![.putBack, .goTrash, .showInFinder].contains(action) {
+        for action in Action.allCases where !Self.menuOnly.contains(action) {
             #expect(!keymap.chords(for: action).isEmpty, "\(action) has no shortcut")
         }
     }

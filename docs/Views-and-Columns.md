@@ -58,6 +58,7 @@ Right-click the column headings to choose which columns show:
 | Date Added | when it was put in this folder (moved, copied or downloaded here) |
 | Extension | `txt`, `jpg`…; handy for sorting by type |
 | Permissions | `-rw-r--r--`, as `ls -l` shows it |
+| Tags | the item's Finder tags; see [iCloud and tags](iCloud-and-Tags.md) |
 
 Drag a heading to move a column and drag its edge to resize it. Columns are the same in every
 folder and are remembered between launches. While searching subfolders a **Folder** column also

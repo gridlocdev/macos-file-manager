@@ -37,6 +37,8 @@ enum StartFolder: String, CaseIterable, Identifiable {
     }
 
     static var url: URL {
+        // Snapshot runs start in their demo folder, never reading Home.
+        if let demo = Windows.snapshotFolder { return URL(filePath: demo) }
         let defaults = UserDefaults.standard
         let home = FileManager.default.homeDirectoryForCurrentUser
         switch StartFolder(rawValue: defaults.string(forKey: SettingsKey.startFolder) ?? "") ?? .home {
@@ -137,6 +139,22 @@ struct SettingsView: View {
                             Button("Choose…", action: chooseStartFolder)
                         }
                     }
+                }
+            }
+            Section("Keyboard") {
+                LabeledContent("Shortcuts") {
+                    HStack {
+                        Button("Edit Shortcuts File…") { KeymapStore.shared.edit() }
+                        Button("Reload") { KeymapStore.shared.reload() }
+                    }
+                }
+                Text("Menu shortcuts change after File Manager is quit and opened again.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(KeymapStore.shared.problems, id: \.self) { problem in
+                    Label(problem, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             Section("Open Terminal Here") {

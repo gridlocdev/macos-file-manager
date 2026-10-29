@@ -40,10 +40,14 @@ rename.
   and kind, date and size filters; **Invert Selection** and **Select by Pattern**.
 - **Batch rename** with find and replace, regular expressions, case changes and numbering,
   with a live preview and a single undo.
+- **Works with Finder and iCloud**: Open With and a Services item to open folders from other
+  apps, Finder tags (show, set, filter), iCloud download status with Download Now / Remove
+  Download, and zip Compress / Extract.
+- **Your own shortcuts** in a small JSON file, on top of the standard ones.
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-More is planned (Finder tags, compressing, split view); see [PLAN.md](PLAN.md).
+More is planned (split view, Connect to Server); see [PLAN.md](PLAN.md).
 
 ## Requirements
 

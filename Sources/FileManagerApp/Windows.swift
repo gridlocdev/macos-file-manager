@@ -9,6 +9,8 @@ struct WindowSpec: Codable, Hashable {
     var tabParent: UUID?
     /// Bring this tab to the front once it's in its window (the selected tab of a restored window).
     var select = false
+    /// A file to select once the folder is listed (a file opened from another app).
+    var reveal: String?
 }
 
 /// Every open browser window and tab. Tabs are native macOS window tabs (tab bar, Ctrl+Tab,
@@ -36,7 +38,9 @@ final class Windows {
 
     private static let sessionKey = "session"
     /// `just snapshot` runs never touch the real session.
-    static let isSnapshotRun = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT"] != nil
+    nonisolated static let isSnapshotRun = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT"] != nil
+    /// The demo folder a snapshot run works in.
+    nonisolated static let snapshotFolder = isSnapshotRun ? ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_FOLDER"] : nil
 
     // MARK: Registration
 
@@ -89,10 +93,10 @@ final class Windows {
 
     func model(withID id: UUID) -> BrowserModel? { entries[id]?.model }
 
-    #if DEBUG
-    /// The first open window's model, for the snapshot hook when no window is key.
+    /// The first open window's model (for the snapshot hook, and for opening folders sent from
+    /// other apps when no window is key).
     var firstModel: BrowserModel? { order.lazy.compactMap { self.entries[$0]?.model }.first }
-    #endif
+    var allModels: [BrowserModel] { order.compactMap { entries[$0]?.model } }
 
     var hasClosedTabs: Bool { !closedTabs.isEmpty }
 
@@ -122,6 +126,25 @@ final class Windows {
         guard let first = specs.first else { return WindowSpec() }
         restoreQueue = Array(specs.dropFirst())
         return first
+    }
+
+    /// Folders sent from other apps (Open With, the Dock icon, the Service, `open -a`): each opens
+    /// in a new window; a file opens its folder with the file selected. Before any window is up
+    /// (the app was launched to open them) they wait for the first window.
+    func openFromElsewhere(_ urls: [URL]) {
+        let specs = urls.map { url -> WindowSpec in
+            var isFolder: ObjCBool = false
+            FileManager.default.fileExists(atPath: url.path, isDirectory: &isFolder)
+            return isFolder.boolValue
+                ? WindowSpec(path: url.path)
+                : WindowSpec(path: url.deletingLastPathComponent().path, reveal: url.path)
+        }
+        if let model = ActiveBrowser.shared.model ?? firstModel {
+            for spec in specs { model.requestOpen(spec) }
+            NSApp.activate()
+        } else {
+            restoreQueue += specs
+        }
     }
 
     /// Windows and tabs still to open after the first one, once.

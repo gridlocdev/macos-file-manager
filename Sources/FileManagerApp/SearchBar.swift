@@ -48,8 +48,12 @@ struct SearchBar: View {
     }
 
     private var filters: some View {
-        let active = [model.criteria.kind != .any, model.criteria.date != .any, model.criteria.size != .any]
-            .filter { $0 }.count
+        let active = [
+            model.criteria.kind != .any, model.criteria.date != .any, model.criteria.size != .any,
+            model.criteria.tag != nil,
+        ].filter { $0 }.count
+        let otherTags = Set(model.folderTags).subtracting(TagColor.standard)
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         return Menu {
             Picker("Kind", selection: $model.criteria.kind) {
                 ForEach(SearchCriteria.Kind.allCases, id: \.self) { Text($0.title).tag($0) }
@@ -60,12 +64,17 @@ struct SearchBar: View {
             Picker("Size", selection: $model.criteria.size) {
                 ForEach(SearchCriteria.SizeRange.allCases, id: \.self) { Text($0.title).tag($0) }
             }
+            Picker("Tag", selection: $model.criteria.tag) {
+                Text("Any Tag").tag(String?.none)
+                ForEach(TagColor.standard + otherTags, id: \.self) { Text($0).tag(String?.some($0)) }
+            }
             if active > 0 {
                 Divider()
                 Button("Clear Filters") {
                     model.criteria.kind = .any
                     model.criteria.date = .any
                     model.criteria.size = .any
+                    model.criteria.tag = nil
                 }
             }
         } label: {

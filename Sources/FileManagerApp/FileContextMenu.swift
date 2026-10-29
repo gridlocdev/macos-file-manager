@@ -48,6 +48,11 @@ import FileManagerCore
         menu.addItem(.separator())
         add(.copyPath, to: menu)
         add(.getInfo, to: menu)
+        add(.compress, to: menu)
+        if model.canPerform(.extract) { add(.extract, to: menu) }
+        if model.canPerform(.downloadNow) { add(.downloadNow, to: menu) }
+        if model.canPerform(.removeDownload) { add(.removeDownload, to: menu) }
+        menu.addItem(tagsItem(for: selected))
         if selected.count == 1, selected[0].isFolder {
             let item = NSMenuItem(title: Action.openTerminal.title, action: #selector(openTerminalInFolder(_:)), keyEquivalent: "")
             item.target = self
@@ -101,6 +106,63 @@ import FileManagerCore
         }
         item.submenu = submenu
         return item
+    }
+
+    /// Tags: the standard colours plus any other tags in the folder, ticked when every selected
+    /// item has it (a dash when only some do).
+    private func tagsItem(for selected: [FileItem]) -> NSMenuItem {
+        let item = NSMenuItem(title: "Tags", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        let others = Set(model.items.flatMap(\.tags)).filter { TagColor.index(of: $0) == nil }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        for tag in TagColor.standard + others {
+            let entry = NSMenuItem(title: tag, action: #selector(toggleTag(_:)), keyEquivalent: "")
+            entry.target = self
+            entry.representedObject = tag
+            entry.image = Self.dot(TagDots.color(for: tag))
+            let count = selected.filter { $0.tags.contains(tag) }.count
+            entry.state = count == 0 ? .off : count == selected.count ? .on : .mixed
+            submenu.addItem(entry)
+            if tag == TagColor.standard.last, !others.isEmpty { submenu.addItem(.separator()) }
+        }
+        submenu.addItem(.separator())
+        let new = NSMenuItem(title: "New Tag…", action: #selector(newTag(_:)), keyEquivalent: "")
+        new.target = self
+        submenu.addItem(new)
+        item.submenu = submenu
+        return item
+    }
+
+    private static func dot(_ color: NSColor) -> NSImage {
+        NSImage(size: NSSize(width: 12, height: 12), flipped: false) { rect in
+            color.setFill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
+            return true
+        }
+    }
+
+    @objc func toggleTag(_ sender: NSMenuItem) {
+        guard let tag = sender.representedObject as? String else { return }
+        model.toggleTag(tag)
+    }
+
+    @objc func newTag(_ sender: NSMenuItem) {
+        let alert = NSAlert()
+        alert.messageText = "New Tag"
+        alert.informativeText = "The tag is added to the selected items."
+        let field = NSTextField(string: "")
+        field.placeholderString = "Tag name"
+        field.frame = NSRect(x: 0, y: 0, width: 220, height: 24)
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Add Tag")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        let model = model
+        Task {
+            guard await FileOperations.shared.present(alert, window: model.window) == .alertFirstButtonReturn else { return }
+            let tag = field.stringValue.trimmingCharacters(in: .whitespaces)
+            if !tag.isEmpty { model.toggleTag(tag) }
+        }
     }
 
     @discardableResult

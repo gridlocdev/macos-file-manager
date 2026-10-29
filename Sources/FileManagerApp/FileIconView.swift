@@ -433,6 +433,8 @@ final class FileIconItem: NSCollectionViewItem {
     static let id = NSUserInterfaceItemIdentifier("FileIconItem")
     private(set) var url: URL?
     private let background = NSView()
+    private let tagDots = TagDots()
+    private let cloudImage = NSImageView()
     private var imageSize: (width: NSLayoutConstraint, height: NSLayoutConstraint)?
 
     static func size(for iconSize: CGFloat) -> NSSize {
@@ -460,6 +462,13 @@ final class FileIconItem: NSCollectionViewItem {
         label.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(label)
 
+        // Tags and the iCloud state sit on the icon's bottom-right corner.
+        cloudImage.contentTintColor = .secondaryLabelColor
+        let badges = NSStackView(views: [tagDots, cloudImage])
+        badges.spacing = 3
+        badges.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(badges)
+
         let width = image.widthAnchor.constraint(equalToConstant: 64)
         let height = image.heightAnchor.constraint(equalToConstant: 64)
         imageSize = (width, height)
@@ -474,6 +483,8 @@ final class FileIconItem: NSCollectionViewItem {
             label.topAnchor.constraint(equalTo: image.bottomAnchor, constant: 4),
             label.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 2),
             label.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -2),
+            badges.trailingAnchor.constraint(equalTo: image.trailingAnchor, constant: 4),
+            badges.bottomAnchor.constraint(equalTo: image.bottomAnchor, constant: 2),
         ])
         view = root
         imageView = image
@@ -487,6 +498,11 @@ final class FileIconItem: NSCollectionViewItem {
         imageSize?.width.constant = iconSize
         imageSize?.height.constant = iconSize
         view.alphaValue = alpha
+        tagDots.tags = item.tags
+        tagDots.isHidden = item.tags.isEmpty
+        cloudImage.image = CloudBadge.image(item.cloud)
+        cloudImage.toolTip = item.cloud?.title
+        cloudImage.isHidden = cloudImage.image == nil
         updateHighlight()
     }
 

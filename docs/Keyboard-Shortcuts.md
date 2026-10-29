@@ -71,6 +71,10 @@ Settings → Keyboard.
 | Move to Trash | Cmd+Backspace, Delete | Delete |
 | Delete Immediately… | Opt+Cmd+Backspace, Shift+Delete | Shift+Delete |
 | Put Back | File menu, in the Trash | Restore, in the Recycle Bin |
+| Compress | File menu, right-click | Send to → Compressed (zipped) folder |
+| Extract | File menu, right-click | Extract All |
+| Download Now | File menu, in iCloud Drive | Always keep on this device (OneDrive) |
+| Remove Download | File menu, in iCloud Drive | Free up space (OneDrive) |
 | Undo | Cmd+Z | Ctrl+Z |
 | Redo | Shift+Cmd+Z | Ctrl+Y, Ctrl+Shift+Z |
 
@@ -139,6 +143,11 @@ See [Searching and selecting](Searching-and-Selecting.md).
 |---|---|
 | Save the new name | Return, or click elsewhere |
 | Cancel | Esc |
+
+## Your own shortcuts
+
+Every shortcut on this page can be changed, and menu-only commands can be given one. See
+[Custom shortcuts](Custom-Shortcuts.md).
 
 ## Window
 

@@ -57,3 +57,47 @@ public struct KeyChord: Hashable, Sendable, CustomStringConvertible {
         }
     }
 }
+
+extension KeyChord {
+    /// Reads a chord written the way the docs write them: "Shift+Cmd+N", "Opt+Up", "F5", "Cmd+=".
+    /// Modifiers in any order; Command/⌘, Option/Alt/⌥, Control/⌃ and Enter/Escape work too.
+    /// Case doesn't matter.
+    public init?(parsing text: String) {
+        var parts = text.trimmingCharacters(in: .whitespaces).split(separator: "+", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        // "Cmd++" is Cmd and the + key.
+        if parts.count >= 2, parts.suffix(2) == ["", ""] { parts = parts.dropLast(2) + ["+"] }
+        guard let keyName = parts.popLast(), !keyName.isEmpty else { return nil }
+        var modifiers: Modifiers = []
+        for part in parts {
+            switch part.lowercased() {
+            case "cmd", "command", "⌘": modifiers.insert(.command)
+            case "opt", "option", "alt", "⌥": modifiers.insert(.option)
+            case "ctrl", "control", "⌃": modifiers.insert(.control)
+            case "shift", "⇧": modifiers.insert(.shift)
+            default: return nil
+            }
+        }
+        let key: Key
+        switch keyName.lowercased() {
+        case "return", "enter": key = .returnKey
+        case "backspace": key = .delete
+        case "delete", "del": key = .forwardDelete
+        case "tab": key = .tab
+        case "space": key = .space
+        case "esc", "escape": key = .escape
+        case "up": key = .up
+        case "down": key = .down
+        case "left": key = .left
+        case "right": key = .right
+        case let name where name.count >= 2 && name.first == "f" && Int(name.dropFirst()) != nil:
+            guard let n = Int(name.dropFirst()), (1...20).contains(n) else { return nil }
+            key = .function(n)
+        case let name where name.count == 1:
+            key = .character(name)
+        default:
+            return nil
+        }
+        self.init(key, modifiers)
+    }
+}

@@ -28,6 +28,9 @@ These pages explain **how to use the app** and **where it differs from what you'
 | [The sidebar](Sidebar.md) | How do I pin a folder? What's Recent? How do I eject a drive? |
 | [Keyboard shortcuts](Keyboard-Shortcuts.md) | What's the shortcut for…? What's the Windows or Linux equivalent? |
 | [Coming from Windows and Linux](Coming-from-Windows-and-Linux.md) | Why Cmd and not Ctrl? Why does Return rename? Which key deletes? |
+| [Using with Finder](Using-with-Finder.md) | How do I open a folder from Finder in File Manager? What always opens in Finder? |
+| [iCloud and tags](iCloud-and-Tags.md) | Which files are only in iCloud? How do I tag files or find tagged ones? How do I zip and unzip? |
+| [Custom shortcuts](Custom-Shortcuts.md) | Can I change a shortcut? Give Compress a shortcut? |
 | [Settings](Settings.md) | How do I pick my terminal app? Can folders be mixed in with files? |
 
 ## Reference

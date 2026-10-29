@@ -9,6 +9,7 @@ public enum Action: String, CaseIterable, Sendable {
     case newFolder, newTextFile
     case rename, duplicate
     case getInfo, quickLook, showInFinder, showContextMenu
+    case compress, extract, downloadNow, removeDownload
     case moveToTrash, deleteImmediately, putBack
     case undo, redo
     case cut, copy, paste, pasteMove, copyPath, selectAll
@@ -46,6 +47,10 @@ public enum Action: String, CaseIterable, Sendable {
         case .quickLook: "Quick Look"
         case .showInFinder: "Show in Finder"
         case .showContextMenu: "Show Context Menu"
+        case .compress: "Compress"
+        case .extract: "Extract"
+        case .downloadNow: "Download Now"
+        case .removeDownload: "Remove Download"
         case .moveToTrash: "Move to Trash"
         case .deleteImmediately: "Delete Immediately…"
         case .putBack: "Put Back"
@@ -89,7 +94,8 @@ public enum Action: String, CaseIterable, Sendable {
     public var menu: Menu? {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
-            .getInfo, .quickLook, .showInFinder, .newWindow, .newTab, .openInNewTab, .reopenClosedTab, .addToSidebar:
+            .getInfo, .quickLook, .showInFinder, .newWindow, .newTab, .openInNewTab, .reopenClosedTab, .addToSidebar,
+            .compress, .extract, .downloadNow, .removeDownload:
             .file
         case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
             .find:
@@ -110,7 +116,8 @@ public enum Action: String, CaseIterable, Sendable {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
             .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
-            .getInfo, .quickLook, .showInFinder, .showContextMenu, .openInNewTab, .addToSidebar:
+            .getInfo, .quickLook, .showInFinder, .showContextMenu, .openInNewTab, .addToSidebar,
+            .compress, .extract, .downloadNow, .removeDownload:
             true
         default:
             false

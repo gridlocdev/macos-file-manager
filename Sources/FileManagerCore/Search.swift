@@ -79,12 +79,17 @@ public struct SearchCriteria: Hashable, Sendable {
     public var kind = Kind.any
     public var date = DateRange.any
     public var size = SizeRange.any
+    /// Only items with this Finder tag; nil for any.
+    public var tag: String?
 
-    public init(text: String = "", kind: Kind = .any, date: DateRange = .any, size: SizeRange = .any) {
+    public init(
+        text: String = "", kind: Kind = .any, date: DateRange = .any, size: SizeRange = .any, tag: String? = nil
+    ) {
         self.text = text
         self.kind = kind
         self.date = date
         self.size = size
+        self.tag = tag
     }
 
     public enum Kind: String, CaseIterable, Sendable {
@@ -184,10 +189,16 @@ public struct SearchCriteria: Hashable, Sendable {
 
     /// No text and no filters: everything matches.
     public var isEmpty: Bool { NamePattern(text).isEmpty && hasNoFilters }
-    public var hasNoFilters: Bool { kind == .any && date == .any && size == .any }
+    public var hasNoFilters: Bool { kind == .any && date == .any && size == .any && tag == nil }
+
+    private func hasTag(_ item: FileItem) -> Bool {
+        guard let tag else { return true }
+        return item.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame }
+    }
 
     public func matches(_ item: FileItem, now: Date = Date(), calendar: Calendar = .current) -> Bool {
-        guard NamePattern(text).matches(item.name), kind.matches(item), size.matches(item) else { return false }
+        guard NamePattern(text).matches(item.name), kind.matches(item), size.matches(item), hasTag(item)
+        else { return false }
         if let start = date.start(now: now, calendar: calendar) {
             guard let modified = item.modified, modified >= start else { return false }
         }
@@ -200,7 +211,7 @@ public struct SearchCriteria: Hashable, Sendable {
         let pattern = NamePattern(text)
         let start = date.start(now: now, calendar: calendar)
         return items.filter { item in
-            guard pattern.matches(item.name), kind.matches(item), size.matches(item) else { return false }
+            guard pattern.matches(item.name), kind.matches(item), size.matches(item), hasTag(item) else { return false }
             if let start { return (item.modified ?? .distantPast) >= start }
             return true
         }

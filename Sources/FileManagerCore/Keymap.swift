@@ -57,6 +57,10 @@ public struct Keymap: Sendable {
         .getInfo: [.char("i", .command), KeyChord(.returnKey, .option)],
         .quickLook: [KeyChord(.space)],
         .showInFinder: [],
+        .compress: [],
+        .extract: [],
+        .downloadNow: [],
+        .removeDownload: [],
         .showContextMenu: [KeyChord(.function(10), .shift)],
         .moveToTrash: [KeyChord(.delete, .command), KeyChord(.forwardDelete)],
         .deleteImmediately: [KeyChord(.delete, [.command, .option]), KeyChord(.forwardDelete, .shift)],
@@ -95,4 +99,38 @@ public struct Keymap: Sendable {
         .toggleHiddenFiles: [.char("h", .command), .char(".", [.command, .shift])],
         .openTerminal: [.char("t", [.command, .option]), KeyChord(.function(4))],
     ])
+}
+
+extension Keymap {
+    /// Your shortcuts file on top of these: each action listed gets exactly the chords given
+    /// (an empty list takes its shortcuts away). A chord given to an action is taken from any
+    /// other action that had it. Unknown actions and chords that can't be read are skipped and
+    /// reported in `problems`.
+    public func applying(_ overrides: [String: [String]]) -> (keymap: Keymap, problems: [String]) {
+        var bindings = self.bindings
+        var problems: [String] = []
+        for (name, spellings) in overrides.sorted(by: { $0.key < $1.key }) {
+            if name.hasPrefix("_") { continue }  // "_comment" and the like
+            guard let action = Action(rawValue: name) else {
+                problems.append("“\(name)” isn't an action.")
+                continue
+            }
+            var chords: [KeyChord] = []
+            for spelling in spellings {
+                if let chord = KeyChord(parsing: spelling) {
+                    chords.append(chord)
+                } else {
+                    problems.append("\(name): can't read the shortcut “\(spelling)”.")
+                }
+            }
+            for chord in chords {
+                for (other, otherChords) in bindings where other != action && otherChords.contains(chord) {
+                    bindings[other] = otherChords.filter { $0 != chord }
+                    problems.append("\(chord) moved from \(other.rawValue) to \(name).")
+                }
+            }
+            bindings[action] = chords
+        }
+        return (Keymap(bindings), problems)
+    }
 }

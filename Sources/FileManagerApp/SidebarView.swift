@@ -8,6 +8,11 @@ import SwiftUI
 struct SidebarView: View {
     var model: BrowserModel
     @State private var volumes: [Volume] = Volume.mounted()
+    /// The folder tree's root: Home, or in snapshot runs the demo folder, so a test never lists
+    /// folders outside it (which can bring up macOS's folder-access prompts for a new build).
+    private var treeRoot: URL {
+        Windows.snapshotFolder.map { URL(filePath: $0) } ?? model.home
+    }
     @State private var tree = FolderTree()
     private var store: SidebarStore { .shared }
 
@@ -47,13 +52,14 @@ struct SidebarView: View {
                 }
                 Section("Folders") {
                     FolderNode(
-                        url: model.home, title: FileManager.default.displayName(atPath: model.home.path),
-                        symbol: "house", section: .tree, tree: tree, model: model, eject: nil)
+                        url: treeRoot, title: FileManager.default.displayName(atPath: treeRoot.path),
+                        symbol: Windows.isSnapshotRun ? "folder" : "house", section: .tree, tree: tree, model: model,
+                        eject: nil)
                 }
             }
             .listStyle(.sidebar)
             .onChange(of: model.url, initial: true) {
-                tree.reveal(model.url, roots: [model.home] + volumes.map(\.url))
+                tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url))
                 scroller.scrollTo(SidebarTag(section: .tree, path: model.url.path))
             }
             .onChange(of: model.listingVersion) { tree.forget(model.url) }
@@ -253,6 +259,8 @@ struct Volume: Identifiable, Hashable {
     var id: URL { url }
 
     static func mounted() -> [Volume] {
+        // Snapshot runs leave disks alone (network and removable ones can prompt for access).
+        if Windows.isSnapshotRun { return [] }
         let keys: [URLResourceKey] = [
             .volumeLocalizedNameKey, .volumeIsInternalKey, .volumeIsRemovableKey, .volumeIsEjectableKey,
             .volumeIsLocalKey, .volumeIsRootFileSystemKey,

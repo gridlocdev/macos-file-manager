@@ -7,6 +7,8 @@ enum DirectoryLoader {
         .isDirectoryKey, .isPackageKey, .isHiddenKey, .isSymbolicLinkKey,
         .fileSizeKey, .contentModificationDateKey, .localizedTypeDescriptionKey,
         .creationDateKey, .addedToDirectoryDateKey, .fileSecurityKey,
+        .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsDownloadingKey,
+        .ubiquitousItemIsUploadingKey,
     ]
 
     static func list(_ folder: URL) async -> Result<[FileItem], Error> {
@@ -35,7 +37,7 @@ enum DirectoryLoader {
             var mode: mode_t = 0
             if CFFileSecurityGetMode(security as CFFileSecurity, &mode) { permissions = Int(mode & 0o7777) }
         }
-        return FileItem(
+        var item = FileItem(
             url: url.normalized,
             name: name(url, isFolder: isFolder),
             isFolder: isFolder,
@@ -47,6 +49,19 @@ enum DirectoryLoader {
             added: values?.addedToDirectoryDate,
             permissions: permissions
         )
+        // Tags come from an extended attribute that the listing's prefetch can hand back stale
+        // just after they change (a tag set a moment ago would vanish), so read them afresh.
+        var tagURL = url
+        tagURL.removeCachedResourceValue(forKey: .tagNamesKey)
+        item.tags = (try? tagURL.resourceValues(forKeys: [.tagNamesKey]))?.tagNames ?? []
+        if values?.isUbiquitousItem == true {
+            item.cloud =
+                values?.ubiquitousItemIsDownloading == true ? .downloading
+                : values?.ubiquitousItemIsUploading == true ? .uploading
+                : values?.ubiquitousItemDownloadingStatus == .current ? .current
+                : .notDownloaded
+        }
+        return item
     }
 
     /// With "Show all file extensions" on (the default), the real name ("notes.txt"); apps

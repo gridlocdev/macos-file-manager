@@ -95,4 +95,4 @@ Keyboard Shortcuts → Function Keys → *Use F1, F2, etc. keys as standard func
 F-key action also has a Cmd shortcut.
 
 ---
-Next: [Settings](Settings.md)
+Next: [Using with Finder](Using-with-Finder.md)

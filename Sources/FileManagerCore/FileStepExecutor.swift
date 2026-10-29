@@ -65,6 +65,16 @@ public struct FileStepExecutor: Sendable {
                 case .delete(let url):
                     try fm.removeItem(at: url)
                     outcome.executed.append(.deleted(url))
+                case .compress(let sources, let archive):
+                    try Archive.compress(sources, to: archive)
+                    outcome.executed.append(.compressed(to: archive))
+                case .extract(let archive, let suggested):
+                    let result = try Archive.extract(archive, suggested: suggested)
+                    outcome.executed.append(.extracted(archive, to: result))
+                case .setTags(let url, let tags):
+                    let old = (try? url.resourceValues(forKeys: [.tagNamesKey]))?.tagNames ?? []
+                    try (url as NSURL).setResourceValue(tags, forKey: .tagNamesKey)
+                    outcome.executed.append(.tagged(url, from: old, to: tags))
                 }
                 progress(index)
             } catch {

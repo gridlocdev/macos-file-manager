@@ -51,6 +51,7 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   Navigation.swift             Breadcrumbs, RecentFolders, PinnedFolders, SessionState
   Search.swift                 NamePattern (wildcards, Spotlight predicate), SearchCriteria, Selection
   BatchRename.swift            batch rename options, preview with problems, moves (swaps via temp names)
+  Archive.swift                zip names; compress/extract with ditto (run by FileStepExecutor)
   ViewSettings.swift           FolderView (mode, sort, groups, zoom), FolderViewMemory, Grouping, ListRow
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
@@ -78,6 +79,7 @@ Sources/FileManagerApp/        the app
   QuickLook.swift              FileBrowsingView (either view has focus) and the Quick Look panel source
   PreviewPane.swift            the docked preview (Opt+P)
   FolderViewStore.swift        each folder's view, saved in Application Support
+  KeymapStore.swift            the keymap in use: standard + Shortcuts.json overrides
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
                                ActiveBrowser (the key window's model, for the menu bar)
   DebugSnapshot.swift          debug-only: capture the window, print menus (just snapshot)
@@ -256,7 +258,13 @@ on the window's model directly), `scope:subfolders` (Find's switch) and `batch:<
 (a batch rename of the selection, as the sheet's Rename button runs it). When you're using
 another app, macOS may not let File Manager become active; then nothing is key, Cmd shortcuts
 don't reach the menu bar, and the hook falls back to the first window, so use `action:` steps.
-The output lists the items shown and selected at the end. Keys go through the normal event
+The output lists the items shown and selected at the end.
+
+Snapshot runs stay inside the demo folder so a fresh build never triggers macOS's folder-access
+prompts: the window starts there instead of Home, the sidebar's folder tree is rooted there,
+Locations lists no disks, and your saved session, recent folders, folder views and shortcuts
+file are neither read nor written. To try opening folders from outside (`open -a`), send them
+only while a snapshot instance is running; otherwise `open` starts a normal copy of the app. Keys go through the normal event
 queue, so they exercise `KeyMonitor` and the menu bar like real key presses. Shifted Cmd
 shortcuts (Shift+Cmd+N) don't match menus when synthesized; use `menu:` for those. The demo
 folder (`build/snapshot-demo`) is recreated each run, and the hook refuses to press anything

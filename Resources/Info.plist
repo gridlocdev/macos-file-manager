@@ -14,5 +14,33 @@
     <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
+    <!-- Lists File Manager under Open With for folders and disks, and accepts folders dropped
+         on its Dock icon. Alternate: Finder stays the default. -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key><string>Folder</string>
+            <key>CFBundleTypeRole</key><string>Viewer</string>
+            <key>LSHandlerRank</key><string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.folder</string>
+                <string>public.volume</string>
+            </array>
+        </dict>
+    </array>
+    <!-- Services ▸ Open in File Manager for files and folders selected in other apps. -->
+    <key>NSServices</key>
+    <array>
+        <dict>
+            <key>NSMenuItem</key>
+            <dict><key>default</key><string>Open in File Manager</string></dict>
+            <key>NSMessage</key><string>openInFileManager</string>
+            <key>NSPortName</key><string>File Manager</string>
+            <key>NSRequiredContext</key><dict/>
+            <key>NSSendFileTypes</key>
+            <array><string>public.item</string></array>
+        </dict>
+    </array>
 </dict>
 </plist>

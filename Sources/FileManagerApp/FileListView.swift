@@ -31,6 +31,7 @@ struct FileListView: NSViewRepresentable {
             case .size: tableColumn.width = 70; tableColumn.minWidth = 50
             case .ext: tableColumn.width = 70; tableColumn.minWidth = 40
             case .permissions: tableColumn.width = 100; tableColumn.minWidth = 80
+            case .tags: tableColumn.width = 120; tableColumn.minWidth = 50
             }
             tableColumn.isHidden = !column.isShownByDefault
             table.addTableColumn(tableColumn)
@@ -200,6 +201,7 @@ struct FileListView: NSViewRepresentable {
             if column == .name {
                 cell.imageView?.image = icons.icon(for: item)
                 cell.iconSize = iconSize
+                cell.showBadges(tags: item.tags, cloud: item.cloud)
             }
             cell.textField?.alignment = column == .size ? .right : .left
             cell.textField?.textColor = column == .name ? .labelColor : .secondaryLabelColor
@@ -320,6 +322,18 @@ struct FileListView: NSViewRepresentable {
 final class FileCell: NSTableCellView {
     private var iconWidth: NSLayoutConstraint?
     private var iconHeight: NSLayoutConstraint?
+    /// Tag dots and the iCloud symbol, after the name.
+    private var badges: NSStackView?
+    private let tagDots = TagDots()
+    private let cloudImage = NSImageView()
+
+    func showBadges(tags: [String], cloud: CloudStatus?) {
+        tagDots.tags = tags
+        tagDots.isHidden = tags.isEmpty
+        cloudImage.image = CloudBadge.image(cloud)
+        cloudImage.toolTip = cloud?.title
+        cloudImage.isHidden = cloud == nil || cloud == .current
+    }
 
     var iconSize: CGFloat = 16 {
         didSet {
@@ -346,19 +360,32 @@ final class FileCell: NSTableCellView {
             let height = image.heightAnchor.constraint(equalToConstant: 16)
             iconWidth = width
             iconHeight = height
+            cloudImage.contentTintColor = .secondaryLabelColor
+            let stack = NSStackView(views: [tagDots, cloudImage])
+            stack.spacing = 4
+            stack.translatesAutoresizingMaskIntoConstraints = false
+            stack.setContentHuggingPriority(.required, for: .horizontal)
+            stack.setContentCompressionResistancePriority(.required, for: .horizontal)
+            addSubview(stack)
+            badges = stack
+            tagDots.isHidden = true
+            cloudImage.isHidden = true
             NSLayoutConstraint.activate([
                 image.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
                 image.centerYAnchor.constraint(equalTo: centerYAnchor),
                 width, height,
                 text.leadingAnchor.constraint(equalTo: image.trailingAnchor, constant: 6),
+                stack.leadingAnchor.constraint(greaterThanOrEqualTo: text.trailingAnchor, constant: 4),
+                stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2),
+                stack.centerYAnchor.constraint(equalTo: centerYAnchor),
             ])
+            // The name gives way to the badges, then truncates.
+            text.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         } else {
             text.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2).isActive = true
+            text.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2).isActive = true
         }
-        NSLayoutConstraint.activate([
-            text.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2),
-            text.centerYAnchor.constraint(equalTo: centerYAnchor),
-        ])
+        text.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }

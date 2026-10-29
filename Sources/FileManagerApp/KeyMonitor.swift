@@ -16,23 +16,21 @@ final class ActiveBrowser {
 
 struct KeyMonitor: NSViewRepresentable {
     var model: BrowserModel
-    var keymap: Keymap = .standard
 
     func makeNSView(context: Context) -> MonitorView {
         let view = MonitorView()
         view.model = model
-        view.keymap = keymap
         return view
     }
 
     func updateNSView(_ view: MonitorView, context: Context) {
         view.model = model
-        view.keymap = keymap
     }
 
     final class MonitorView: NSView {
         var model: BrowserModel?
-        var keymap = Keymap.standard
+        /// Read on every key, so Reload in Settings takes effect at once.
+        private var keymap: Keymap { KeymapStore.shared.keymap }
         private var monitor: Any?
 
         override func viewDidMoveToWindow() {

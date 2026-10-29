@@ -14,6 +14,9 @@
 - [The sidebar](Sidebar.md)
 - [Keyboard shortcuts](Keyboard-Shortcuts.md)
 - [Coming from Windows and Linux](Coming-from-Windows-and-Linux.md)
+- [Using with Finder](Using-with-Finder.md)
+- [iCloud and tags](iCloud-and-Tags.md)
+- [Custom shortcuts](Custom-Shortcuts.md)
 - [Settings](Settings.md)
 
 **Reference**

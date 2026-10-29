@@ -32,6 +32,12 @@ or any folder you choose with **Other Folder…**. If that folder isn't there (o
 unplugged), Home is used. New windows and tabs opened from a window (Cmd+N, Cmd+T) show the same
 folder as the window you're in, as in Explorer.
 
+## Keyboard
+
+**Edit Shortcuts File…** opens your shortcuts file (making a starter one the first time) and
+**Reload** reads it again. Problems with the file are listed here. See
+[Custom shortcuts](Custom-Shortcuts.md).
+
 ## Open Terminal Here
 
 **Terminal app** picks what F4 and Go → Open Terminal Here open:

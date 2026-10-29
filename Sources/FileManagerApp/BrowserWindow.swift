@@ -72,6 +72,7 @@ struct BrowserWindow: View {
             Windows.shared.register(model, spec: spec)
             model.foldersFirst = foldersFirst
             model.start()
+            if let reveal = spec.reveal { model.refresh(selecting: [URL(filePath: reveal)]) }
             model.focusList()
             // The first window at launch reopens the rest of last session's windows and tabs.
             for other in Windows.shared.takeRestoreQueue() { openWindow(value: other) }

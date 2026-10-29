@@ -125,6 +125,7 @@ enum FileFormat {
         case .size: size(item.size)
         case .ext: item.fileExtension
         case .permissions: item.permissions.map { Permissions.symbolic($0, isFolder: item.isFolder) } ?? "--"
+        case .tags: item.tags.joined(separator: ", ")
         }
     }
 }
@@ -132,4 +133,61 @@ enum FileFormat {
 /// Settings that change how files are opened and shown.
 enum ViewPreferences {
     static var singleClickOpens: Bool { UserDefaults.standard.bool(forKey: SettingsKey.singleClickOpen) }
+}
+
+/// Finder-style overlapping coloured dots for an item's tags (tags without a standard colour
+/// are grey). At most three show, as in Finder.
+final class TagDots: NSView {
+    var tags: [String] = [] {
+        didSet {
+            invalidateIntrinsicContentSize()
+            needsDisplay = true
+            toolTip = tags.joined(separator: ", ")
+        }
+    }
+
+    private static let size: CGFloat = 10
+    private var shown: [String] { Array(tags.prefix(3)) }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: shown.isEmpty ? 0 : Self.size + CGFloat(shown.count - 1) * 5, height: Self.size)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        for (i, tag) in shown.enumerated().reversed() {
+            let rect = NSRect(x: CGFloat(i) * 5, y: (bounds.height - Self.size) / 2, width: Self.size, height: Self.size)
+            let path = NSBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
+            Self.color(for: tag).setFill()
+            path.fill()
+            NSColor.windowBackgroundColor.setStroke()
+            path.lineWidth = 1
+            path.stroke()
+        }
+    }
+
+    static func color(for tag: String) -> NSColor {
+        switch TagColor.index(of: tag) {
+        case 0: .systemRed
+        case 1: .systemOrange
+        case 2: .systemYellow
+        case 3: .systemGreen
+        case 4: .systemBlue
+        case 5: .systemPurple
+        default: .systemGray
+        }
+    }
+}
+
+enum CloudBadge {
+    /// Nothing for downloaded items (the usual case), a cloud for the rest.
+    static func image(_ status: CloudStatus?) -> NSImage? {
+        let symbol: String
+        switch status {
+        case nil, .current: return nil
+        case .notDownloaded: symbol = "icloud.and.arrow.down"
+        case .downloading: symbol = "arrow.down.circle.dotted"
+        case .uploading: symbol = "icloud.and.arrow.up"
+        }
+        return NSImage(systemSymbolName: symbol, accessibilityDescription: status?.title)
+    }
 }

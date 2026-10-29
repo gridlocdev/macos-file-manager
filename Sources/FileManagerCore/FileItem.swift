@@ -15,6 +15,10 @@ public struct FileItem: Identifiable, Hashable, Sendable {
     public var added: Date?
     /// POSIX mode bits (0o755), for the Permissions column.
     public var permissions: Int?
+    /// Finder tags ("Red", "Work").
+    public var tags: [String] = []
+    /// Whether it's in iCloud Drive and downloaded; nil for items that aren't in iCloud.
+    public var cloud: CloudStatus?
 
     public var id: URL { url }
 
@@ -41,7 +45,7 @@ public struct FileItem: Identifiable, Hashable, Sendable {
 
 public struct FileSort: Hashable, Sendable {
     public enum Column: String, CaseIterable, Sendable {
-        case name, modified, kind, size, created, added, ext, permissions
+        case name, modified, kind, size, created, added, ext, permissions, tags
 
         public var title: String {
             switch self {
@@ -53,6 +57,7 @@ public struct FileSort: Hashable, Sendable {
             case .added: "Date Added"
             case .ext: "Extension"
             case .permissions: "Permissions"
+            case .tags: "Tags"
             }
         }
 
@@ -99,10 +104,43 @@ public struct FileSort: Hashable, Sendable {
             return a.fileExtension.localizedStandardCompare(b.fileExtension)
         case .permissions:
             return order(a.permissions ?? -1, b.permissions ?? -1)
+        case .tags:
+            // Untagged items last.
+            let left = a.tags.first ?? "\u{10FFFF}", right = b.tags.first ?? "\u{10FFFF}"
+            return left.localizedStandardCompare(right)
         }
     }
 
     private func order<T: Comparable>(_ a: T, _ b: T) -> ComparisonResult {
         a < b ? .orderedAscending : a > b ? .orderedDescending : .orderedSame
+    }
+}
+
+/// An iCloud Drive item's state.
+public enum CloudStatus: String, Hashable, Sendable {
+    /// Downloaded and up to date.
+    case current
+    /// Only in iCloud; opening it downloads it.
+    case notDownloaded
+    case downloading
+    case uploading
+
+    public var title: String {
+        switch self {
+        case .current: "Downloaded"
+        case .notDownloaded: "In iCloud only"
+        case .downloading: "Downloading"
+        case .uploading: "Uploading"
+        }
+    }
+}
+
+/// Finder's standard tag colours, by name.
+public enum TagColor {
+    public static let standard = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Gray"]
+
+    /// Index into `standard`, or nil for a tag without a standard colour.
+    public static func index(of tag: String) -> Int? {
+        standard.firstIndex { $0.caseInsensitiveCompare(tag) == .orderedSame }
     }
 }
