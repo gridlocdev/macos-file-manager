@@ -25,9 +25,13 @@ public enum ServerAddress {
     public static func parse(_ text: String) -> Result<URL, Problem> {
         var text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return .failure(.empty) }
-        if text.hasPrefix("\\\\") {
-            text = "smb://" + text.dropFirst(2).replacingOccurrences(of: "\\", with: "/")
-        } else if !text.contains("://") {
+        // Windows habits: "\\nas\share", or half and half: "smb:\\nas\share", "smb:/nas/share".
+        text = text.replacingOccurrences(of: "\\", with: "/")
+        if text.hasPrefix("//") {
+            text = "smb:" + text
+        } else if let match = text.firstMatch(of: /^([A-Za-z][A-Za-z0-9+.-]*):\/+/) {
+            text = "\(match.1)://" + text[match.range.upperBound...]
+        } else {
             text = "smb://" + text
         }
         guard let scheme = text.components(separatedBy: "://").first?.lowercased(), !scheme.isEmpty else {

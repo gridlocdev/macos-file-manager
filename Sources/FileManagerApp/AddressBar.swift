@@ -13,8 +13,9 @@ struct AddressBar: View {
         Group {
             if editing {
                 TextField("Path", text: $model.addressText)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .font(.body.monospaced())
+                    .padding(.horizontal, 10)
                     .focused($focused)
                     .onAppear { focused = true }
                     .onSubmit { model.submitAddress() }
@@ -63,10 +64,10 @@ private struct Breadcrumbs: View {
                 .contentShape(Rectangle())
                 .onTapGesture(perform: startEditing)
         }
-        .padding(.horizontal, 6)
+        // No box of its own: the toolbar draws the capsule around it, and a second rounded box
+        // inside gets its corners clipped by the capsule's curve.
+        .padding(.horizontal, 10)
         .frame(height: 26)
-        .background(RoundedRectangle(cornerRadius: 7).fill(.background.secondary))
-        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(.separator))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Address")
     }

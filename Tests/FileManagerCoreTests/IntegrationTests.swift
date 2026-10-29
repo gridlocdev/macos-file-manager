@@ -115,6 +115,11 @@ import Testing
         #expect(url(#"\\nas\Shared Files"#) == "smb://nas/Shared%20Files")
         #expect(url("https://dav.example.com/files") == "https://dav.example.com/files")
         #expect(url("nfs://server/export") == "nfs://server/export")
+        // Half Windows, half URL.
+        #expect(url(#"smb:\\192.168.50.158\share"#) == "smb://192.168.50.158/share")
+        #expect(url("smb:/nas/share") == "smb://nas/share")
+        #expect(url("192.168.50.158/share") == "smb://192.168.50.158/share")
+        #expect(url("nas:445/share") == "smb://nas:445/share")
     }
 
     @Test func problems() {

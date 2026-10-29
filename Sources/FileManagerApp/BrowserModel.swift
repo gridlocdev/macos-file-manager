@@ -626,9 +626,13 @@ final class BrowserModel {
     private func updateFreeSpace(_ folder: URL) {
         freeSpaceTask?.cancel()
         freeSpaceTask = Task {
-            let free = await Task.detached {
-                try? folder.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-                    .volumeAvailableCapacityForImportantUsage
+            let free = await Task.detached { () -> Int64? in
+                let values = try? folder.resourceValues(
+                    forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
+                // Network shares report 0 for the "important usage" figure (it counts purgeable
+                // space on local disks only); their plain free space is right.
+                if let important = values?.volumeAvailableCapacityForImportantUsage, important > 0 { return important }
+                return values?.volumeAvailableCapacity.map(Int64.init)
             }.value
             if !Task.isCancelled, folder == url { freeSpace = free }
         }
