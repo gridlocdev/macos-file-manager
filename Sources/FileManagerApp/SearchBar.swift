@@ -40,7 +40,8 @@ struct SearchBar: View {
         .frame(height: 32)
         .background(.bar)
         .onAppear { focused = true }
-        .onChange(of: model.searchFocusRequest) {
+        .onPaneCommand(model) { command in
+            guard case .focusSearch = command else { return }
             focused = true
             // Cmd+F again selects what's typed, ready to type over it.
             DispatchQueue.main.async { NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil) }

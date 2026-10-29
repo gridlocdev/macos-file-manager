@@ -47,12 +47,9 @@ struct FileIconView: NSViewRepresentable {
         let version = model.listingVersion
         let selection = model.selection
         let reveal = model.revealAfterLoad
-        let focusRequest = model.listFocusRequest
         let iconSize = CGFloat(model.view.iconSize)
         let grouped = model.view.groupBy != .none
-        let renameRequest = model.renameRequest
-        let quickLookRequest = model.quickLookRequest
-        let contextMenuRequest = model.contextMenuRequest
+        let commands = model.takeFileViewCommands()
         let cut = Clipboard.shared.cutURLs
 
         let sizeChanged = iconSize != coordinator.iconSize
@@ -72,22 +69,21 @@ struct FileIconView: NSViewRepresentable {
             grid.scrollToItems(at: [path], scrollPosition: .nearestHorizontalEdge)
             DispatchQueue.main.async { model.didReveal() }
         }
-        if focusRequest != coordinator.focusRequest {
-            coordinator.focusRequest = focusRequest
-            DispatchQueue.main.async { grid.window?.makeFirstResponder(grid) }
+        // Focus, the menu and rename wait until this update is done.
+        var later: [PaneCommand] = []
+        for command in commands {
+            if case .quickLook = command { grid.quickLook.toggle() } else { later.append(command) }
         }
-        if quickLookRequest != coordinator.quickLookRequest {
-            coordinator.quickLookRequest = quickLookRequest
-            grid.quickLook.toggle()
-        }
-        if contextMenuRequest != coordinator.contextMenuRequest {
-            coordinator.contextMenuRequest = contextMenuRequest
-            DispatchQueue.main.async { coordinator.showContextMenuFromKeyboard() }
-        }
-        if renameRequest != coordinator.renameRequest {
-            coordinator.renameRequest = renameRequest
-            if let target = model.renameTarget {
-                DispatchQueue.main.async { coordinator.beginRename(target) }
+        if !later.isEmpty {
+            DispatchQueue.main.async {
+                for command in later {
+                    switch command {
+                    case .focusList: grid.window?.makeFirstResponder(grid)
+                    case .contextMenu: coordinator.showContextMenuFromKeyboard()
+                    case .rename(let target): coordinator.beginRename(target)
+                    default: break
+                    }
+                }
             }
         }
     }
@@ -101,10 +97,6 @@ struct FileIconView: NSViewRepresentable {
         var version = -1
         var cut: Set<URL> = []
         var iconSize: CGFloat = 0
-        var focusRequest = 0
-        var renameRequest = 0
-        var quickLookRequest = 0
-        var contextMenuRequest = 0
         var isUpdating = false
         let rename: InlineRename
         let contextMenu: FileContextMenu

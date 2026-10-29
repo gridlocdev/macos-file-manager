@@ -69,11 +69,8 @@ struct FileListView: NSViewRepresentable {
         let version = model.listingVersion
         let selection = model.selection
         let reveal = model.revealAfterLoad
-        let focusRequest = model.listFocusRequest
         let view = model.view
-        let renameRequest = model.renameRequest
-        let quickLookRequest = model.quickLookRequest
-        let contextMenuRequest = model.contextMenuRequest
+        let commands = model.takeFileViewCommands()
         let cut = Clipboard.shared.cutURLs
         let showsFolders = model.isSearchingSubfolders
         coordinator.root = model.url
@@ -103,22 +100,21 @@ struct FileListView: NSViewRepresentable {
             table.scrollRowToVisible(row)
             DispatchQueue.main.async { model.didReveal() }
         }
-        if focusRequest != coordinator.focusRequest {
-            coordinator.focusRequest = focusRequest
-            DispatchQueue.main.async { table.window?.makeFirstResponder(table) }
+        // Focus, the menu and rename wait until this update is done.
+        var later: [PaneCommand] = []
+        for command in commands {
+            if case .quickLook = command { table.quickLook.toggle() } else { later.append(command) }
         }
-        if quickLookRequest != coordinator.quickLookRequest {
-            coordinator.quickLookRequest = quickLookRequest
-            table.quickLook.toggle()
-        }
-        if contextMenuRequest != coordinator.contextMenuRequest {
-            coordinator.contextMenuRequest = contextMenuRequest
-            DispatchQueue.main.async { coordinator.showContextMenuFromKeyboard() }
-        }
-        if renameRequest != coordinator.renameRequest {
-            coordinator.renameRequest = renameRequest
-            if let target = model.renameTarget {
-                DispatchQueue.main.async { coordinator.beginRename(target) }
+        if !later.isEmpty {
+            DispatchQueue.main.async {
+                for command in later {
+                    switch command {
+                    case .focusList: table.window?.makeFirstResponder(table)
+                    case .contextMenu: coordinator.showContextMenuFromKeyboard()
+                    case .rename(let target): coordinator.beginRename(target)
+                    default: break
+                    }
+                }
             }
         }
     }
@@ -134,10 +130,6 @@ struct FileListView: NSViewRepresentable {
         var cut: Set<URL> = []
         var iconSize: CGFloat = 16
         var root = URL(filePath: "/")
-        var focusRequest = 0
-        var renameRequest = 0
-        var quickLookRequest = 0
-        var contextMenuRequest = 0
         var isUpdating = false
         let rename: InlineRename
         let contextMenu: FileContextMenu

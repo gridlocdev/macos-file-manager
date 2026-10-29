@@ -14,8 +14,6 @@ final class SearchSession {
     /// A subfolder search is still finding things.
     private(set) var isSearching = false
     private(set) var hitLimit = false
-    /// Bumped to put the cursor in the find field.
-    private(set) var focusRequest = 0
     /// What a subfolder search has found so far.
     private(set) var results: [FileItem] = []
 
@@ -38,7 +36,6 @@ final class SearchSession {
 
     func open() {
         isOpen = true
-        focusRequest += 1
     }
 
     /// Closes the bar and forgets the criteria.

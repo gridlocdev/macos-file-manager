@@ -73,11 +73,6 @@ struct BrowserWindow: View {
             // The first window at launch reopens the rest of last session's windows and tabs.
             for other in Windows.shared.takeRestoreQueue() { openWindow(value: other) }
         }
-        .onChange(of: model.splitRequest) { toggleSplit() }
-        // The split pane appearing (nil → 0) isn't a request.
-        .onChange(of: split?.splitRequest) { old, new in if old != nil, new != nil { toggleSplit() } }
-        .onChange(of: model.connectRequest) { connecting = true }
-        .onChange(of: split?.connectRequest) { old, new in if old != nil, new != nil { connecting = true } }
         .sheet(isPresented: $connecting) {
             ConnectToServerView(model: active)
         }
@@ -115,6 +110,15 @@ struct BrowserWindow: View {
         }
         .frame(minWidth: 240, maxWidth: .infinity)
         .modifier(PaneEvents(model: pane))
+        .onPaneCommand(pane) { command in
+            switch command {
+            case .toggleSplit: toggleSplit()
+            case .connectToServer: connecting = true
+            case .getInfo(let urls): openWindow(id: InfoWindow.id, value: urls)
+            case .open(let spec): openWindow(value: spec)
+            default: break
+            }
+        }
     }
 
     /// F3: open a second pane on the active pane's folder, or close the split, keeping the folder
@@ -169,12 +173,11 @@ struct BrowserWindow: View {
     }
 }
 
-/// What each pane needs from the window: new windows and tabs, Get Info, batch rename, settings.
+/// What each pane needs from the window besides its commands: batch rename, settings.
 private struct PaneEvents: ViewModifier {
     @Bindable var model: BrowserModel
     @AppStorage(SettingsKey.foldersFirst) private var foldersFirst = true
     @AppStorage(SettingsKey.showAllExtensions) private var showAllExtensions = true
-    @Environment(\.openWindow) private var openWindow
 
     func body(content: Content) -> some View {
         content
@@ -182,16 +185,10 @@ private struct PaneEvents: ViewModifier {
             .sheet(item: $model.batchRename) { request in
                 BatchRenameView(request: request, model: model)
             }
-            .onChange(of: model.openRequestCount) {
-                for request in model.takeOpenRequests() { openWindow(value: request) }
-            }
             .onChange(of: foldersFirst) { model.foldersFirst = foldersFirst }
             .onChange(of: showAllExtensions) { model.refresh() }
             // The new view takes over the keyboard focus the old one had.
             .onChange(of: model.view.mode) { model.focusList() }
-            .onChange(of: model.infoRequestCount) {
-                openWindow(id: InfoWindow.id, value: model.infoRequest)
-            }
     }
 }
 

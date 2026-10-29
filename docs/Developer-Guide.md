@@ -49,6 +49,7 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   TransferPlanner.swift        paste/duplicate planning: conflicts, folder merges; DiskFileTree;
                                ConflictQuestions (ask each, or one answer for the rest)
   UndoHistory.swift            the app-wide undo/redo stacks of file operations
+  CommandLog.swift             numbered one-shot requests from a model to its views
   FileStepExecutor.swift       runs FileSteps with FileManager (Trash injectable for tests)
   DropRules.swift              drag-and-drop move/copy rules; FolderSize; Permissions
   Navigation.swift             Breadcrumbs, RecentFolders, PinnedFolders, SessionState
@@ -63,6 +64,7 @@ Sources/FileManagerApp/        the app
   AppCommands.swift            the menu bar, built from Action + Keymap
   BrowserWindow.swift          window layout: sidebar, toolbar, panes (split view), status bars
   BrowserModel.swift           one folder view: navigation, filter/sort, selection, perform(Action)
+  PaneCommand.swift            what a model asks its views to do once; .onPaneCommand
   BrowserServices.swift        the shared objects a BrowserModel is given (operations, windows, stores, clipboard)
   FolderListing.swift          a folder as read from disk: items, error, free space, watcher
   SearchSession.swift          Find for one pane: criteria, scope, subfolder search results
@@ -196,12 +198,24 @@ back reloads while the field is open, since a reload would throw the edit away.
   `NSServicesMenuRequestor` for file URLs.
 - **Quick Look**: `FileTableView` takes control of `QLPreviewPanel` and is its data source;
   selection changes reload the panel, and key presses in the panel are forwarded to the table.
-- **Get Info**: `BrowserModel.perform(.getInfo)` publishes `infoRequest`; `BrowserWindow`
+- **Get Info**: `BrowserModel.perform(.getInfo)` sends `.getInfo(urls)`; `BrowserWindow`
   opens a `WindowGroup(for: [URL].self)` window. Folder sizes come from `FolderSize.measure`
   in a detached task that stops when the window closes.
 
 Synthetic events can't drive drags or menus, so `just snapshot` doesn't cover these; check them
 by hand.
+
+## Pane commands
+
+The model asks its views for one-off things (focus the list or address bar, start renaming,
+toggle Quick Look, show the right-click menu, open a window, split) with
+`BrowserModel.send(_: PaneCommand)`. Commands go into a numbered `CommandLog` (Core): SwiftUI
+views take them with `.onPaneCommand(model) { … }`, the file list and icon view with
+`model.takeFileViewCommands()`. Each remembers the last number it handled, so two commands in
+a row both arrive and a view that appears later doesn't replay old ones. The file views' place
+is kept on the model, so switching between icons and details doesn't lose a command sent
+while the new view was being made (the focus, usually). Add a
+case to `PaneCommand` rather than a counter on the model.
 
 ## Windows and tabs
 
@@ -213,8 +227,8 @@ window), the folder, and optionally `tabParent`, the model id of the window to j
 exists, in either order, then calls `addTabbedWindow` on the parent's last tab. While
 restoring, tabs can appear before their parent; they wait in `waiting` until it does.
 
-`BrowserModel` can't call `openWindow`, so it queues specs (`requestOpen`) and `BrowserWindow`
-opens them. `BrowserModel.init` does no work, because SwiftUI may create throwaway copies when
+`BrowserModel` can't call `openWindow`, so it sends `.open(spec)` (`requestOpen`) and
+`BrowserWindow` opens them. `BrowserModel.init` does no work, because SwiftUI may create throwaway copies when
 it re-creates `BrowserWindow`; loading starts in `start()` from `onAppear`.
 
 Session restore: `Windows.save()` groups windows by `tabGroup` and stores a `SessionState` in

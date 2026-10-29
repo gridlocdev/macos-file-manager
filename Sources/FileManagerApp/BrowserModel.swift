@@ -46,24 +46,10 @@ final class BrowserModel {
 
     /// Address bar text while editing; reset to the current folder on navigation or cancel.
     var addressText = ""
-    /// Bumped to move keyboard focus to the address bar / the file list.
-    private(set) var addressFocusRequest = 0
-    private(set) var listFocusRequest = 0
     /// Scrolled to after the next load (the folder you came up from, a pasted item).
     private(set) var revealAfterLoad: URL?
-    /// Bumped to toggle Quick Look / show the right-click menu from the keyboard.
-    private(set) var quickLookRequest = 0
-    private(set) var contextMenuRequest = 0
-    /// Get Info asks the window to open an Info window for these.
-    private(set) var infoRequest: [URL] = []
-    private(set) var infoRequestCount = 0
-    /// Windows and tabs to open (the window calls `openWindow` for these).
-    private(set) var openRequests: [WindowSpec] = []
-    private(set) var openRequestCount = 0
-
-    /// Bumped to start renaming `renameTarget` in the list.
-    private(set) var renameRequest = 0
-    private(set) var renameTarget: URL?
+    /// Requests to this pane's views and window (focus, rename, Quick Look, new windows…).
+    private(set) var commands = CommandLog<PaneCommand>()
 
     /// The window this model lives in, for tabs, focus moves and alerts. Set by `KeyMonitor`.
     var window: NSWindow? {
@@ -80,9 +66,6 @@ final class BrowserModel {
     weak var otherPane: BrowserModel?
     /// Called when this pane's file list takes the keyboard focus (it becomes the active pane).
     var onFocused: (() -> Void)?
-    /// Bumped to ask the window to open or close the split view / Connect to Server.
-    private(set) var splitRequest = 0
-    private(set) var connectRequest = 0
     /// Tabs and windows opened from this pane belong to the window's main pane.
     var windowID: UUID { hostID ?? id }
 
@@ -197,8 +180,19 @@ final class BrowserModel {
 
     // MARK: Address bar
 
-    func focusAddressBar() { addressFocusRequest += 1 }
-    func focusList() { listFocusRequest += 1 }
+    func focusAddressBar() { send(.focusAddressBar) }
+    func focusList() { send(.focusList) }
+
+    func send(_ command: PaneCommand) { commands.send(command) }
+
+    /// The file list or icon view's commands since it last looked. The place it got to is kept
+    /// here, not in the view, so a view that replaces the other (icons ↔ details) still gets
+    /// what was sent while it was being made, such as the focus.
+    func takeFileViewCommands() -> [PaneCommand] {
+        defer { fileViewSeenCommand = commands.last }
+        return commands.commands(after: fileViewSeenCommand)
+    }
+    @ObservationIgnored private var fileViewSeenCommand = 0
 
     func submitAddress() {
         guard let target = PathInput.resolve(addressText, relativeTo: url, home: home) else {
@@ -328,8 +322,8 @@ final class BrowserModel {
         case .invertSelection: selection = Selection.inverted(selection, in: items.map(\.url))
         case .selectByPattern: selectByPattern()
         case .compress: compress()
-        case .toggleSplitView: splitRequest += 1
-        case .connectToServer: connectRequest += 1
+        case .toggleSplitView: send(.toggleSplit)
+        case .connectToServer: send(.connectToServer)
         case .copyToOtherPane, .moveToOtherPane:
             if let other = otherPane { sendToOtherPane(other, move: action == .moveToOtherPane) }
         case .extract: extract()
@@ -355,10 +349,9 @@ final class BrowserModel {
         case .undo: undoOrRedo(undo: true)
         case .redo: undoOrRedo(undo: false)
         case .getInfo:
-            infoRequest = selection.isEmpty ? [url] : selectedURLs
-            infoRequestCount += 1
-        case .quickLook: quickLookRequest += 1
-        case .showContextMenu: contextMenuRequest += 1
+            send(.getInfo(selection.isEmpty ? [url] : selectedURLs))
+        case .quickLook: send(.quickLook)
+        case .showContextMenu: send(.contextMenu)
         case .showInFinder:
             NSWorkspace.shared.activateFileViewerSelecting(selection.isEmpty ? [url] : selectedURLs)
         }
@@ -381,15 +374,8 @@ final class BrowserModel {
 
     // MARK: Windows and tabs
 
-    func requestOpen(_ spec: WindowSpec) {
-        openRequests.append(spec)
-        openRequestCount += 1
-    }
-
-    func takeOpenRequests() -> [WindowSpec] {
-        defer { openRequests = [] }
-        return openRequests
-    }
+    /// Asks the window to open a window or tab.
+    func requestOpen(_ spec: WindowSpec) { send(.open(spec)) }
 
     /// Middle-click, Ctrl+Return or the menu: each folder in a tab of this window, in the
     /// background like a browser (this tab stays in front).
@@ -467,8 +453,7 @@ final class BrowserModel {
     }
 
     func startRename(_ target: URL) {
-        renameTarget = target
-        renameRequest += 1
+        send(.rename(target))
     }
 
     /// Called by the list when editing ends. Returns false (and explains) if the name can't be used.
@@ -615,7 +600,6 @@ final class BrowserModel {
     }
     var isSearching: Bool { search.isSearching }
     var searchHitLimit: Bool { search.hitLimit }
-    var searchFocusRequest: Int { search.focusRequest }
     var isSearchingSubfolders: Bool { search.isSearchingSubfolders }
     var isFiltering: Bool { search.isFiltering }
     /// Tags used in this folder, for the find bar's Tag filter.
@@ -625,7 +609,10 @@ final class BrowserModel {
         showHiddenFiles ? listing.items.count : listing.items.count(where: { !$0.isHidden })
     }
 
-    func openSearch() { search.open() }
+    func openSearch() {
+        search.open()
+        send(.focusSearch)
+    }
 
     /// Esc or the bar's close button: back to the whole folder.
     func endSearch() {

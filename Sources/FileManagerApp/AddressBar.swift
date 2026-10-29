@@ -31,7 +31,8 @@ struct AddressBar: View {
             }
         }
         .frame(minWidth: 160, idealWidth: 300, maxWidth: .infinity)
-        .onChange(of: model.addressFocusRequest) {
+        .onPaneCommand(model) { command in
+            guard case .focusAddressBar = command else { return }
             editing = true
             focused = true
         }

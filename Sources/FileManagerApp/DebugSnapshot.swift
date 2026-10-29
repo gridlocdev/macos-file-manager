@@ -76,6 +76,7 @@ import FileManagerCore
                 print("snapshot: folder: \(model.url.lastPathComponent), view: \(model.view.mode), group: \(model.view.groupBy)")
             }
             print("snapshot: windows: \(NSApp.windows.filter(\.isVisible).map(\.title))")
+            print("snapshot: focus: \(NSApp.keyWindow?.firstResponder.map { String(describing: type(of: $0)) } ?? "-")")
             print("snapshot: tabs in key window: \(NSApp.keyWindow?.tabGroup?.windows.map(\.title) ?? []), key: \(NSApp.keyWindow?.title ?? "-")")
             printMenus()
             // An open sheet stops the app from quitting.
