@@ -245,33 +245,8 @@ final class BrowserModel {
     var selectedURLs: [URL] { selectedItems.map(\.url) }
     var selectedItems: [FileItem] { items.filter { selection.contains($0.url) } }
 
-    func canPerform(_ action: Action) -> Bool {
-        switch action {
-        case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately, .quickLook: return !selection.isEmpty
-        case .invertSelection, .selectByPattern: return !items.isEmpty
-        case .copyToOtherPane, .moveToOtherPane: return !selection.isEmpty && otherPane != nil
-        case .compress: return !selection.isEmpty && !isTrashFolder
-        case .extract: return selectedItems.contains { !$0.isFolder && Archive.isArchive($0.url) }
-        case .downloadNow: return selectedItems.contains { $0.cloud == .notDownloaded }
-        case .removeDownload: return selectedItems.contains { $0.cloud == .current }
-        case .openInNewTab: return items.contains { selection.contains($0.url) && $0.isFolder }
-        case .reopenClosedTab: return services.windows.hasClosedTabs
-        case .nextTab, .previousTab: return controls.tabCount > 1
-        case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9:
-            let count = controls.tabCount
-            return action == .showTab9 ? count > 1 : (action.tabNumber ?? 0) <= count
-        case .moveToTrash: return !selection.isEmpty && !isTrashFolder
-        case .putBack: return !selection.isEmpty && isTrashFolder
-        case .paste, .pasteMove: return services.clipboard.hasFiles && errorMessage == nil
-        case .newFolder, .newTextFile: return errorMessage == nil
-        case .undo: return ops.canUndo
-        case .redo: return ops.canRedo
-        case .goBack: return history.canGoBack
-        case .goForward: return history.canGoForward
-        case .goUp: return url.path != "/"
-        default: return true
-        }
-    }
+    /// See `Action.isAvailable(in:)`.
+    func canPerform(_ action: Action) -> Bool { action.isAvailable(in: self) }
 
     func perform(_ action: Action) {
         guard canPerform(action) else {
@@ -759,6 +734,21 @@ final class BrowserModel {
     private func volumeName(of url: URL) -> String? {
         try? url.resourceValues(forKeys: [.volumeNameKey]).volumeName
     }
+}
+
+extension BrowserModel: @MainActor ActionState {
+    var hasSelection: Bool { !selection.isEmpty }
+    var hasItems: Bool { !items.isEmpty }
+    var canReadFolder: Bool { listing.error == nil }
+    var isAtRoot: Bool { url.path == "/" }
+    var hasOtherPane: Bool { otherPane != nil }
+    var tabCount: Int { controls.tabCount }
+    var hasClosedTabs: Bool { services.windows.hasClosedTabs }
+    var clipboardHasFiles: Bool { services.clipboard.hasFiles }
+    var canUndo: Bool { ops.canUndo }
+    var canRedo: Bool { ops.canRedo }
+    var canGoBack: Bool { history.canGoBack }
+    var canGoForward: Bool { history.canGoForward }
 }
 
 struct BatchRenameRequest: Identifiable {

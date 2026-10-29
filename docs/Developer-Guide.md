@@ -39,6 +39,7 @@ Xcode toolchain: Command Palette → **Swift: Select Toolchain**.
 ```
 Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   Action.swift                 every command: title, which menu it's in
+  ActionAvailability.swift     when each Action is available (ActionState: selection, tabs, clipboard…)
   KeyChord.swift               a key + modifiers, and its docs spelling ("Shift+Cmd+N")
   Keymap.swift                 Action → shortcuts; the standard keymap
   NavigationHistory.swift      back/forward stacks
@@ -124,7 +125,8 @@ by exactly one of two things:
 The monitor must leave menu chords alone: SwiftUI runs a menu item's shortcut even when a
 monitor has swallowed the event, so handling it in both places runs the action twice.
 
-`BrowserModel.canPerform(_:)` decides when an action is available; `perform` beeps when it
+`Action.isAvailable(in:)` (Core) decides when an action is available, from an `ActionState`
+that `BrowserModel` provides; `BrowserModel.canPerform(_:)` asks it, and `perform` beeps when it
 isn't. The toolbar buttons grey out, but menu items stay enabled.
 
 The menu bar finds the key window's model through `ActiveBrowser.shared`, which `KeyMonitor`
@@ -139,7 +141,8 @@ focus.) SwiftUI doesn't re-evaluate menu items when that model's properties chan
 
 1. Add a case to `Action` with its `title` and `menu`.
 2. Add its chords to `Keymap.standard`.
-3. Handle it in `BrowserModel.perform` (and `canPerform` if it isn't always available).
+3. Handle it in `BrowserModel.perform`, and say when it's available in `Action.isAvailable(in:)`
+   (the switch lists every case, so it won't compile until you do).
 4. Put it in a menu in `AppCommands`.
 5. Add a row to `docs/Keyboard-Shortcuts.md` whose first cell is the title and second cell lists
    every chord in `KeyChord.description` spelling (modifiers in the order Ctrl, Opt, Shift, Cmd).
