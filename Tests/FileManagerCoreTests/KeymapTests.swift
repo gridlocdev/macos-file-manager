@@ -6,6 +6,22 @@ import Testing
 @Suite struct KeymapTests {
     let keymap = Keymap.standard
 
+    /// macOS takes these before the app sees them (screenshots, Spotlight, the app switcher,
+    /// Mission Control, Force Quit, Lock Screen, Dock hiding), so binding one would do nothing.
+    @Test func noChordIsTakenByMacOS() {
+        let reserved: [KeyChord] = [
+            .char("3", [.command, .shift]), .char("4", [.command, .shift]), .char("5", [.command, .shift]),
+            .char("6", [.command, .shift]),
+            KeyChord(.space, .command), KeyChord(.space, [.command, .option]), KeyChord(.space, [.command, .control]),
+            KeyChord(.tab, .command), KeyChord(.tab, [.command, .shift]),
+            KeyChord(.escape, [.command, .option]), .char("q", [.command, .control]), .char("d", [.command, .option]),
+            KeyChord(.up, .control), KeyChord(.down, .control), KeyChord(.left, .control), KeyChord(.right, .control),
+        ]
+        for chord in reserved {
+            #expect(keymap.action(for: chord) == nil, "\(chord) is taken by macOS but bound to \(keymap.action(for: chord)!)")
+        }
+    }
+
     @Test func noChordIsBoundTwice() {
         #expect(keymap.conflicts.isEmpty, "\(keymap.conflicts)")
     }

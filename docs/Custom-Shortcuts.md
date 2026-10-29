@@ -123,8 +123,8 @@ Some things to know:
 | `focusPreviousArea` | Focus Previous Area | Shift+F6 |
 | `refresh` | Refresh | Cmd+R, F5 |
 | `toggleHiddenFiles` | Show Hidden Files | Cmd+H, Shift+Cmd+. |
-| `viewAsIcons` | as Icons | Shift+Cmd+2 |
-| `viewAsDetails` | as Details | Shift+Cmd+6 |
+| `viewAsIcons` | as Icons | Opt+Cmd+1 |
+| `viewAsDetails` | as Details | Opt+Cmd+2 |
 | `zoomIn` | Zoom In | Cmd+=, Shift+Cmd+= |
 | `zoomOut` | Zoom Out | Cmd+- |
 | `actualSize` | Actual Size | Cmd+0 |

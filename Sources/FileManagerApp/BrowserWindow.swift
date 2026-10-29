@@ -145,8 +145,8 @@ struct BrowserWindow: View {
     private var viewButtons: some View {
         HStack(spacing: 6) {
             ControlGroup {
-                viewButton(.viewAsIcons, mode: .icons, symbol: "square.grid.2x2", keys: "Shift+Cmd+2")
-                viewButton(.viewAsDetails, mode: .details, symbol: "list.bullet", keys: "Shift+Cmd+6")
+                viewButton(.viewAsIcons, mode: .icons, symbol: "square.grid.2x2", keys: "Opt+Cmd+1")
+                viewButton(.viewAsDetails, mode: .details, symbol: "list.bullet", keys: "Opt+Cmd+2")
             }
             .fixedSize()
             Button("Split View", systemImage: "rectangle.split.2x1") { active.perform(.toggleSplitView) }

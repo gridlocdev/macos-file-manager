@@ -102,7 +102,7 @@ Ordered by how essential to everyday file management, then by what later feature
 | Reopen closed tab | Cmd+Shift+T | 4 |
 | Search / filter | Cmd+F | 5 |
 | Invert selection / select by pattern | Cmd+Shift+I / Cmd+S | 5 |
-| Icons / details view | Cmd+Shift+2 / Cmd+Shift+6 | 6 |
+| Icons / details view | Opt+Cmd+1 / Opt+Cmd+2 | 6 |
 | Zoom in / out / reset | Cmd+= / Cmd+- / Cmd+0 | 6 |
 | Preview pane | Opt+P | 6 |
 | Split view | F3 | 8 |
@@ -140,7 +140,7 @@ Items appear as their milestone lands; shortcuts shown come from the keymap.
 - Local git only, no GitHub yet.
 - Icon: standing set of drawers (app-icon skill).
 - Single pane + tabs is the default; split view is an extra (M8).
-- Views: Cmd+Shift+2 icons / Cmd+Shift+6 details (Cmd+1…9 = tabs).
+- Views: Opt+Cmd+1 icons / Opt+Cmd+2 details (Cmd+1…9 = tabs; Explorer's Ctrl+Shift+2/6 can't carry over because Shift+Cmd+3…6 are macOS screenshot shortcuts).
 - Search: Cmd+F only; F3 = split view (Dolphin).
 - Put Back: only items this app trashed; no Finder hand-off.
 - No embedded terminal; Open Terminal Here (configurable app) covers it.

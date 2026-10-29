@@ -75,6 +75,13 @@ Dolphin's F4 opens a terminal panel inside the window. Here F4 opens the current
 separate terminal app: Terminal, iTerm, Ghostty or another app you choose in
 [Settings](Settings.md).
 
+### Icons and Details are Opt+Cmd+1 and Opt+Cmd+2
+
+Explorer's Ctrl+Shift+2 (large icons) and Ctrl+Shift+6 (details) can't become Shift+Cmd+2 and
+Shift+Cmd+6 here, because macOS keeps Shift+Cmd+3 to 6 for screenshots and takes them before any
+app sees them. File Manager uses Finder's Cmd+1 and Cmd+2 with Opt added instead, since Cmd+1 to
+9 switch tabs. See [Views and columns](Views-and-Columns.md).
+
 ### Find is Cmd+F, not F3
 
 In Explorer, F3 and Ctrl+E also start a search. Here search is **Cmd+F** only, and it filters

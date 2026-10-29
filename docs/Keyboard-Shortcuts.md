@@ -114,8 +114,8 @@ Cmd+Backspace work on the text instead of on files.
 
 | Action | Keys | Windows / Linux |
 |---|---|---|
-| as Icons | Shift+Cmd+2 | Ctrl+Shift+2 (Explorer, large icons) |
-| as Details | Shift+Cmd+6 | Ctrl+Shift+6 (Explorer) |
+| as Icons | Opt+Cmd+1 | Ctrl+Shift+2 (Explorer, large icons); Cmd+1 in Finder |
+| as Details | Opt+Cmd+2 | Ctrl+Shift+6 (Explorer); Cmd+2 in Finder |
 | Zoom In | Cmd+=, Shift+Cmd+=, Cmd+scroll up (icons) | Ctrl+=, Ctrl+scroll |
 | Zoom Out | Cmd+-, Cmd+scroll down (icons) | Ctrl+-, Ctrl+scroll |
 | Actual Size | Cmd+0 | Ctrl+0 |

@@ -13,8 +13,8 @@ Manager`), never as hidden files inside your folders, so nothing like `.DS_Store
 
 | View | Keys | Also |
 |---|---|---|
-| as Details | Shift+Cmd+6 | View menu, the toolbar's view buttons, right-click empty space |
-| as Icons | Shift+Cmd+2 | the same |
+| as Details | Opt+Cmd+2 | View menu, the toolbar's view buttons, right-click empty space |
+| as Icons | Opt+Cmd+1 | the same |
 
 The **details list** has a row per item with columns. The **icon view** shows a grid of icons
 with the names under them, and thumbnails for pictures, movies, PDFs and other files Quick Look

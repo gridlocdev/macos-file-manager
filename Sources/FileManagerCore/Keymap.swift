@@ -94,8 +94,10 @@ public struct Keymap: Sendable {
         .focusNextArea: [KeyChord(.function(6))],
         .focusPreviousArea: [KeyChord(.function(6), .shift)],
         .refresh: [.char("r", .command), KeyChord(.function(5))],
-        .viewAsIcons: [.char("2", [.command, .shift])],
-        .viewAsDetails: [.char("6", [.command, .shift])],
+        // Finder's Cmd+1 / Cmd+2 with Opt (Cmd+1…9 switch tabs). Not Explorer's Ctrl+Shift+2/6:
+        // Shift+Cmd+3…6 are macOS screenshot shortcuts, which the system takes first.
+        .viewAsIcons: [.char("1", [.command, .option])],
+        .viewAsDetails: [.char("2", [.command, .option])],
         .zoomIn: [.char("=", .command), .char("=", [.command, .shift])],
         .zoomOut: [.char("-", .command)],
         .actualSize: [.char("0", .command)],
