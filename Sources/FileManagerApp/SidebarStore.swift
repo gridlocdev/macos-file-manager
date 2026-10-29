@@ -48,7 +48,6 @@ final class SidebarStore {
     }
 
     func visited(_ path: String) {
-        guard !Windows.isSnapshotRun else { return }
         recent.visit(path)
         save()
     }
@@ -59,6 +58,8 @@ final class SidebarStore {
     }
 
     private func save() {
+        // Snapshot runs leave the user's sidebar alone.
+        guard !Windows.isSnapshotRun else { return }
         defaults.set(try? JSONEncoder().encode(pins), forKey: Self.pinsKey)
         defaults.set(try? JSONEncoder().encode(recent), forKey: Self.recentKey)
     }
