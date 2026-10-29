@@ -9,7 +9,7 @@ default:
 build:
     xcrun swift build
 
-# Run the unit tests (keymap, history, paths, sorting, docs)
+# Run the unit tests (Core logic and docs; the app's models in a scratch sandbox)
 test:
     xcrun swift test
 

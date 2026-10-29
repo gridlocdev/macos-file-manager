@@ -8,6 +8,9 @@ docs/Developer-Guide.md.
 - Must stay maintainable in VS Code: no Xcode project, everything through SwiftPM and the justfile.
 - Swift 6 strict concurrency, macOS 27 minimum. `BrowserModel` is `@MainActor @Observable`; folder reads run in `Task.detached`.
 - Pure logic (keymap, history, paths, sorting) goes in `FileManagerCore` (no AppKit) with Swift Testing tests.
+  Model behaviour that needs the app target is tested in `FileManagerAppTests` with a `Sandbox`
+  (scratch folder, own UserDefaults suite, fake Trash); pass dependencies in through
+  `BrowserServices` rather than reaching for `.shared`.
 - Every command is an `Action`; shortcuts live only in `Keymap.standard`. Menus and `KeyMonitor` read it through `KeymapStore` (which layers the user's Shortcuts.json on top). Never add a `.keyboardShortcut` or key handler outside the keymap. `docs/Custom-Shortcuts.md` must list every action name (a test checks).
 - Modifier is Cmd (where Windows/Linux use Ctrl), Opt for Alt. Return is reserved for rename; Cmd+H toggles hidden files.
 - The file list is AppKit `NSTableView` (SwiftUI `Table` eats Return/Backspace). Don't switch it to SwiftUI.

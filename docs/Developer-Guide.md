@@ -101,6 +101,7 @@ Sources/FileManagerApp/        the app
   Settings.swift               settings keys, Preferences (typed reads for non-view code),
                                Settings window, Open Terminal Here
 Tests/FileManagerCoreTests/    Swift Testing tests, including the docs check below
+Tests/FileManagerAppTests/     BrowserModel and FileOperations in a Sandbox (scratch folder and stores)
 Resources/Info.plist           bundle info; also embedded in the executable
 Resources/AppIcon.icns         app icon, generated from assets/icon.svg
 assets/icon.svg                app icon source
@@ -275,11 +276,19 @@ conflicts, history, path resolution and completion, sorting, file operation plan
 patterns and search filters, and batch rename previews and moves. Put new pure logic in
 `FileManagerCore` and test it there; keep AppKit in the app target.
 
+It also runs `FileManagerAppTests`, which test the app's models (`BrowserModel`,
+`FileOperations`) through `@testable import FileManagerApp`. Each test makes a `Sandbox`: a
+scratch folder in the temporary directory, a `BrowserServices` whose stores, session and
+settings use their own UserDefaults suite and files in that folder, a private pasteboard, a
+Trash inside the folder, and a `FakePresenter` that answers confirmations and counts beeps.
+Nothing touches your folders, Trash or settings. Folder reads and file operations finish in the
+background, so tests wait with `eventually { … }`.
+
 ### Snapshots
 
 Debug builds have a hook (`DebugSnapshot.swift`) that draws the window into a PNG, prints the
 whole menu bar with shortcuts and enabled state, and quits. It works without screen-recording
-permission, so it's also how the docs screenshot is made:
+permission, so it's also how the docs screenshot is made. The output ends with which view has the keyboard focus:
 
 ```bash
 just snapshot                                    # build/snapshot.png of a demo folder

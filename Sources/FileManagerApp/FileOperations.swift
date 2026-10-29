@@ -44,7 +44,13 @@ final class FileOperations {
 
     let trashLog: TrashLog
 
-    init(trashLog: TrashLog = TrashLog()) { self.trashLog = trashLog }
+    /// Runs the steps; tests give it one with a scratch Trash.
+    private let executor: FileStepExecutor
+
+    init(trashLog: TrashLog = TrashLog(), executor: FileStepExecutor = FileStepExecutor()) {
+        self.trashLog = trashLog
+        self.executor = executor
+    }
 
     // MARK: Running steps
 
@@ -68,7 +74,7 @@ final class FileOperations {
 
         // Progress comes back through one stream, so it arrives in order.
         let (progress, reporter) = AsyncStream.makeStream(of: Int.self)
-        let executor = FileStepExecutor()
+        let executor = executor
         let task = Task.detached(priority: .userInitiated) {
             defer { reporter.finish() }
             return executor.run(steps) { reporter.yield($0) } isCancelled: { Task.isCancelled }

@@ -28,5 +28,11 @@ let package = Package(
             dependencies: ["FileManagerCore"],
             path: "Tests/FileManagerCoreTests"
         ),
+        // The app's models (BrowserModel, FileOperations) with scratch folders and stores.
+        .testTarget(
+            name: "FileManagerAppTests",
+            dependencies: ["FileManagerApp"],
+            path: "Tests/FileManagerAppTests"
+        ),
     ]
 )

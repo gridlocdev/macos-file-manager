@@ -37,6 +37,10 @@ final class Windows {
     private var saveTask: Task<Void, Never>?
 
     private static let sessionKey = "session"
+    /// Where the session is saved.
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
     /// `just snapshot` runs never touch the real session.
     nonisolated static let isSnapshotRun = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT"] != nil
     /// The demo folder a snapshot run works in.
@@ -110,7 +114,7 @@ final class Windows {
         launchSpecTaken = true
         let snapshotRestore = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_RESTORE"] != nil
         guard !Self.isSnapshotRun || snapshotRestore, Preferences.standard.reopenSession,
-            let data = UserDefaults.standard.data(forKey: Self.sessionKey),
+            let data = defaults.data(forKey: Self.sessionKey),
             let saved = try? JSONDecoder().decode(SessionState.self, from: data)
         else { return WindowSpec() }
         let session = saved.restorable { FileManager.default.fileExists(atPath: $0) }
@@ -192,7 +196,7 @@ final class Windows {
                 return SessionState.Window(tabs: tabs, selected: min(selected, tabs.count - 1))
             })
         if let data = try? JSONEncoder().encode(session) {
-            UserDefaults.standard.set(data, forKey: Self.sessionKey)
+            defaults.set(data, forKey: Self.sessionKey)
         }
     }
 }

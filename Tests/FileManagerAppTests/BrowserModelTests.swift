@@ -1,0 +1,220 @@
+import AppKit
+import FileManagerCore
+import Foundation
+import Testing
+
+@testable import FileManagerApp
+
+/// Answers the model's questions the way a test says, and counts beeps.
+@MainActor final class FakePresenter: BrowserPresenter {
+    var beeps = 0
+    var confirmAnswer = true
+    var confirmations: [String] = []
+    var pattern: (pattern: String, adding: Bool)?
+    var problems: [String] = []
+
+    func beep() { beeps += 1 }
+    func confirm(_ title: String, detail: String, button: String, destructive: Bool) async -> Bool {
+        confirmations.append(title)
+        return confirmAnswer
+    }
+    func showProblem(_ title: String, detail: String) { problems.append(title) }
+    func showError(_ error: Error, title: String) { problems.append(title) }
+    func askForPattern(initial: String) async -> (pattern: String, adding: Bool)? { pattern }
+}
+
+/// A scratch folder with a few files, and services that keep everything (settings, the session,
+/// folder views, the Trash, the clipboard) out of the user's own.
+@MainActor final class Sandbox {
+    let root: URL
+    let services: BrowserServices
+    let presenter = FakePresenter()
+    private let suite: String
+
+    init() throws {
+        root = FileManager.default.temporaryDirectory
+            .appending(path: "FileManagerAppTests-\(UUID().uuidString)").canonical
+        let fm = FileManager.default
+        for folder in ["Projects", "Receipts", ".config", "Trash", "State"] {
+            try fm.createDirectory(at: root.appending(path: folder), withIntermediateDirectories: true)
+        }
+        for name in ["notes.txt", "file2.txt", "file10.txt", ".hidden", "Projects/plan.txt"] {
+            try Data("x".utf8).write(to: root.appending(path: name))
+        }
+
+        suite = "FileManagerAppTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        // Saved pins, so the sidebar doesn't look for the default ones in Home.
+        defaults.set(Data(#"{"paths":[]}"#.utf8), forKey: "sidebarPins")
+        let trash = root.appending(path: "Trash")
+        let executor = FileStepExecutor { url in
+            let target = trash.appending(path: UUID().uuidString + "-" + url.lastPathComponent)
+            try FileManager.default.moveItem(at: url, to: target)
+            return target
+        }
+        let state = root.appending(path: "State")
+        services = BrowserServices(
+            operations: FileOperations(trashLog: TrashLog(file: state.appending(path: "trash-log.json")), executor: executor),
+            windows: Windows(defaults: defaults),
+            sidebar: SidebarStore(defaults: defaults),
+            folderViews: FolderViewStore(file: state.appending(path: "FolderViews.json")),
+            clipboard: Clipboard(pasteboard: NSPasteboard(name: NSPasteboard.Name(suite))),
+            preferences: Preferences(defaults: defaults))
+    }
+
+    func model(at folder: URL? = nil) -> BrowserModel {
+        BrowserModel(start: folder ?? root, services: services, presenter: presenter)
+    }
+
+    func exists(_ name: String) -> Bool { FileManager.default.fileExists(atPath: root.appending(path: name).path) }
+
+    func names(_ model: BrowserModel) -> [String] { model.items.map(\.name) }
+
+    deinit {
+        try? FileManager.default.removeItem(at: root)
+        UserDefaults().removePersistentDomain(forName: suite)
+    }
+}
+
+/// Waits for something the model does in the background (a folder read, a file operation).
+@MainActor func eventually(_ condition: () -> Bool) async throws {
+    for _ in 0..<200 {
+        if condition() { return }
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    Issue.record("timed out")
+}
+
+@MainActor @Suite struct BrowserModelTests {
+    let sandbox: Sandbox
+    init() throws { sandbox = try Sandbox() }
+
+    func started(at folder: URL? = nil) async throws -> BrowserModel {
+        let model = sandbox.model(at: folder)
+        model.start()
+        try await eventually { !model.isLoading && model.listingVersion > 0 }
+        return model
+    }
+
+    @Test func listsFoldersFirstAndHidesHiddenFiles() async throws {
+        let model = try await started()
+        #expect(sandbox.names(model) == ["Projects", "Receipts", "State", "Trash", "file2.txt", "file10.txt", "notes.txt"])
+        model.perform(.toggleHiddenFiles)
+        #expect(sandbox.names(model).contains(".hidden"))
+    }
+
+    @Test func goingUpSelectsTheFolderYouCameFrom() async throws {
+        let model = try await started()
+        model.navigate(to: sandbox.root.appending(path: "Projects/"))
+        try await eventually { model.items.map(\.name) == ["plan.txt"] }
+        model.perform(.goUp)
+        try await eventually { model.selectedItems.map(\.name) == ["Projects"] }
+        #expect(model.canPerform(.goForward) == false)
+        #expect(model.canPerform(.goBack))
+    }
+
+    @Test func findFiltersAndEndSearchRestores() async throws {
+        let model = try await started()
+        model.perform(.find)
+        model.criteria.text = "file"
+        #expect(sandbox.names(model) == ["file2.txt", "file10.txt"])
+        #expect(model.folderItemCount == 7)
+        model.perform(.endSearch)
+        #expect(model.items.count == 7)
+    }
+
+    @Test func unavailableActionBeeps() async throws {
+        let model = try await started()
+        model.perform(.goBack)
+        model.perform(.rename)
+        #expect(sandbox.presenter.beeps == 2)
+    }
+
+    @Test func newFolderIsSelectedAndRenamedThenUndone() async throws {
+        let model = try await started()
+        model.perform(.newFolder)
+        try await eventually { model.selectedItems.map(\.name) == [FileNaming.newFolderName] }
+        #expect(sandbox.exists(FileNaming.newFolderName))
+        #expect(model.takeFileViewCommands().contains {
+            if case .rename(let url) = $0 { url.lastPathComponent == FileNaming.newFolderName } else { false }
+        })
+        model.perform(.undo)
+        try await eventually { !sandbox.exists(FileNaming.newFolderName) }
+    }
+
+    @Test func deleteAsksFirst() async throws {
+        let model = try await started()
+        model.selection = [sandbox.root.appending(path: "notes.txt").normalized]
+        sandbox.presenter.confirmAnswer = false
+        model.perform(.deleteImmediately)
+        try await eventually { sandbox.presenter.confirmations.count == 1 }
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(sandbox.exists("notes.txt"))
+    }
+
+    @Test func selectByPattern() async throws {
+        let model = try await started()
+        sandbox.presenter.pattern = ("file*", false)
+        model.perform(.selectByPattern)
+        try await eventually { model.selection.count == 2 }
+        #expect(Set(model.selectedItems.map(\.name)) == ["file2.txt", "file10.txt"])
+    }
+
+    @Test func copyAndPaste() async throws {
+        let model = try await started()
+        model.selection = [sandbox.root.appending(path: "notes.txt").normalized]
+        model.perform(.copy)
+        model.navigate(to: sandbox.root.appending(path: "Receipts"))
+        try await eventually { !model.isLoading && model.items.isEmpty }
+        model.perform(.paste)
+        try await eventually { sandbox.names(model) == ["notes.txt"] }
+        #expect(model.selectedItems.map(\.name) == ["notes.txt"])
+        #expect(sandbox.exists("notes.txt"))
+    }
+}
+
+@MainActor @Suite struct FileOperationsTests {
+    let sandbox: Sandbox
+    init() throws { sandbox = try Sandbox() }
+
+    @Test func conflictAnswersComeFromAsk() async throws {
+        let ops = sandbox.services.operations
+        let source = sandbox.root.appending(path: "Projects/plan.txt")
+        let target = sandbox.root.appending(path: "Receipts")
+        try Data("old".utf8).write(to: target.appending(path: "plan.txt"))
+        var asked: [String] = []
+        let results = await ops.transfer([source], into: target, mode: .copy, window: nil) { conflict, _ in
+            asked.append(conflict.destination.lastPathComponent)
+            return (.keepBoth, false)
+        }
+        #expect(asked == ["plan.txt"])
+        #expect(results.count == 1)
+        #expect(results[0].lastPathComponent != "plan.txt")
+        #expect(try String(contentsOf: target.appending(path: "plan.txt"), encoding: .utf8) == "old")
+    }
+
+    @Test func stopCopiesNothing() async throws {
+        let ops = sandbox.services.operations
+        let target = sandbox.root.appending(path: "Receipts")
+        try Data("old".utf8).write(to: target.appending(path: "plan.txt"))
+        let results = await ops.transfer(
+            [sandbox.root.appending(path: "Projects/plan.txt")], into: target, mode: .copy, window: nil
+        ) { _, _ in nil }
+        #expect(results.isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: target.path) == ["plan.txt"])
+        #expect(!ops.canUndo)
+    }
+
+    @Test func undoAndRedoAMove() async throws {
+        let ops = sandbox.services.operations
+        let from = sandbox.root.appending(path: "notes.txt")
+        let to = sandbox.root.appending(path: "Receipts/notes.txt")
+        await ops.run("Move", steps: [.move(from, to: to)], window: nil)
+        #expect(sandbox.exists("Receipts/notes.txt"))
+        _ = await ops.undo(window: nil)
+        #expect(sandbox.exists("notes.txt") && !sandbox.exists("Receipts/notes.txt"))
+        #expect(ops.canRedo)
+        _ = await ops.redo(window: nil)
+        #expect(sandbox.exists("Receipts/notes.txt"))
+    }
+}
