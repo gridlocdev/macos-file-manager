@@ -2,10 +2,11 @@ import AppKit
 import FileManagerCore
 import Observation
 
-/// One folder view: what's shown, history, selection. A window has one now; tabs (M4) and
-/// split view (M8) will each get their own.
+/// One folder view: what's shown, history, selection. Every window and tab has one (tabs are
+/// windows; see `Windows`).
 @MainActor @Observable
 final class BrowserModel {
+    let id: UUID
     private(set) var url: URL
     private(set) var items: [FileItem] = []
     private(set) var errorMessage: String?
@@ -33,6 +34,9 @@ final class BrowserModel {
     private(set) var infoRequestCount = 0
     /// Free space on the current folder's disk, for the status bar.
     private(set) var freeSpace: Int64?
+    /// Windows and tabs to open (the window calls `openWindow` for these).
+    private(set) var openRequests: [WindowSpec] = []
+    private(set) var openRequestCount = 0
 
     /// Bumped to start renaming `renameTarget` in the list.
     private(set) var renameRequest = 0
@@ -44,16 +48,27 @@ final class BrowserModel {
     let home = FileManager.default.homeDirectoryForCurrentUser
     private var allItems: [FileItem] = []
     private var loadTask: Task<Void, Never>?
+    private var freeSpaceTask: Task<Void, Never>?
     private var watcher: DirectoryWatcher?
     /// Selected once the next load shows them (new, pasted or renamed items).
     private var pendingSelection: Set<URL> = []
     private var pendingRename: URL?
+    private var started = false
 
-    init(start: URL? = nil) {
-        let start = start ?? FileManager.default.homeDirectoryForCurrentUser
+    /// Cheap: SwiftUI may create throwaway models. Nothing is read until `start()`.
+    init(start: URL? = nil, id: UUID = UUID()) {
+        self.id = id
+        let start = (start ?? FileManager.default.homeDirectoryForCurrentUser).standardizedFileURL
         url = start
         history = NavigationHistory(start: start)
         addressText = PathInput.display(start, home: home)
+    }
+
+    /// Loads the first folder. Called once the window appears.
+    func start() {
+        guard !started else { return }
+        started = true
+        SidebarStore.shared.visited(url.path)
         load()
     }
 
@@ -99,6 +114,8 @@ final class BrowserModel {
         revealAfterLoad = cameFromChild ? previous.normalized : nil
         pendingSelection = cameFromChild ? [previous.normalized] : []
         pendingRename = nil
+        SidebarStore.shared.visited(target.path)
+        Windows.shared.scheduleSave()
         load()
     }
 
@@ -171,6 +188,12 @@ final class BrowserModel {
         let ops = FileOperations.shared
         switch action {
         case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately, .quickLook: return !selection.isEmpty
+        case .openInNewTab: return items.contains { selection.contains($0.url) && $0.isFolder }
+        case .reopenClosedTab: return Windows.shared.hasClosedTabs
+        case .nextTab, .previousTab: return (window?.tabGroup?.windows.count ?? 1) > 1
+        case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9:
+            let count = window?.tabGroup?.windows.count ?? 1
+            return action == .showTab9 ? count > 1 : (action.tabNumber ?? 0) <= count
         case .moveToTrash: return !selection.isEmpty && !isTrashFolder
         case .putBack: return !selection.isEmpty && isTrashFolder
         case .paste, .pasteMove: return Clipboard.shared.hasFiles && errorMessage == nil
@@ -200,8 +223,24 @@ final class BrowserModel {
         case .goDownloads: navigate(to: home.appendingPathComponent("Downloads"))
         case .goApplications: navigate(to: URL(fileURLWithPath: "/Applications"))
         case .focusAddressBar: focusAddressBar()
-        case .focusNextArea: window?.selectNextKeyView(nil)
-        case .focusPreviousArea: window?.selectPreviousKeyView(nil)
+        case .focusNextArea: moveFocus(forward: true)
+        case .focusPreviousArea: moveFocus(forward: false)
+        case .newWindow: requestOpen(WindowSpec(path: url.path))
+        case .newTab: requestOpen(WindowSpec(path: url.path, tabParent: id, select: true))
+        case .openInNewTab: openInNewTabs(items.filter { selection.contains($0.url) && $0.isFolder }.map(\.url))
+        case .reopenClosedTab:
+            if let path = Windows.shared.popClosedTab() {
+                requestOpen(WindowSpec(path: path, tabParent: id, select: true))
+            }
+        case .nextTab: showTab(offset: 1)
+        case .previousTab: showTab(offset: -1)
+        case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9:
+            let tabs = window?.tabGroup?.windows ?? []
+            let index = action == .showTab9 ? tabs.count - 1 : (action.tabNumber ?? 1) - 1
+            if tabs.indices.contains(index) { tabs[index].makeKeyAndOrderFront(nil) }
+        case .addToSidebar:
+            let folders = items.filter { selection.contains($0.url) && $0.isFolder }.map(\.url.path)
+            SidebarStore.shared.pin(folders.isEmpty ? [url.path] : folders)
         case .refresh: refresh()
         case .toggleHiddenFiles: showHiddenFiles.toggle()
         case .openTerminal: TerminalLauncher.open(url)
@@ -246,6 +285,61 @@ final class BrowserModel {
     /// Total size of the selected files (folders aren't added up, as in Explorer's status bar).
     var selectionSize: Int64 {
         items.filter { selection.contains($0.url) && !$0.isFolder }.reduce(0) { $0 + ($1.size ?? 0) }
+    }
+
+    // MARK: Windows and tabs
+
+    /// Next/previous tab, wrapping around. The Ctrl+Tab keys themselves are left to macOS (see
+    /// `Action.isHandledByMacOS`); this is for other callers.
+    private func showTab(offset: Int) {
+        guard let window, let tabs = window.tabGroup?.windows, let index = tabs.firstIndex(of: window) else { return }
+        tabs[(index + offset + tabs.count) % tabs.count].makeKeyAndOrderFront(nil)
+    }
+
+    func requestOpen(_ spec: WindowSpec) {
+        openRequests.append(spec)
+        openRequestCount += 1
+    }
+
+    func takeOpenRequests() -> [WindowSpec] {
+        defer { openRequests = [] }
+        return openRequests
+    }
+
+    /// Middle-click, Ctrl+Return or the menu: each folder in a tab of this window, in the
+    /// background like a browser (this tab stays in front).
+    func openInNewTabs(_ folders: [URL]) {
+        for folder in folders { requestOpen(WindowSpec(path: folder.path, tabParent: id, select: false)) }
+    }
+
+    /// F6 / Shift+F6, like Explorer: file list → address bar → sidebar → file list.
+    private func moveFocus(forward: Bool) {
+        guard let window else { return }
+        let responder = window.firstResponder
+        let inList = responder is FileTableView
+        let inAddress = responder is NSText
+        let sidebar = Self.sidebarView(in: window.contentView)
+        func focusSidebar() {
+            if let sidebar { window.makeFirstResponder(sidebar) } else { focusList() }
+        }
+        switch (forward, inList, inAddress) {
+        case (true, true, _): focusAddressBar()
+        case (true, _, true): focusSidebar()
+        case (false, true, _): focusSidebar()
+        case (false, _, true): focusList()
+        case (false, _, _): focusAddressBar()
+        default: focusList()
+        }
+    }
+
+    /// The sidebar list's AppKit view: the first table or outline that isn't the file list.
+    private static func sidebarView(in view: NSView?) -> NSView? {
+        guard let view else { return nil }
+        if view is NSTableView, !(view is FileTableView) { return view }
+        for child in view.subviews {
+            if let found = sidebarView(in: child) { return found }
+        }
+        return nil
     }
 
     // MARK: File operations
@@ -372,13 +466,9 @@ final class BrowserModel {
         watcher = DirectoryWatcher(url: target) { [weak self] in self?.refresh() }
         loadTask = Task {
             let result = await DirectoryLoader.list(target)
-            let free = await Task.detached {
-                try? target.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-                    .volumeAvailableCapacityForImportantUsage
-            }.value
             guard !Task.isCancelled, target == url else { return }
             isLoading = false
-            freeSpace = free
+            updateFreeSpace(target)
             switch result {
             case .success(let listing):
                 allItems = listing
@@ -406,6 +496,19 @@ final class BrowserModel {
                 pendingRename = nil
                 startRename(rename)
             }
+        }
+    }
+
+    /// Free space can take a moment to work out (it counts purgeable space), so it's filled in
+    /// after the listing rather than holding it up.
+    private func updateFreeSpace(_ folder: URL) {
+        freeSpaceTask?.cancel()
+        freeSpaceTask = Task {
+            let free = await Task.detached {
+                try? folder.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+                    .volumeAvailableCapacityForImportantUsage
+            }.value
+            if !Task.isCancelled, folder == url { freeSpace = free }
         }
     }
 

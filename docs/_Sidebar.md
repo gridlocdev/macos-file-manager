@@ -7,6 +7,8 @@
 **Understanding the app**
 - [Copying and moving files](Copying-and-Moving-Files.md)
 - [Drag and drop](Drag-and-Drop.md)
+- [Tabs and windows](Tabs-and-Windows.md)
+- [The sidebar](Sidebar.md)
 - [Keyboard shortcuts](Keyboard-Shortcuts.md)
 - [Coming from Windows and Linux](Coming-from-Windows-and-Linux.md)
 - [Settings](Settings.md)

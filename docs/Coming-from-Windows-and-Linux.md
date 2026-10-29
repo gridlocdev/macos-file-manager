@@ -24,6 +24,12 @@ different, and why.
   `name - Copy`, and **Shift+Delete** deletes without the Trash (after asking).
 - One undo history for the whole app, like Explorer's: Cmd+Z undoes copies, moves, renames,
   new folders and trashing.
+- **Tabs** like Explorer's and Nautilus's: Cmd+T, Ctrl+Tab, middle-click a folder to open it
+  in a new tab, Shift+Cmd+T to reopen a closed one. Cmd+1…9 jump to a tab (Alt+1…9 in
+  Nautilus).
+- The **address bar** shows clickable folders with › menus of subfolders, like Explorer's.
+- The **sidebar** has pinned folders (Quick access), recent folders and a folder tree that
+  follows where you are (the navigation pane).
 - **Shift+F10** opens the right-click menu, and **Alt+Enter** (here Opt+Return) opens an item's
   properties (Get Info).
 - Dragging moves on the same disk and copies to another disk, as in Explorer. To force it,

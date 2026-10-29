@@ -5,6 +5,7 @@ enum SettingsKey {
     static let terminal = "terminalApp"
     static let customTerminalPath = "customTerminalPath"
     static let foldersFirst = "foldersFirst"
+    static let reopenSession = "reopenSession"
 }
 
 enum TerminalChoice: String, CaseIterable, Identifiable {
@@ -61,11 +62,15 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.terminal) private var terminal = TerminalChoice.terminal
     @AppStorage(SettingsKey.customTerminalPath) private var customTerminalPath = ""
     @AppStorage(SettingsKey.foldersFirst) private var foldersFirst = true
+    @AppStorage(SettingsKey.reopenSession) private var reopenSession = true
 
     var body: some View {
         Form {
             Section("Files") {
                 Toggle("Show folders before files", isOn: $foldersFirst)
+            }
+            Section("Windows") {
+                Toggle("Reopen windows and tabs from last time", isOn: $reopenSession)
             }
             Section("Open Terminal Here") {
                 Picker("Terminal app", selection: $terminal) {

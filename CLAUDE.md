@@ -14,6 +14,8 @@ docs/Developer-Guide.md.
 - No third-party dependencies; ask before adding any.
 - User docs live in `docs/` (wiki-style: `Home.md`, `_Sidebar.md`, flat hyphenated pages, relative `.md` links). Update the page describing a behaviour in the same commit that changes it. `docs/Keyboard-Shortcuts.md` must list every keymap chord (a test checks).
 - Every file change goes through `FileStep`s run by `FileStepExecutor` (via `FileOperations`), so it's undoable and shows progress. Never call FileManager copy/move/remove elsewhere. Replace trashes rather than deletes.
+- Tabs are native window tabs; each tab is a `WindowGroup(for: WindowSpec.self)` window with its own `BrowserModel` (see `Windows.swift`). Keep `BrowserModel.init` free of work.
+- SwiftUI gotchas seen here: menu items don't refresh from model state (keep them enabled, fixed titles, no Toggles); `DisclosureGroup` builds closed content (guard with `isExpanded`); only write observed state on real changes.
 - Test file operations only in `build/snapshot-demo` (`just snapshot`); never against real folders.
 - Don't write anything into the user's folders (no .DS_Store-style files); app state goes in UserDefaults or Application Support.
 - Never delete or overwrite user files while testing; use a scratch folder.

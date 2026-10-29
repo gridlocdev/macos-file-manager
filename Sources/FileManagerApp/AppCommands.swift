@@ -5,6 +5,7 @@ import SwiftUI
 /// The menu bar. Items come from `Action`, with shortcuts from the keymap.
 struct AppCommands: Commands {
     private var browser: BrowserModel? { ActiveBrowser.shared.model }
+    @Environment(\.openWindow) private var openWindow
     private let keymap = Keymap.standard
 
     var body: some Commands {
@@ -16,6 +17,13 @@ struct AppCommands: Commands {
             Button("Show All") { NSApp.unhideAllApplications(nil) }
         }
 
+        CommandGroup(replacing: .newItem) {
+            button(.newWindow)
+            button(.newTab)
+            button(.openInNewTab)
+            button(.reopenClosedTab)
+        }
+
         CommandGroup(after: .newItem) {
             Divider()
             button(.newFolder)
@@ -25,6 +33,7 @@ struct AppCommands: Commands {
             button(.quickLook)
             button(.getInfo)
             button(.showInFinder)
+            button(.addToSidebar)
             Divider()
             button(.rename)
             button(.duplicate)
@@ -105,7 +114,16 @@ struct AppCommands: Commands {
             }
             return
         }
-        if let browser { browser.perform(action) } else { NSSound.beep() }
+        if let browser {
+            browser.perform(action)
+        } else if action == .newWindow || action == .newTab {
+            // No window open: still make one.
+            openWindow(value: WindowSpec())
+        } else if action == .reopenClosedTab, let path = Windows.shared.popClosedTab() {
+            openWindow(value: WindowSpec(path: path))
+        } else {
+            NSSound.beep()
+        }
     }
 
     /// The docs ship inside the .app; when running from the build folder, use the repo's.

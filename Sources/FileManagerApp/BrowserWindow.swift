@@ -3,9 +3,15 @@ import SwiftUI
 
 /// One window: sidebar, toolbar with back/forward/up and the address bar, file list, status bar.
 struct BrowserWindow: View {
-    @State private var model = BrowserModel()
+    let spec: WindowSpec
+    @State private var model: BrowserModel
     @AppStorage(SettingsKey.foldersFirst) private var foldersFirst = true
     @Environment(\.openWindow) private var openWindow
+
+    init(spec: WindowSpec) {
+        self.spec = spec
+        _model = State(initialValue: BrowserModel(start: spec.path.map { URL(filePath: $0) }, id: spec.id))
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -41,8 +47,15 @@ struct BrowserWindow: View {
         .background(KeyMonitor(model: model))
         .frame(minWidth: 640, minHeight: 360)
         .onAppear {
+            Windows.shared.register(model, spec: spec)
             model.sort.foldersFirst = foldersFirst
+            model.start()
             model.focusList()
+            // The first window at launch reopens the rest of last session's windows and tabs.
+            for other in Windows.shared.takeRestoreQueue() { openWindow(value: other) }
+        }
+        .onChange(of: model.openRequestCount) {
+            for request in model.takeOpenRequests() { openWindow(value: request) }
         }
         .onChange(of: foldersFirst) { model.sort.foldersFirst = foldersFirst }
         .onChange(of: model.infoRequestCount) {
@@ -66,31 +79,6 @@ struct BrowserWindow: View {
         } else if model.items.isEmpty && !model.isLoading {
             Text("This folder is empty").foregroundStyle(.secondary)
         }
-    }
-}
-
-struct AddressBar: View {
-    @Bindable var model: BrowserModel
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        TextField("Path", text: $model.addressText)
-            .textFieldStyle(.roundedBorder)
-            .font(.body.monospaced())
-            .frame(minWidth: 280, idealWidth: 520, maxWidth: .infinity)
-            .focused($focused)
-            .onSubmit { model.submitAddress() }
-            .onExitCommand { model.cancelAddressEdit() }
-            .onKeyPress(.tab) {
-                model.completeAddress()
-                return .handled
-            }
-            .onChange(of: model.addressFocusRequest) { focused = true }
-            .onChange(of: focused) {
-                if !focused { model.addressText = PathInput.display(model.url, home: model.home) }
-            }
-            .help("Type a path and press Return. Tab completes folder names. (Cmd+L)")
-            .accessibilityLabel("Address")
     }
 }
 

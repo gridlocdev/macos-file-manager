@@ -42,6 +42,7 @@ struct KeyMonitor: NSViewRepresentable {
             NotificationCenter.default.removeObserver(self)
             guard let window else { return }
             model?.window = window
+            if let model { Windows.shared.attached(model, window: window) }
             // The menu bar acts on the key window's model.
             NotificationCenter.default.addObserver(
                 self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
@@ -59,6 +60,7 @@ struct KeyMonitor: NSViewRepresentable {
 
         @objc private func windowWillClose() {
             if ActiveBrowser.shared.model === model { ActiveBrowser.shared.model = nil }
+            if let model { Windows.shared.closed(model) }
         }
 
         private func handle(_ event: NSEvent) -> NSEvent? {
@@ -76,6 +78,7 @@ struct KeyMonitor: NSViewRepresentable {
             // The chord a menu item shows is left to the menu: SwiftUI runs menu shortcuts even
             // when a monitor swallows the event, so handling it here too would run it twice.
             if action.menu != nil, keymap.menuChord(for: action) == chord { return event }
+            if action.isHandledByMacOS { return event }
             // Return renames and Delete trashes only in the file list, not the sidebar.
             if action.needsFileListFocus, !(window.firstResponder is FileTableView) { return event }
             model.perform(action)

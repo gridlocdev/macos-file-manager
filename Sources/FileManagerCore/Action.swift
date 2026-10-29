@@ -2,6 +2,10 @@
 /// refer to these, so each command is defined once.
 public enum Action: String, CaseIterable, Sendable {
     case open
+    case newWindow, newTab, openInNewTab, reopenClosedTab
+    case nextTab, previousTab
+    case showTab1, showTab2, showTab3, showTab4, showTab5, showTab6, showTab7, showTab8, showTab9
+    case addToSidebar
     case newFolder, newTextFile
     case rename, duplicate
     case getInfo, quickLook, showInFinder, showContextMenu
@@ -22,6 +26,16 @@ public enum Action: String, CaseIterable, Sendable {
     public var title: String {
         switch self {
         case .open: "Open"
+        case .newWindow: "New Window"
+        case .newTab: "New Tab"
+        case .openInNewTab: "Open in New Tab"
+        case .reopenClosedTab: "Reopen Closed Tab"
+        case .nextTab: "Show Next Tab"
+        case .previousTab: "Show Previous Tab"
+        case .showTab9: "Show Last Tab"
+        case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8:
+            "Show Tab \(tabNumber ?? 0)"
+        case .addToSidebar: "Add to Sidebar"
         case .newFolder: "New Folder"
         case .newTextFile: "New Text File"
         case .rename: "Rename"
@@ -63,11 +77,12 @@ public enum Action: String, CaseIterable, Sendable {
     public var menu: Menu? {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
-            .getInfo, .quickLook, .showInFinder:
+            .getInfo, .quickLook, .showInFinder, .newWindow, .newTab, .openInNewTab, .reopenClosedTab, .addToSidebar:
             .file
         case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll: .edit
         case .refresh, .toggleHiddenFiles: .view
-        case .focusNextArea, .focusPreviousArea, .showContextMenu: nil
+        case .focusNextArea, .focusPreviousArea, .showContextMenu, .nextTab, .previousTab: nil
+        case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9: nil
         default: .go
         }
     }
@@ -79,7 +94,7 @@ public enum Action: String, CaseIterable, Sendable {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
             .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll,
-            .getInfo, .quickLook, .showInFinder, .showContextMenu:
+            .getInfo, .quickLook, .showInFinder, .showContextMenu, .openInNewTab, .addToSidebar:
             true
         default:
             false
@@ -100,11 +115,32 @@ public enum Action: String, CaseIterable, Sendable {
         }
     }
 
+    /// Shortcuts macOS already runs itself: Ctrl+Tab and Ctrl+Shift+Tab switch window tabs even
+    /// when the app has handled the key, so handling them too would switch twice. They're in
+    /// the keymap so the docs list them, but the key handler passes them on.
+    public var isHandledByMacOS: Bool { self == .nextTab || self == .previousTab }
+
+    /// 1…9 for the Show Tab actions (9 is the last tab, as in browsers).
+    public var tabNumber: Int? {
+        switch self {
+        case .showTab1: 1
+        case .showTab2: 2
+        case .showTab3: 3
+        case .showTab4: 4
+        case .showTab5: 5
+        case .showTab6: 6
+        case .showTab7: 7
+        case .showTab8: 8
+        case .showTab9: 9
+        default: nil
+        }
+    }
+
     /// Plain keys (Return, Delete) for these only work in the file list, so Return in the
     /// sidebar doesn't rename and Delete there doesn't trash the list's selection.
     public var needsFileListFocus: Bool {
         switch self {
-        case .rename, .moveToTrash, .deleteImmediately, .open, .quickLook, .showContextMenu: true
+        case .rename, .moveToTrash, .deleteImmediately, .open, .quickLook, .showContextMenu, .openInNewTab: true
         default: false
         }
     }

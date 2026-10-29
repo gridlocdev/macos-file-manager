@@ -57,6 +57,19 @@ The file list needs the keyboard focus (click a file first), and something must 
 It's adding up every file in the folder. Big folders, or folders on network drives, take a
 while. Closing the window stops it.
 
+**My tabs didn't come back after quitting.**
+Check Settings → **Reopen windows and tabs from last time**. Folders that were deleted or are on
+a disconnected drive are skipped. If the app crashed instead of quitting, the tabs from just
+before the crash come back.
+
+**Ctrl+Tab doesn't switch tabs.**
+It switches tabs within one window. Tabs in separate windows aren't in the same tab bar; use
+Window → Merge All Windows to put them together.
+
+**A drive won't eject.**
+Something is still using it: a file open in another app, a Terminal in a folder on it, or a
+File Manager tab showing it. Close those and try again.
+
 **Cmd+H showed hidden files instead of hiding the app.**
 That's on purpose. Use File Manager → Hide File Manager, or click another app.
 

@@ -9,6 +9,12 @@ every window.
 column you sort by, as Explorer and the Linux file managers do. Turn it off to mix folders in
 with files, as Finder does by default.
 
+## Windows
+
+**Reopen windows and tabs from last time** (on by default) brings back your windows and tabs,
+each in the folder it was showing, when File Manager starts. Turn it off to start with one
+window on your home folder. See [Tabs and windows](Tabs-and-Windows.md#reopening-where-you-left-off).
+
 ## Open Terminal Here
 
 **Terminal app** picks what F4 and Go → Open Terminal Here open:

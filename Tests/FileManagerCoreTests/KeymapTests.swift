@@ -27,6 +27,10 @@ import Testing
         #expect(keymap.action(for: KeyChord(.space)) == .quickLook)
         #expect(keymap.action(for: KeyChord(.returnKey, .option)) == .getInfo)
         #expect(keymap.action(for: KeyChord(.function(10), .shift)) == .showContextMenu)
+        #expect(keymap.action(for: .char("9", .command)) == .showTab9)
+        #expect(keymap.action(for: KeyChord(.tab, .control)) == .nextTab)
+        #expect(keymap.action(for: KeyChord(.returnKey, .control)) == .openInNewTab)
+        #expect(Action.showTab9.tabNumber == 9 && Action.showTab9.title == "Show Last Tab")
     }
 
     @Test func textEditingFallbacks() {

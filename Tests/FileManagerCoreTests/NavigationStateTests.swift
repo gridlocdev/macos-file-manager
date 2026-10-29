@@ -1,0 +1,78 @@
+import Foundation
+import Testing
+
+@testable import FileManagerCore
+
+@Suite struct BreadcrumbTests {
+    @Test func startupDisk() {
+        let segments = Breadcrumbs.segments(
+            for: URL(filePath: "/Users/me/src"), volumes: ["/": "Macintosh HD"], startupDiskName: "Macintosh HD")
+        #expect(segments.map(\.title) == ["Macintosh HD", "Users", "me", "src"])
+        #expect(segments.map(\.url.path) == ["/", "/Users", "/Users/me", "/Users/me/src"])
+    }
+
+    @Test func otherDisk() {
+        let segments = Breadcrumbs.segments(
+            for: URL(filePath: "/Volumes/USB Stick/Photos"),
+            volumes: ["/": "Macintosh HD", "/Volumes/USB Stick": "USB Stick"], startupDiskName: "Macintosh HD")
+        #expect(segments.map(\.title) == ["USB Stick", "Photos"])
+        #expect(segments.first?.url.path == "/Volumes/USB Stick")
+    }
+
+    @Test func rootAlone() {
+        let segments = Breadcrumbs.segments(for: URL(filePath: "/"), volumes: [:], startupDiskName: "HD")
+        #expect(segments.map(\.title) == ["HD"])
+    }
+
+    @Test func diskWithSimilarName() {
+        let segments = Breadcrumbs.segments(
+            for: URL(filePath: "/Volumes/USB2/x"), volumes: ["/Volumes/USB": "USB"], startupDiskName: "HD")
+        #expect(segments.map(\.title) == ["HD", "Volumes", "USB2", "x"])
+    }
+}
+
+@Suite struct SidebarListTests {
+    @Test func recentsNewestFirstWithoutDuplicates() {
+        var recent = RecentFolders(limit: 3)
+        for path in ["/a", "/b", "/a", "/c", "/d"] { recent.visit(path) }
+        #expect(recent.paths == ["/d", "/c", "/a"])
+    }
+
+    @Test func pinAddsMovesAndUnpins() {
+        var pins = PinnedFolders(paths: ["/a", "/b", "/c"])
+        pins.pin(["/x"], at: 1)
+        #expect(pins.paths == ["/a", "/x", "/b", "/c"])
+        pins.pin(["/c"], at: 0)
+        #expect(pins.paths == ["/c", "/a", "/x", "/b"])
+        pins.pin(["/a"])
+        #expect(pins.paths == ["/c", "/x", "/b", "/a"])
+        pins.unpin("/x")
+        #expect(pins.paths == ["/c", "/b", "/a"])
+    }
+
+    @Test func moveLikeSwiftUI() {
+        var pins = PinnedFolders(paths: ["/a", "/b", "/c", "/d"])
+        pins.move(from: [0], to: 3)
+        #expect(pins.paths == ["/b", "/c", "/a", "/d"])
+        pins.move(from: [3], to: 0)
+        #expect(pins.paths == ["/d", "/b", "/c", "/a"])
+    }
+}
+
+@Suite struct SessionStateTests {
+    @Test func dropsMissingFoldersAndEmptyWindows() {
+        let session = SessionState(windows: [
+            .init(tabs: ["/a", "/gone", "/b"], selected: 2),
+            .init(tabs: ["/gone"]),
+            .init(tabs: ["/gone", "/c"], selected: 0),
+        ])
+        let restored = session.restorable { $0 != "/gone" }
+        #expect(restored.windows == [.init(tabs: ["/a", "/b"], selected: 1), .init(tabs: ["/c"], selected: 0)])
+    }
+
+    @Test func roundTripsThroughJSON() throws {
+        let session = SessionState(windows: [.init(tabs: ["/a", "/b"], selected: 1)])
+        let data = try JSONEncoder().encode(session)
+        #expect(try JSONDecoder().decode(SessionState.self, from: data) == session)
+    }
+}

@@ -18,8 +18,12 @@ rename.
 
 - **Explorer and Linux shortcuts.** Back and forward with Opt+Left/Right or your mouse's side
   buttons, up with Backspace, refresh with F5, move between panes with F6.
-- **A real address bar.** Type or paste any path, use `~`, and press Tab to complete folder
-  names.
+- **Tabs**: Cmd+T, Ctrl+Tab, middle-click to open a folder in a new tab, Shift+Cmd+T to reopen
+  a closed one, and your windows and tabs come back next time.
+- **An Explorer-style address bar**: click any folder in the path or pick from its › menu, or
+  click the empty part to type a path with Tab completion.
+- **A sidebar** with pinned folders, recent folders, drives with Eject, and a folder tree that
+  follows where you are.
 - **A details list that behaves.** Folders first, natural number sorting (`file2` before
   `file10`), type-ahead, resizable columns, and live updates when files change.
 - **Cut and paste that moves files**, folder merging like Explorer, Replace / Keep Both / Skip
@@ -32,7 +36,7 @@ rename.
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-More is planned (tabs, a folder tree, search, icon view); see [PLAN.md](PLAN.md).
+More is planned (search, icon view, a preview pane); see [PLAN.md](PLAN.md).
 
 ## Requirements
 

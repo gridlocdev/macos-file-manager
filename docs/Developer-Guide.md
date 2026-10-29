@@ -48,6 +48,7 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   TransferPlanner.swift        paste/duplicate planning: conflicts, folder merges; DiskFileTree
   FileStepExecutor.swift       runs FileSteps with FileManager (Trash injectable for tests)
   DropRules.swift              drag-and-drop move/copy rules; FolderSize; Permissions
+  Navigation.swift             Breadcrumbs, RecentFolders, PinnedFolders, SessionState
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
   AppCommands.swift            the menu bar, built from Action + Keymap
@@ -59,6 +60,10 @@ Sources/FileManagerApp/        the app
   FileListInteractions.swift   FileTableView (spring loading, Quick Look, Services); drag and
                                drop and the right-click menu for the list
   InfoWindow.swift             Get Info windows (one per selection)
+  Windows.swift                WindowSpec; every window/tab, tab joining, closed tabs, session
+  AddressBar.swift             address bar: path segments with › menus, or a text field
+  SidebarView.swift            pinned, recent, locations (eject), folder tree; drop targets
+  SidebarStore.swift           pinned and recent folders in UserDefaults
   DirectoryLoader.swift        background folder reads; DirectoryWatcher (live updates)
   FileListView.swift           the details list (NSTableView), icons, type-ahead
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
@@ -171,6 +176,37 @@ back reloads while the field is open, since a reload would throw the edit away.
 
 Synthetic events can't drive drags or menus, so `just snapshot` doesn't cover these; check them
 by hand.
+
+## Windows and tabs
+
+Tabs are native window tabs: every tab is a window from `WindowGroup(for: WindowSpec.self)`
+with its own `BrowserModel`. A `WindowSpec` carries a fresh id (so SwiftUI never reuses a
+window), the folder, and optionally `tabParent`, the model id of the window to join.
+
+`Windows` (app target) registers each model when its view appears and when its window
+exists, in either order, then calls `addTabbedWindow` on the parent's last tab. While
+restoring, tabs can appear before their parent; they wait in `waiting` until it does.
+
+`BrowserModel` can't call `openWindow`, so it queues specs (`requestOpen`) and `BrowserWindow`
+opens them. `BrowserModel.init` does no work, because SwiftUI may create throwaway copies when
+it re-creates `BrowserWindow`; loading starts in `start()` from `onAppear`.
+
+Session restore: `Windows.save()` groups windows by `tabGroup` and stores a `SessionState` in
+UserDefaults (debounced on every change, and in `applicationShouldTerminate` while windows
+are still open). At launch the WindowGroup's `defaultValue` is the first saved tab; the first
+window then opens the rest. SwiftUI's own restoration is off (`.restorationBehavior(.disabled)`).
+Snapshot runs never read or save the session unless `FILEMANAGER_SNAPSHOT_RESTORE` is set.
+
+Ctrl+Tab and Ctrl+Shift+Tab are switched by macOS itself even when the key handler has
+consumed them, so `Action.isHandledByMacOS` makes `KeyMonitor` pass them on (handling them too
+switched twice and looked like nothing happened).
+
+## Sidebar
+
+The sidebar's folder tree uses `DisclosureGroup`s that only build their children while open:
+`DisclosureGroup` builds its content even when closed, and every closed child listing its own
+children walked the whole disk and starved the main thread. `FolderTree.expanded` is only
+written when it actually changes, since any write to an observed property re-renders.
 
 ## The file list
 

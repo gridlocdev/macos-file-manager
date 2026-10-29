@@ -22,6 +22,27 @@ Settings → Keyboard.
 | Focus Next Area | F6, Tab | F6, Tab |
 | Focus Previous Area | Shift+F6, Shift+Tab | Shift+F6, Shift+Tab |
 
+## Windows and tabs
+
+| Action | Keys | Windows / Linux |
+|---|---|---|
+| New Window | Cmd+N | Ctrl+N |
+| New Tab | Cmd+T | Ctrl+T |
+| Open in New Tab | Ctrl+Return, middle-click a folder | Ctrl+Return (Nautilus), middle-click |
+| Reopen Closed Tab | Shift+Cmd+T | Ctrl+Shift+T |
+| Show Next Tab | Ctrl+Tab | Ctrl+Tab |
+| Show Previous Tab | Ctrl+Shift+Tab | Ctrl+Shift+Tab |
+| Show Tab 1 | Cmd+1 | Alt+1 (Nautilus) |
+| Show Tab 2 | Cmd+2 | Alt+2 |
+| Show Tab 3 | Cmd+3 | Alt+3 |
+| Show Tab 4 | Cmd+4 | Alt+4 |
+| Show Tab 5 | Cmd+5 | Alt+5 |
+| Show Tab 6 | Cmd+6 | Alt+6 |
+| Show Tab 7 | Cmd+7 | Alt+7 |
+| Show Tab 8 | Cmd+8 | Alt+8 |
+| Show Last Tab | Cmd+9 | Alt+9 |
+| Close tab or window | Cmd+W | Ctrl+W |
+
 ## Going to a place
 
 | Action | Keys | Windows / Linux |
@@ -32,6 +53,7 @@ Settings → Keyboard.
 | Downloads | Opt+Cmd+L | |
 | Applications | Shift+Cmd+A | |
 | Trash | Go menu | Recycle Bin |
+| Add to Sidebar | Ctrl+Cmd+T | Pin to Quick access |
 
 ## Working with files
 
@@ -95,8 +117,6 @@ Cmd+Backspace work on the text instead of on files.
 
 | Action | Keys |
 |---|---|
-| New window | Cmd+N |
-| Close window | Cmd+W |
 | Settings | Cmd+, |
 | Hide Others | Opt+Cmd+H |
 | Quit | Cmd+Q |

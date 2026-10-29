@@ -22,7 +22,8 @@ In Explorer, Ctrl copies and Shift moves. On a Mac the keys are Opt and Cmd, the
 
 - **On a folder in the list**: into that folder. It highlights when you're over it.
 - **On empty space in the list** (or a file): into the folder you're looking at.
-- **On a sidebar item** (Desktop, Downloads, a drive…): into that place.
+- **On a sidebar item** (Desktop, Downloads, a drive, a folder in the tree…): into that
+  place. Dropping **between** pinned folders pins it instead; see [The sidebar](Sidebar.md).
 - **Onto another app**: Mail attaches the file, an editor opens it, and so on. Dropping on the
   Trash in the Dock moves it to the Trash.
 
@@ -46,4 +47,4 @@ from Photos, an image from Safari. File Manager can't receive those yet; drop th
 or on the Desktop instead.
 
 ---
-Next: [Keyboard shortcuts](Keyboard-Shortcuts.md)
+Next: [Tabs and windows](Tabs-and-Windows.md)

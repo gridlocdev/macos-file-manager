@@ -1,6 +1,7 @@
 # Using the app
 
-Each File Manager window shows one folder. Open more windows with **Cmd+N**.
+Each File Manager tab shows one folder. Open a new tab with **Cmd+T** and a new window with
+**Cmd+N**; see [Tabs and windows](Tabs-and-Windows.md).
 
 ![File Manager window with hidden files shown](images/window.webp)
 
@@ -27,12 +28,23 @@ Each File Manager window shows one folder. Open more windows with **Cmd+N**.
   (Opt+Left / Opt+Right, Cmd+[ / Cmd+], or the back and forward buttons on your mouse).
 - **↑** goes to the enclosing folder (Backspace, Opt+Up or Cmd+Up). The folder you came from is
   selected, so you can go straight back down with Cmd+Down.
-- **The address bar** shows where you are. `~` means your home folder.
+- **The address bar** shows where you are, as clickable folders.
+
+## The address bar
+
+Like Explorer's, the address bar shows the path as a row of folders:
+`Macintosh HD › Users › you › Documents ›`.
+
+- **Click a folder** to go straight to it.
+- **Click a ›** for a menu of the folders inside the one before it, and pick one to go there.
+  The folder you're in (or on the way to) is ticked.
+- When the path is too long to fit, the folders at the start go into a **…** menu.
+- **Click the empty part** of the bar to type a path instead.
 
 ## Typing a path
 
-Press **Cmd+L** (or Opt+D, as on Windows) to jump to the address bar, then type and press
-**Return**. You can type:
+Press **Cmd+L** (or Opt+D, as on Windows), or click the empty part of the address bar, to type a
+path, then press **Return**. `~` means your home folder. You can type:
 
 | You type | Goes to |
 |---|---|
@@ -50,9 +62,9 @@ case, and hidden folders are only suggested once you type the leading `.`.
 
 ## The sidebar
 
-**Favorites** has your home folder, Desktop, Documents, Downloads, Applications and iCloud Drive.
-**Locations** lists your Mac's disk and any mounted drives, disk images or network shares; it
-updates when you connect or eject one. Click an item to open it.
+**Pinned** folders (your favourites, in your order), **Recent** folders, **Locations** (disks
+and network shares, with Eject) and a **Folders** tree of your home folder that opens down to
+where you are. See [The sidebar](Sidebar.md).
 
 ## The file list
 
@@ -130,8 +142,8 @@ up there; use Get Info for that.
 
 ## Moving around with the keyboard
 
-**F6** moves the keyboard focus between the sidebar, the address bar and the file list, like F6
-in Explorer; **Shift+F6** goes the other way. Tab works too, as in any Mac window.
+**F6** moves the keyboard focus from the file list to the address bar, then the sidebar, then
+back to the list, like F6 in Explorer; **Shift+F6** goes the other way.
 
 ## Open Terminal Here
 

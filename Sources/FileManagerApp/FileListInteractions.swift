@@ -13,6 +13,14 @@ final class FileTableView: NSTableView, NSSpringLoadingDestination {
     var openRow: (Int) -> Void = { _ in }
     var previewURLs: () -> [URL] = { [] }
     var rowForURL: (URL) -> Int? = { _ in nil }
+    var middleClickRow: (Int) -> Void = { _ in }
+
+    /// Middle-click a folder: open it in a new tab, like a browser.
+    override func otherMouseDown(with event: NSEvent) {
+        guard event.buttonNumber == 2 else { return super.otherMouseDown(with: event) }
+        let row = row(at: convert(event.locationInWindow, from: nil))
+        if row >= 0 { middleClickRow(row) }
+    }
 
     // MARK: Spring-loaded folders
 
@@ -139,6 +147,10 @@ extension FileListView.Coordinator: NSMenuDelegate {
         }
         table.previewURLs = { [unowned self] in model.selectedURLs }
         table.rowForURL = { [unowned self] url in items.firstIndex { $0.url == url } }
+        table.middleClickRow = { [unowned self] row in
+            guard row < items.count, items[row].isFolder else { return }
+            model.openInNewTabs([items[row].url])
+        }
         let menu = NSMenu()
         menu.delegate = self
         table.menu = menu
@@ -247,6 +259,7 @@ extension FileListView.Coordinator: NSMenuDelegate {
         guard let first = urls.first else { return }
         let selected = items.filter { model.selection.contains($0.url) }
         add(.open, to: menu)
+        if selected.contains(where: \.isFolder) { add(.openInNewTab, to: menu) }
         menu.addItem(openWithItem(for: urls, first: first))
         add(.quickLook, to: menu)
         menu.addItem(.separator())
@@ -264,6 +277,7 @@ extension FileListView.Coordinator: NSMenuDelegate {
             menu.addItem(item)
         }
         add(.showInFinder, to: menu)
+        if selected.contains(where: \.isFolder) { add(.addToSidebar, to: menu) }
         menu.addItem(.separator())
         if model.isTrashFolder {
             add(.putBack, to: menu)
@@ -298,6 +312,7 @@ extension FileListView.Coordinator: NSMenuDelegate {
         add(.copyPath, to: menu)
         add(.getInfo, to: menu)
         add(.showInFinder, to: menu)
+        add(.addToSidebar, to: menu)
     }
 
     @discardableResult
