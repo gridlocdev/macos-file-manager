@@ -9,8 +9,6 @@ final class BrowserModel {
     let id: UUID
     private(set) var url: URL
     private(set) var items: [FileItem] = []
-    private(set) var errorMessage: String?
-    private(set) var isLoading = false
     /// Bumped whenever `items` is replaced, so the table knows to reload.
     private(set) var listingVersion = 0
     private(set) var history: NavigationHistory
@@ -34,20 +32,15 @@ final class BrowserModel {
     var showHiddenFiles = false {
         didSet {
             guard showHiddenFiles != oldValue else { return }
-            if isSearchingSubfolders { startSubfolderSearch() }
+            if isSearchingSubfolders { search.restart() }
             applyFilterAndSort()
         }
     }
 
-    /// Find (Cmd+F): the bar is open, what it looks for, and where.
-    private(set) var isSearchOpen = false
-    var criteria = SearchCriteria() { didSet { if criteria != oldValue { searchChanged() } } }
-    var searchScope = SearchScope.folder { didSet { if searchScope != oldValue { searchChanged() } } }
-    /// A subfolder search is still finding things.
-    private(set) var isSearching = false
-    private(set) var searchHitLimit = false
-    /// Bumped to put the cursor in the find field.
-    private(set) var searchFocusRequest = 0
+    /// The folder as read from disk; this model filters, sorts and selects in it.
+    let listing = FolderListing()
+    /// Find (Cmd+F).
+    let search = SearchSession()
     /// Rename with several items selected opens the batch rename sheet.
     var batchRename: BatchRenameRequest?
 
@@ -64,8 +57,6 @@ final class BrowserModel {
     /// Get Info asks the window to open an Info window for these.
     private(set) var infoRequest: [URL] = []
     private(set) var infoRequestCount = 0
-    /// Free space on the current folder's disk, for the status bar.
-    private(set) var freeSpace: Int64?
     /// Windows and tabs to open (the window calls `openWindow` for these).
     private(set) var openRequests: [WindowSpec] = []
     private(set) var openRequestCount = 0
@@ -74,8 +65,13 @@ final class BrowserModel {
     private(set) var renameRequest = 0
     private(set) var renameTarget: URL?
 
-    /// The window this model lives in, for focus moves. Set by `KeyMonitor`.
-    weak var window: NSWindow?
+    /// The window this model lives in, for tabs, focus moves and alerts. Set by `KeyMonitor`.
+    var window: NSWindow? {
+        get { controls.window }
+        set { controls.window = newValue }
+    }
+    private let controls: WindowControls
+    private let presenter: any BrowserPresenter
 
     // MARK: Split view
     /// The window's main pane, when this is the right-hand pane of a split view.
@@ -91,20 +87,10 @@ final class BrowserModel {
     var windowID: UUID { hostID ?? id }
 
     let home = FileManager.default.homeDirectoryForCurrentUser
-    private var allItems: [FileItem] = []
-    private var loadTask: Task<Void, Never>?
-    private var freeSpaceTask: Task<Void, Never>?
-    private var watcher: DirectoryWatcher?
     /// Selected once the next load shows them (new, pasted or renamed items).
     private var pendingSelection: Set<URL> = []
     private var pendingRename: URL?
     private var started = false
-    private var searchResults: [FileItem] = []
-    /// The last search's results stay up until the new one finds something, so refreshing or
-    /// typing another letter doesn't blank the list.
-    private var resultsAreStale = false
-    private var folderSearch: FolderSearch?
-    private var searchDelay: Task<Void, Never>?
     private var lastSelectPattern = ""
     private var restoringView = false
 
@@ -115,6 +101,11 @@ final class BrowserModel {
         url = start
         history = NavigationHistory(start: start)
         addressText = PathInput.display(start, home: home)
+        let controls = WindowControls()
+        self.controls = controls
+        presenter = AlertPresenter(controls: controls, operations: .shared)
+        search.context = { [weak self] in (self?.url ?? start, self?.showHiddenFiles ?? false) }
+        search.onUpdate = { [weak self] found in self?.searchUpdated(found) }
     }
 
     /// Loads the first folder. Called once the window appears.
@@ -148,7 +139,7 @@ final class BrowserModel {
     }
 
     func refresh() {
-        if isSearchingSubfolders { startSubfolderSearch() }
+        if isSearchingSubfolders { search.restart() }
         load(keepSelection: true)
     }
 
@@ -158,7 +149,7 @@ final class BrowserModel {
         pendingSelection = Set(urls)
         pendingRename = rename?.normalized
         revealAfterLoad = urls.first
-        if isSearchingSubfolders { startSubfolderSearch() }
+        if isSearchingSubfolders { search.restart() }
         load()
     }
 
@@ -167,7 +158,7 @@ final class BrowserModel {
         url = target
         addressText = PathInput.display(target, home: home)
         selection = []
-        closeSearch()
+        search.close()
         restoreView(for: target)
         // Going up (or back to a parent) selects the folder you came from, like Explorer.
         let cameFromChild = previous.deletingLastPathComponent().standardizedFileURL == target
@@ -212,7 +203,7 @@ final class BrowserModel {
             addressText = PathInput.display(url, home: home)
             focusList()
         } else {
-            NSSound.beep()
+            presenter.beep()
         }
     }
 
@@ -231,7 +222,7 @@ final class BrowserModel {
                     && isDirectory.boolValue
             }
         }
-        if let completed { addressText = completed } else { NSSound.beep() }
+        if let completed { addressText = completed } else { presenter.beep() }
     }
 
     // MARK: Actions
@@ -257,9 +248,9 @@ final class BrowserModel {
         case .removeDownload: return selectedItems.contains { $0.cloud == .current }
         case .openInNewTab: return items.contains { selection.contains($0.url) && $0.isFolder }
         case .reopenClosedTab: return Windows.shared.hasClosedTabs
-        case .nextTab, .previousTab: return (window?.tabGroup?.windows.count ?? 1) > 1
+        case .nextTab, .previousTab: return controls.tabCount > 1
         case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9:
-            let count = window?.tabGroup?.windows.count ?? 1
+            let count = controls.tabCount
             return action == .showTab9 ? count > 1 : (action.tabNumber ?? 0) <= count
         case .moveToTrash: return !selection.isEmpty && !isTrashFolder
         case .putBack: return !selection.isEmpty && isTrashFolder
@@ -276,7 +267,7 @@ final class BrowserModel {
 
     func perform(_ action: Action) {
         guard canPerform(action) else {
-            NSSound.beep()
+            presenter.beep()
             return
         }
         switch action {
@@ -299,12 +290,11 @@ final class BrowserModel {
             if let path = Windows.shared.popClosedTab() {
                 requestOpen(WindowSpec(path: path, tabParent: windowID, select: true))
             }
-        case .nextTab: showTab(offset: 1)
-        case .previousTab: showTab(offset: -1)
+        // The Ctrl+Tab keys themselves are left to macOS (see `Action.isHandledByMacOS`).
+        case .nextTab: controls.showTab(offset: 1)
+        case .previousTab: controls.showTab(offset: -1)
         case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9:
-            let tabs = window?.tabGroup?.windows ?? []
-            let index = action == .showTab9 ? tabs.count - 1 : (action.tabNumber ?? 1) - 1
-            if tabs.indices.contains(index) { tabs[index].makeKeyAndOrderFront(nil) }
+            controls.showTab(at: action == .showTab9 ? controls.tabCount - 1 : (action.tabNumber ?? 1) - 1)
         case .addToSidebar:
             let folders = items.filter { selection.contains($0.url) && $0.isFolder }.map(\.url.path)
             SidebarStore.shared.pin(folders.isEmpty ? [url.path] : folders)
@@ -312,8 +302,8 @@ final class BrowserModel {
         case .toggleHiddenFiles: showHiddenFiles.toggle()
         case .viewAsIcons: view.mode = .icons
         case .viewAsDetails: view.mode = .details
-        case .zoomIn: if !view.zoom(in: true) { NSSound.beep() }
-        case .zoomOut: if !view.zoom(in: false) { NSSound.beep() }
+        case .zoomIn: if !view.zoom(in: true) { presenter.beep() }
+        case .zoomOut: if !view.zoom(in: false) { presenter.beep() }
         case .actualSize: view.resetZoom()
         case .togglePreviewPane:
             let defaults = UserDefaults.standard
@@ -377,13 +367,6 @@ final class BrowserModel {
 
     // MARK: Windows and tabs
 
-    /// Next/previous tab, wrapping around. The Ctrl+Tab keys themselves are left to macOS (see
-    /// `Action.isHandledByMacOS`); this is for other callers.
-    private func showTab(offset: Int) {
-        guard let window, let tabs = window.tabGroup?.windows, let index = tabs.firstIndex(of: window) else { return }
-        tabs[(index + offset + tabs.count) % tabs.count].makeKeyAndOrderFront(nil)
-    }
-
     func requestOpen(_ spec: WindowSpec) {
         openRequests.append(spec)
         openRequestCount += 1
@@ -400,28 +383,23 @@ final class BrowserModel {
         for folder in folders { requestOpen(WindowSpec(path: folder.path, tabParent: windowID, select: false)) }
     }
 
-    /// F6 / Shift+F6, like Explorer: file list → address bar → sidebar → file list.
-    /// With a split view the right-hand list comes between the left one and the address bar.
+    /// F6 / Shift+F6 (see `FocusCycle`).
     private func moveFocus(forward: Bool) {
-        guard let window else { return }
-        let responder = window.firstResponder
-        let inList = responder is any FileBrowsingView
-        let inAddress = responder is NSText
-        let sidebar = Self.sidebarView(in: window.contentView)
-        func focusSidebar() {
-            if let sidebar { window.makeFirstResponder(sidebar) } else { focusList() }
-        }
+        guard window != nil else { return }
         // This is the active pane (the one the keys go to); work out which side it is.
         let left = hostID == nil ? self : (otherPane ?? self)
         let right = hostID == nil ? otherPane : self
-        let inRightList = inList && right === self
-        switch (forward, inList, inAddress) {
-        case (true, true, _): if !inRightList, let right { right.focusList() } else { focusAddressBar() }
-        case (true, _, true): focusSidebar()
-        case (true, _, _): left.focusList()
-        case (false, true, _): if inRightList { left.focusList() } else { focusSidebar() }
-        case (false, _, true): (right ?? left).focusList()
-        case (false, _, _): focusAddressBar()
+        let current: FocusCycle.Area? =
+            switch controls.focus {
+            case .fileList: right === self ? .rightList : .leftList
+            case .textField: .addressBar
+            case .other: nil
+            }
+        switch FocusCycle.next(from: current, forward: forward, isSplit: right != nil) {
+        case .leftList: left.focusList()
+        case .rightList: (right ?? left).focusList()
+        case .addressBar: focusAddressBar()
+        case .sidebar: if !controls.focusSidebar() { focusList() }
         }
     }
 
@@ -434,16 +412,6 @@ final class BrowserModel {
             other.refresh(selecting: results)
             refresh()
         }
-    }
-
-    /// The sidebar list's AppKit view: the first table or outline that isn't the file list.
-    private static func sidebarView(in view: NSView?) -> NSView? {
-        guard let view else { return nil }
-        if view is NSTableView, !(view is FileTableView) { return view }
-        for child in view.subviews {
-            if let found = sidebarView(in: child) { return found }
-        }
-        return nil
     }
 
     // MARK: File operations
@@ -472,7 +440,7 @@ final class BrowserModel {
 
     /// New Folder / New Text File: makes it, selects it and starts renaming, like Explorer.
     private func create(folder isFolder: Bool) {
-        let names = Set(allItems.map(\.name) + allItems.map(\.url.lastPathComponent))
+        let names = Set(listing.items.map(\.name) + listing.items.map(\.url.lastPathComponent))
         let base = isFolder ? FileNaming.newFolderName : FileNaming.newTextFileName
         let target = url.appendingPathComponent(FileNaming.unique(base, isFolder: isFolder, existing: names))
         let folder = url
@@ -494,13 +462,13 @@ final class BrowserModel {
         let oldName = item.lastPathComponent
         guard newName != oldName, newName != FileManager.default.displayName(atPath: item.path) else { return }
         if let problem = FileNaming.problem(with: newName) {
-            showProblem("Can't rename “\(oldName)”", problem)
+            presenter.showProblem("Can't rename “\(oldName)”", detail: problem)
             return
         }
         let target = item.deletingLastPathComponent().appendingPathComponent(newName)
         let caseChangeOnly = newName.lowercased() == oldName.lowercased()
         if !caseChangeOnly, FileManager.default.fileExists(atPath: target.path) {
-            showProblem("Can't rename “\(oldName)”", "There's already an item named “\(newName)” here.")
+            presenter.showProblem("Can't rename “\(oldName)”", detail: "There's already an item named “\(newName)” here.")
             return
         }
         Task {
@@ -512,15 +480,14 @@ final class BrowserModel {
     private func moveToTrash() {
         let targets = selectedURLs
         if UserDefaults.standard.bool(forKey: SettingsKey.confirmTrash) {
-            let alert = NSAlert()
-            alert.messageText =
+            let title =
                 targets.count == 1
                 ? "Move “\(targets[0].lastPathComponent)” to the Trash?" : "Move \(targets.count) items to the Trash?"
-            alert.informativeText = "You can undo this, or put them back from the Trash."
-            alert.addButton(withTitle: "Move to Trash")
-            alert.addButton(withTitle: "Cancel")
             Task {
-                guard await ops.present(alert, window: window) == .alertFirstButtonReturn else { return }
+                guard await presenter.confirm(
+                    title, detail: "You can undo this, or put them back from the Trash.", button: "Move to Trash",
+                    destructive: false)
+                else { return }
                 trash(targets)
             }
             return
@@ -540,17 +507,14 @@ final class BrowserModel {
 
     private func deleteImmediately() {
         let targets = selectedURLs
-        let alert = NSAlert()
-        alert.alertStyle = .critical
-        alert.messageText =
+        let title =
             targets.count == 1
             ? "Delete “\(targets[0].lastPathComponent)” immediately?"
             : "Delete \(targets.count) items immediately?"
-        alert.informativeText = "They won't go to the Trash, and you can't undo this."
-        alert.addButton(withTitle: "Delete")
-        alert.addButton(withTitle: "Cancel")
         Task {
-            guard await ops.present(alert, window: window) == .alertFirstButtonReturn else { return }
+            guard await presenter.confirm(
+                title, detail: "They won't go to the Trash, and you can't undo this.", button: "Delete", destructive: true)
+            else { return }
             await ops.run("Delete", steps: targets.map { .delete($0) }, history: .none, window: window)
             refresh()
         }
@@ -572,74 +536,46 @@ final class BrowserModel {
         }
     }
 
-    private func showProblem(_ title: String, _ detail: String) {
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = detail
-        Task { _ = await ops.present(alert, window: window) }
-    }
-
     // MARK: Loading
 
     private func load(keepSelection: Bool = false) {
-        loadTask?.cancel()
-        isLoading = true
-        let target = url
-        watcher = DirectoryWatcher(url: target) { [weak self] in self?.refresh() }
-        loadTask = Task {
-            let result = await DirectoryLoader.list(target)
-            guard !Task.isCancelled, target == url else { return }
-            isLoading = false
-            updateFreeSpace(target)
-            switch result {
-            case .success(let listing):
-                allItems = listing
-                errorMessage = nil
-            case .failure(let error):
-                allItems = []
-                errorMessage =
-                    isTrashFolder
-                    ? "File Manager needs Full Disk Access to show the Trash. Turn it on in System Settings → Privacy & Security → Full Disk Access."
-                    : error.localizedDescription
-            }
-            applyFilterAndSort()
-            let present = Set(items.map(\.url))
-            let wanted = pendingSelection.intersection(present)
-            if !wanted.isEmpty {
-                selection = wanted
-                pendingSelection = []
-            } else if keepSelection || !pendingSelection.isEmpty {
-                // Keep what's still there (pending items may arrive with the next refresh).
-                selection = selection.intersection(present)
-            } else {
-                selection = []
-            }
-            if let rename = pendingRename, present.contains(rename) {
-                pendingRename = nil
-                startRename(rename)
-            }
+        listing.load(url, changed: { [weak self] in self?.refresh() }) { [weak self] in
+            self?.listed(keepSelection: keepSelection)
         }
     }
 
-    /// Free space can take a moment to work out (it counts purgeable space), so it's filled in
-    /// after the listing rather than holding it up.
-    private func updateFreeSpace(_ folder: URL) {
-        freeSpaceTask?.cancel()
-        freeSpaceTask = Task {
-            let free = await Task.detached { () -> Int64? in
-                let values = try? folder.resourceValues(
-                    forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
-                // Network shares report 0 for the "important usage" figure (it counts purgeable
-                // space on local disks only); their plain free space is right.
-                if let important = values?.volumeAvailableCapacityForImportantUsage, important > 0 { return important }
-                return values?.volumeAvailableCapacity.map(Int64.init)
-            }.value
-            if !Task.isCancelled, folder == url { freeSpace = free }
+    /// The listing is in: show it, and select what was waiting for it.
+    private func listed(keepSelection: Bool) {
+        applyFilterAndSort()
+        let present = Set(items.map(\.url))
+        let wanted = pendingSelection.intersection(present)
+        if !wanted.isEmpty {
+            selection = wanted
+            pendingSelection = []
+        } else if keepSelection || !pendingSelection.isEmpty {
+            // Keep what's still there (pending items may arrive with the next refresh).
+            selection = selection.intersection(present)
+        } else {
+            selection = []
+        }
+        if let rename = pendingRename, present.contains(rename) {
+            pendingRename = nil
+            startRename(rename)
+        }
+    }
+
+    var isLoading: Bool { listing.isLoading }
+    var freeSpace: Int64? { listing.freeSpace }
+    var errorMessage: String? {
+        listing.error.map { error in
+            isTrashFolder
+                ? "File Manager needs Full Disk Access to show the Trash. Turn it on in System Settings → Privacy & Security → Full Disk Access."
+                : error.localizedDescription
         }
     }
 
     private func applyFilterAndSort() {
-        let source = isSearchingSubfolders ? searchResults : allItems
+        let source = isSearchingSubfolders ? search.results : listing.items
         var visible = showHiddenFiles ? source : source.filter { !$0.isHidden }
         if isSearchOpen { visible = criteria.filter(visible) }
         rows = Grouping.rows(sort.sorted(visible), by: view.groupBy)
@@ -652,87 +588,40 @@ final class BrowserModel {
 
     // MARK: Find
 
-    enum SearchScope: Hashable { case folder, subfolders }
+    typealias SearchScope = SearchSession.Scope
 
-    /// Results come from the whole tree under this folder rather than its listing.
-    var isSearchingSubfolders: Bool { isSearchOpen && searchScope == .subfolders && !criteria.isEmpty }
-    /// The list shows only matching items.
-    var isFiltering: Bool { isSearchOpen && !criteria.isEmpty }
-    /// Tags used in this folder, for the find bar's Tag filter.
-    var folderTags: [String] { Array(Set(allItems.flatMap(\.tags))) }
-    /// Items in the folder itself, before any filter (for "3 of 40 items").
-    var folderItemCount: Int { showHiddenFiles ? allItems.count : allItems.count(where: { !$0.isHidden }) }
-
-    func openSearch() {
-        isSearchOpen = true
-        searchFocusRequest += 1
+    var isSearchOpen: Bool { search.isOpen }
+    var criteria: SearchCriteria {
+        get { search.criteria }
+        set { search.criteria = newValue }
     }
+    var searchScope: SearchScope {
+        get { search.scope }
+        set { search.scope = newValue }
+    }
+    var isSearching: Bool { search.isSearching }
+    var searchHitLimit: Bool { search.hitLimit }
+    var searchFocusRequest: Int { search.focusRequest }
+    var isSearchingSubfolders: Bool { search.isSearchingSubfolders }
+    var isFiltering: Bool { search.isFiltering }
+    /// Tags used in this folder, for the find bar's Tag filter.
+    var folderTags: [String] { Array(Set(listing.items.flatMap(\.tags))) }
+    /// Items in the folder itself, before any filter (for "3 of 40 items").
+    var folderItemCount: Int {
+        showHiddenFiles ? listing.items.count : listing.items.count(where: { !$0.isHidden })
+    }
+
+    func openSearch() { search.open() }
 
     /// Esc or the bar's close button: back to the whole folder.
     func endSearch() {
-        guard isSearchOpen else { return }
-        closeSearch()
+        guard search.isOpen else { return }
+        search.close()
         applyFilterAndSort()
         focusList()
     }
 
-    private func closeSearch() {
-        guard isSearchOpen else { return }
-        isSearchOpen = false
-        criteria = SearchCriteria()
-        stopSubfolderSearch()
-    }
-
-    private func searchChanged() {
-        if isSearchingSubfolders {
-            // Wait for a pause in typing before walking a whole tree.
-            searchDelay?.cancel()
-            searchDelay = Task {
-                try? await Task.sleep(for: .milliseconds(250))
-                if !Task.isCancelled { startSubfolderSearch() }
-            }
-        } else {
-            stopSubfolderSearch()
-        }
-        applyFilterAndSort()
-    }
-
-    private func startSubfolderSearch() {
-        stopSubfolderSearch(keepingResults: true)
-        resultsAreStale = true
-        isSearching = true
-        let search = FolderSearch(
-            root: url, criteria: criteria, showHidden: showHiddenFiles,
-            onResults: { [weak self] found in self?.addSearchResults(found) },
-            onFinish: { [weak self] in
-                guard let self else { return }
-                isSearching = false
-                searchHitLimit = folderSearch?.hitLimit ?? false
-                if resultsAreStale {
-                    resultsAreStale = false
-                    searchResults = []
-                    applyFilterAndSort()
-                }
-            })
-        folderSearch = search
-        search.start()
-    }
-
-    private func stopSubfolderSearch(keepingResults: Bool = false) {
-        if !keepingResults { searchDelay?.cancel() }
-        folderSearch?.cancel()
-        folderSearch = nil
-        if !keepingResults { searchResults = [] }
-        isSearching = false
-        searchHitLimit = false
-    }
-
-    private func addSearchResults(_ found: [FileItem]) {
-        if resultsAreStale {
-            resultsAreStale = false
-            searchResults = []
-        }
-        searchResults += found
+    private func searchUpdated(_ found: [FileItem]) {
         applyFilterAndSort()
         // Renamed or pasted items show up here rather than in the folder's listing.
         let wanted = pendingSelection.intersection(found.map(\.url))
@@ -752,25 +641,13 @@ final class BrowserModel {
 
     /// Select by Pattern (Cmd+S): "*.jpg" selects every JPEG, like Total Commander's Num+.
     private func selectByPattern() {
-        let alert = NSAlert()
-        alert.messageText = "Select by Pattern"
-        alert.informativeText = "Select items whose names match. Use * for any text and ? for one character; separate several patterns with “;”."
-        let field = NSTextField(string: lastSelectPattern)
-        field.placeholderString = "*.jpg; *.png"
-        field.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
-        alert.accessoryView = field
-        alert.addButton(withTitle: "Select")
-        alert.addButton(withTitle: "Add to Selection")
-        alert.addButton(withTitle: "Cancel")
-        alert.window.initialFirstResponder = field
         Task {
-            let response = await ops.present(alert, window: window)
-            guard response != .alertThirdButtonReturn else { return }
-            lastSelectPattern = field.stringValue
-            let pattern = NamePattern(field.stringValue)
+            guard let (text, adding) = await presenter.askForPattern(initial: lastSelectPattern) else { return }
+            lastSelectPattern = text
+            let pattern = NamePattern(text)
             let matching = Set(items.filter { pattern.matches($0.name) }.map(\.url))
-            if matching.isEmpty { NSSound.beep() }
-            selection = response == .alertSecondButtonReturn ? selection.union(matching) : matching
+            if matching.isEmpty { presenter.beep() }
+            selection = adding ? selection.union(matching) : matching
             if let first = items.first(where: { matching.contains($0.url) }) { revealAfterLoad = first.url }
             focusList()
         }
@@ -820,18 +697,8 @@ final class BrowserModel {
 
     /// Tags changed by a file operation (in any window), keyed by path.
     func tagsChanged(_ tags: [String: [String]]) {
-        func update(_ list: inout [FileItem]) -> Bool {
-            var changed = false
-            for i in list.indices {
-                if let new = tags[list[i].url.path], new != list[i].tags {
-                    list[i].tags = new
-                    changed = true
-                }
-            }
-            return changed
-        }
-        let inFolder = update(&allItems)
-        let inResults = update(&searchResults)
+        let inFolder = listing.updateTags(tags)
+        let inResults = search.updateTags(tags)
         if inFolder || inResults { applyFilterAndSort() }
     }
 
@@ -847,7 +714,7 @@ final class BrowserModel {
                     try fm.evictUbiquitousItem(at: item.url)
                 }
             } catch {
-                ops.showError(error, title: "Can't change “\(item.name)”", window: window)
+                presenter.showError(error, title: "Can't change “\(item.name)”")
                 return
             }
         }

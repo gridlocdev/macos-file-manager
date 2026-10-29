@@ -55,11 +55,16 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   ServerAddress.swift          Connect to Server addresses (smb, \\server\share, nfs, WebDAV); recents
   Archive.swift                zip names; compress/extract with ditto (run by FileStepExecutor)
   ViewSettings.swift           FolderView (mode, sort, groups, zoom), FolderViewMemory, Grouping, ListRow
+  FocusCycle.swift             F6 / Shift+F6 order: list → (right list) → address bar → sidebar
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
   AppCommands.swift            the menu bar, built from Action + Keymap
   BrowserWindow.swift          window layout: sidebar, toolbar, panes (split view), status bars
-  BrowserModel.swift           one folder view: navigation, listing, selection, perform(Action)
+  BrowserModel.swift           one folder view: navigation, filter/sort, selection, perform(Action)
+  FolderListing.swift          a folder as read from disk: items, error, free space, watcher
+  SearchSession.swift          Find for one pane: criteria, scope, subfolder search results
+  BrowserPresenter.swift       what the model asks the user (confirm, problems, pattern); NSAlert version
+  WindowControls.swift         a pane's window for the model: tabs, where the focus is, the sidebar
   FileOperations.swift         jobs with progress/cancel, conflict prompts, undo/redo, TrashLog
   Clipboard.swift              files on the system clipboard; cut state
   OperationsWindow.swift       the File Operations progress window
