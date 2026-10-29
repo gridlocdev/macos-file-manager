@@ -273,6 +273,7 @@ struct FileIconView: NSViewRepresentable {
             grid.openInNewTab = { [unowned self] url in model.openInNewTabs([url]) }
             grid.zoom = { [unowned self] zoomIn in model.perform(zoomIn ? .zoomIn : .zoomOut) }
             grid.typeSelect = { [unowned self] prefix in typeSelect(prefix) }
+            grid.onFocus = { [unowned self] in model.onFocused?() }
             grid.quickLook.view = grid
             grid.quickLook.urls = { [unowned self] in model.selectedURLs }
             grid.quickLook.frameOnScreen = { [unowned self, unowned grid] url in
@@ -350,6 +351,7 @@ final class FileCollectionView: NSCollectionView, FileBrowsingView {
     var openInNewTab: (URL) -> Void = { _ in }
     var zoom: (Bool) -> Void = { _ in }
     var typeSelect: (String) -> Void = { _ in }
+    var onFocus: () -> Void = {}
     /// The item under the pointer for the right-click menu being built.
     private(set) var clickedIndexPath: IndexPath?
     private var typed = ""
@@ -357,6 +359,12 @@ final class FileCollectionView: NSCollectionView, FileBrowsingView {
     private var scrollZoom: CGFloat = 0
 
     override var acceptsFirstResponder: Bool { true }
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { onFocus() }
+        return accepted
+    }
 
     private func indexPath(at event: NSEvent) -> IndexPath? {
         indexPathForItem(at: convert(event.locationInWindow, from: nil))

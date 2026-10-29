@@ -77,6 +77,19 @@ final class BrowserModel {
     /// The window this model lives in, for focus moves. Set by `KeyMonitor`.
     weak var window: NSWindow?
 
+    // MARK: Split view
+    /// The window's main pane, when this is the right-hand pane of a split view.
+    var hostID: UUID?
+    /// The other pane while the window is split (F3).
+    weak var otherPane: BrowserModel?
+    /// Called when this pane's file list takes the keyboard focus (it becomes the active pane).
+    var onFocused: (() -> Void)?
+    /// Bumped to ask the window to open or close the split view / Connect to Server.
+    private(set) var splitRequest = 0
+    private(set) var connectRequest = 0
+    /// Tabs and windows opened from this pane belong to the window's main pane.
+    var windowID: UUID { hostID ?? id }
+
     let home = FileManager.default.homeDirectoryForCurrentUser
     private var allItems: [FileItem] = []
     private var loadTask: Task<Void, Never>?
@@ -237,6 +250,7 @@ final class BrowserModel {
         switch action {
         case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately, .quickLook: return !selection.isEmpty
         case .invertSelection, .selectByPattern: return !items.isEmpty
+        case .copyToOtherPane, .moveToOtherPane: return !selection.isEmpty && otherPane != nil
         case .compress: return !selection.isEmpty && !isTrashFolder
         case .extract: return selectedItems.contains { !$0.isFolder && Archive.isArchive($0.url) }
         case .downloadNow: return selectedItems.contains { $0.cloud == .notDownloaded }
@@ -279,11 +293,11 @@ final class BrowserModel {
         case .focusNextArea: moveFocus(forward: true)
         case .focusPreviousArea: moveFocus(forward: false)
         case .newWindow: requestOpen(WindowSpec(path: url.path))
-        case .newTab: requestOpen(WindowSpec(path: url.path, tabParent: id, select: true))
+        case .newTab: requestOpen(WindowSpec(path: url.path, tabParent: windowID, select: true))
         case .openInNewTab: openInNewTabs(items.filter { selection.contains($0.url) && $0.isFolder }.map(\.url))
         case .reopenClosedTab:
             if let path = Windows.shared.popClosedTab() {
-                requestOpen(WindowSpec(path: path, tabParent: id, select: true))
+                requestOpen(WindowSpec(path: path, tabParent: windowID, select: true))
             }
         case .nextTab: showTab(offset: 1)
         case .previousTab: showTab(offset: -1)
@@ -310,6 +324,10 @@ final class BrowserModel {
         case .invertSelection: selection = Selection.inverted(selection, in: items.map(\.url))
         case .selectByPattern: selectByPattern()
         case .compress: compress()
+        case .toggleSplitView: splitRequest += 1
+        case .connectToServer: connectRequest += 1
+        case .copyToOtherPane, .moveToOtherPane:
+            if let other = otherPane { sendToOtherPane(other, move: action == .moveToOtherPane) }
         case .extract: extract()
         case .downloadNow: setDownloaded(true)
         case .removeDownload: setDownloaded(false)
@@ -379,10 +397,11 @@ final class BrowserModel {
     /// Middle-click, Ctrl+Return or the menu: each folder in a tab of this window, in the
     /// background like a browser (this tab stays in front).
     func openInNewTabs(_ folders: [URL]) {
-        for folder in folders { requestOpen(WindowSpec(path: folder.path, tabParent: id, select: false)) }
+        for folder in folders { requestOpen(WindowSpec(path: folder.path, tabParent: windowID, select: false)) }
     }
 
     /// F6 / Shift+F6, like Explorer: file list → address bar → sidebar → file list.
+    /// With a split view the right-hand list comes between the left one and the address bar.
     private func moveFocus(forward: Bool) {
         guard let window else { return }
         let responder = window.firstResponder
@@ -392,13 +411,28 @@ final class BrowserModel {
         func focusSidebar() {
             if let sidebar { window.makeFirstResponder(sidebar) } else { focusList() }
         }
+        // This is the active pane (the one the keys go to); work out which side it is.
+        let left = hostID == nil ? self : (otherPane ?? self)
+        let right = hostID == nil ? otherPane : self
+        let inRightList = inList && right === self
         switch (forward, inList, inAddress) {
-        case (true, true, _): focusAddressBar()
+        case (true, true, _): if !inRightList, let right { right.focusList() } else { focusAddressBar() }
         case (true, _, true): focusSidebar()
-        case (false, true, _): focusSidebar()
-        case (false, _, true): focusList()
+        case (true, _, _): left.focusList()
+        case (false, true, _): if inRightList { left.focusList() } else { focusSidebar() }
+        case (false, _, true): (right ?? left).focusList()
         case (false, _, _): focusAddressBar()
-        default: focusList()
+        }
+    }
+
+    /// Copy / Move to Other Pane: the selection goes into the folder the other pane shows.
+    private func sendToOtherPane(_ other: BrowserModel, move: Bool) {
+        let sources = selectedURLs
+        let folder = other.url
+        Task {
+            let results = await ops.transfer(sources, into: folder, mode: move ? .move : .copy, window: window)
+            other.refresh(selecting: results)
+            refresh()
         }
     }
 

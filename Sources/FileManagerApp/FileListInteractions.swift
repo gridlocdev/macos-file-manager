@@ -13,6 +13,13 @@ final class FileTableView: NSTableView, NSSpringLoadingDestination, FileBrowsing
     var isFolderRow: (Int) -> Bool = { _ in false }
     var openRow: (Int) -> Void = { _ in }
     var middleClickRow: (Int) -> Void = { _ in }
+    var onFocus: () -> Void = {}
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { onFocus() }
+        return accepted
+    }
 
     /// Middle-click a folder: open it in a new tab, like a browser.
     override func otherMouseDown(with event: NSEvent) {
@@ -90,6 +97,7 @@ extension FileListView.Coordinator {
             guard let item = item(row), item.isFolder else { return }
             model.openInNewTabs([item.url])
         }
+        table.onFocus = { [unowned self] in model.onFocused?() }
         table.quickLook.view = table
         table.quickLook.urls = { [unowned self] in model.selectedURLs }
         table.quickLook.frameOnScreen = { [unowned self, unowned table] url in

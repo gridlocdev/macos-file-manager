@@ -64,6 +64,9 @@ struct AppCommands: Commands {
             button(.invertSelection)
             button(.selectByPattern)
             Divider()
+            button(.copyToOtherPane)
+            button(.moveToOtherPane)
+            Divider()
             button(.find)
         }
 
@@ -81,6 +84,7 @@ struct AppCommands: Commands {
                     Button(group.title) { browser?.view.groupBy = group }
                 }
             }
+            button(.toggleSplitView)
             Divider()
             button(.zoomIn)
             button(.zoomOut)
@@ -107,6 +111,7 @@ struct AppCommands: Commands {
             button(.goTrash)
             Divider()
             button(.focusAddressBar)
+            button(.connectToServer)
             button(.openTerminal)
         }
 

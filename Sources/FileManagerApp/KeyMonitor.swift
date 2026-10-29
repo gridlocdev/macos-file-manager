@@ -15,20 +15,30 @@ final class ActiveBrowser {
 }
 
 struct KeyMonitor: NSViewRepresentable {
+    /// The window's main pane (it registers the window and tab).
     var model: BrowserModel
+    /// The pane keys and the menu bar act on: the main one, or the other side of a split view.
+    var active: BrowserModel
 
     func makeNSView(context: Context) -> MonitorView {
         let view = MonitorView()
         view.model = model
+        view.active = active
         return view
     }
 
     func updateNSView(_ view: MonitorView, context: Context) {
         view.model = model
+        view.active = active
     }
 
     final class MonitorView: NSView {
         var model: BrowserModel?
+        var active: BrowserModel? {
+            didSet {
+                if active !== oldValue, window?.isKeyWindow == true { ActiveBrowser.shared.model = active }
+            }
+        }
         /// Read on every key, so Reload in Settings takes effect at once.
         private var keymap: Keymap { KeymapStore.shared.keymap }
         private var monitor: Any?
@@ -53,16 +63,18 @@ struct KeyMonitor: NSViewRepresentable {
         }
 
         @objc private func windowDidBecomeKey() {
-            ActiveBrowser.shared.model = model
+            ActiveBrowser.shared.model = active ?? model
         }
 
         @objc private func windowWillClose() {
-            if ActiveBrowser.shared.model === model { ActiveBrowser.shared.model = nil }
+            if ActiveBrowser.shared.model === model || ActiveBrowser.shared.model === active {
+                ActiveBrowser.shared.model = nil
+            }
             if let model { Windows.shared.closed(model) }
         }
 
         private func handle(_ event: NSEvent) -> NSEvent? {
-            guard let window, event.window === window, let model else { return event }
+            guard let window, event.window === window, let model = active ?? model else { return event }
             if event.type == .otherMouseDown {
                 switch event.buttonNumber {
                 case 3: model.perform(.goBack)

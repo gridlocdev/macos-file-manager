@@ -35,6 +35,12 @@ treat each rebuild as a new app, so the prompts can come back after `just instal
 Pull the latest code and run `just install` again. It quits the running copy, replaces it, and
 opens the new one. Your settings are kept.
 
+## Making a copy to share
+
+`just dist` builds a release copy and zips it as `build/File-Manager-<version>.zip`. Whoever
+unzips it gets the same Gatekeeper warning as above the first time they open it, because the
+app isn't notarized.
+
 ## Uninstalling
 
 1. Quit File Manager (Cmd+Q).

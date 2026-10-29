@@ -24,7 +24,7 @@ These pages explain **how to use the app** and **where it differs from what you'
 | [Views and columns](Views-and-Columns.md) | How do I see thumbnails? Can I add a Date Created column? Group by date? Is there a preview pane? |
 | [Searching and selecting](Searching-and-Selecting.md) | How do I find a file in subfolders? Can I filter by kind or date? How do I select every .jpg? |
 | [Batch rename](Batch-Rename.md) | How do I rename many files at once? Can I number them? Does undo put the names back? |
-| [Tabs and windows](Tabs-and-Windows.md) | How do I open a folder in a new tab? Can I get a closed tab back? Do my tabs come back after quitting? |
+| [Tabs and windows](Tabs-and-Windows.md) | How do I open a folder in a new tab? How do I see two folders side by side? Do my tabs come back after quitting? |
 | [The sidebar](Sidebar.md) | How do I pin a folder? What's Recent? How do I eject a drive? |
 | [Keyboard shortcuts](Keyboard-Shortcuts.md) | What's the shortcut for…? What's the Windows or Linux equivalent? |
 | [Coming from Windows and Linux](Coming-from-Windows-and-Linux.md) | Why Cmd and not Ctrl? Why does Return rename? Which key deletes? |

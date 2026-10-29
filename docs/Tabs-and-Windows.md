@@ -37,6 +37,38 @@ The tab bar appears as soon as there are two tabs. To always show it, choose
 Dragging files **onto a tab** isn't supported; drop them on a sidebar place instead, or switch
 to the tab first (hovering a file over a folder in the list opens it).
 
+## Split view
+
+Press **F3** (or **View → Split View**, or the toolbar's split button) to show two folders side by
+side in one window, as in Dolphin. The new pane opens on the same folder; F3 again closes the
+split, keeping the folder of the pane you were in.
+
+```
+┌─────────┬───────────────────┬───────────────────┐
+│ Sidebar │ ▌Documents        │  Downloads        │
+│         │  file list        │  file list        │
+│         │  status bar       │  status bar       │
+└─────────┴───────────────────┴───────────────────┘
+```
+
+Each pane has its own folder, history, view, selection and find bar. The **active pane** is the
+one you last clicked in or moved the keyboard to; its heading is highlighted. The toolbar's
+Back, Forward, Up and address bar, the sidebar, the menu bar and the preview pane all work on
+the active pane.
+
+| To | Do |
+|---|---|
+| Move between the panes | click in one, or press **F6** (left list → right list → address bar → sidebar) |
+| Copy the selection to the other pane's folder | **Edit → Copy to Other Pane**, or right-click |
+| Move it there | **Edit → Move to Other Pane**, or right-click |
+| Copy or move with the mouse | drag from one pane to the other (Opt copies, Cmd moves) |
+
+Copy and Move to Other Pane have no shortcut by default (F5 and F6, which Total Commander uses,
+are Refresh and Focus Next Area here). Give them one in [your shortcuts file](Custom-Shortcuts.md),
+for example `"copyToOtherPane": ["Shift+F5"]`.
+
+Split panes aren't reopened after quitting; each tab comes back as one pane.
+
 ## Reopening where you left off
 
 When you quit and open File Manager again, your windows and tabs come back, each in the folder

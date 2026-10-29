@@ -18,6 +18,8 @@ rename.
 
 - **Explorer and Linux shortcuts.** Back and forward with Opt+Left/Right or your mouse's side
   buttons, up with Backspace, refresh with F5, move between panes with F6.
+- **Split view** (F3): two folders side by side, with Copy / Move to Other Pane.
+- **Connect to Server** (Cmd+K) for SMB (including `\\server\share` paths), NFS and WebDAV.
 - **Tabs**: Cmd+T, Ctrl+Tab, middle-click to open a folder in a new tab, Shift+Cmd+T to reopen
   a closed one, and your windows and tabs come back next time.
 - **An Explorer-style address bar**: click any folder in the path or pick from its › menu, or
@@ -47,7 +49,7 @@ rename.
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-More is planned (split view, Connect to Server); see [PLAN.md](PLAN.md).
+Everything in [PLAN.md](PLAN.md) is built, apart from dropping files onto a tab.
 
 ## Requirements
 

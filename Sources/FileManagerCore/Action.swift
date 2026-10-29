@@ -10,6 +10,7 @@ public enum Action: String, CaseIterable, Sendable {
     case rename, duplicate
     case getInfo, quickLook, showInFinder, showContextMenu
     case compress, extract, downloadNow, removeDownload
+    case toggleSplitView, copyToOtherPane, moveToOtherPane, connectToServer
     case moveToTrash, deleteImmediately, putBack
     case undo, redo
     case cut, copy, paste, pasteMove, copyPath, selectAll
@@ -51,6 +52,10 @@ public enum Action: String, CaseIterable, Sendable {
         case .extract: "Extract"
         case .downloadNow: "Download Now"
         case .removeDownload: "Remove Download"
+        case .toggleSplitView: "Split View"
+        case .copyToOtherPane: "Copy to Other Pane"
+        case .moveToOtherPane: "Move to Other Pane"
+        case .connectToServer: "Connect to Server…"
         case .moveToTrash: "Move to Trash"
         case .deleteImmediately: "Delete Immediately…"
         case .putBack: "Put Back"
@@ -98,10 +103,10 @@ public enum Action: String, CaseIterable, Sendable {
             .compress, .extract, .downloadNow, .removeDownload:
             .file
         case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
-            .find:
+            .find, .copyToOtherPane, .moveToOtherPane:
             .edit
         case .refresh, .toggleHiddenFiles, .viewAsIcons, .viewAsDetails, .zoomIn, .zoomOut, .actualSize,
-            .togglePreviewPane:
+            .togglePreviewPane, .toggleSplitView:
             .view
         case .focusNextArea, .focusPreviousArea, .showContextMenu, .nextTab, .previousTab, .endSearch: nil
         case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8, .showTab9: nil
@@ -117,7 +122,7 @@ public enum Action: String, CaseIterable, Sendable {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
             .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
             .getInfo, .quickLook, .showInFinder, .showContextMenu, .openInNewTab, .addToSidebar,
-            .compress, .extract, .downloadNow, .removeDownload:
+            .compress, .extract, .downloadNow, .removeDownload, .copyToOtherPane, .moveToOtherPane:
             true
         default:
             false

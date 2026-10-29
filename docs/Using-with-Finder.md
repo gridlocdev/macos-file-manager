@@ -30,7 +30,26 @@ double-clicking a folder on the desktop still opens Finder.
 | Folders and stacks in the Dock ("Open in Finder") | the Dock always hands these to Finder |
 | **Show in Finder** / **Reveal** in other apps, Spotlight's Cmd+Return, downloads in Safari | these ask for Finder by name |
 | Double-clicking a folder in Finder or on the desktop | Finder handles its own windows |
-| AirDrop, Network browsing, Connect to Server | not in File Manager yet |
+| AirDrop and browsing the network for servers | not in File Manager |
+
+## Connecting to a server
+
+**Go → Connect to Server…** (**Cmd+K**, as in Finder) mounts a shared folder on another
+computer or a NAS and opens it. Type an address:
+
+| Server | Address |
+|---|---|
+| Windows share, NAS, Samba (SMB) | `smb://nas.local/share`, `nas.local/share`, or `\\nas\share` as on Windows |
+| NFS | `nfs://server/export` |
+| WebDAV | `https://dav.example.com/files` |
+
+macOS asks for the name and password itself and can keep them in your keychain. A share that's
+already mounted (by Finder, say) opens straight away. Mounted shares show under Locations in the
+sidebar with an Eject button, and the last ten addresses are listed in the window for next
+time.
+
+SFTP isn't on the list: macOS can't mount SFTP servers by itself. Use an app such as Cyberduck
+or macFUSE with SSHFS to mount one, then open the mounted folder in File Manager.
 
 ## Going the other way
 

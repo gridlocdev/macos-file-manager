@@ -29,7 +29,7 @@ struct AddressBar: View {
                 Breadcrumbs(model: model) { editing = true }
             }
         }
-        .frame(minWidth: 200, idealWidth: 400, maxWidth: .infinity)
+        .frame(minWidth: 160, idealWidth: 300, maxWidth: .infinity)
         .onChange(of: model.addressFocusRequest) {
             editing = true
             focused = true

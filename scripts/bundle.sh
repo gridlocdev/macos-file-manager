@@ -14,6 +14,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/FileManagerApp"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+# The build number is the commit count, so each committed build is higher than the last.
+BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP/Contents/Info.plist"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # Help > File Manager Help opens these.
 cp -R docs "$APP/Contents/Resources/docs"

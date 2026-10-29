@@ -7,7 +7,7 @@ import FileManagerCore
 /// FILEMANAGER_SNAPSHOT_KEYS: key chords ("Cmd+C"), "menu:Title", "type:text", "scope:subfolders"
 /// (Find's This Folder/Subfolders switch, which has no key) and "action:find" (runs an `Action` on
 /// the window's model directly; works even when another app keeps this one from becoming active,
-/// which stops keys from arriving), "group:kind" (Group By), "tag:Red" (toggles a tag on the selection) and "batch:find>replace" (a batch rename of the selection, as the
+/// which stops keys from arriving), "group:kind" (Group By), "tag:Red" (toggles a tag on the selection), "other" (later steps act on the other split pane), "select:name" and "batch:find>replace" (a batch rename of the selection, as the
 /// Rename button in the sheet would run it). For checking the UI
 /// and for docs screenshots without screen-recording permission. See `just snapshot`.
 @MainActor enum DebugSnapshot {
@@ -52,6 +52,12 @@ import FileManagerCore
                     print("snapshot: performed \(action)")
                 } else if chord.hasPrefix("batch:"), let model = ActiveBrowser.shared.model {
                     batchRename(String(chord.dropFirst(6)), model: model)
+                } else if chord.hasPrefix("select:"), let model = ActiveBrowser.shared.model {
+                    let name = String(chord.dropFirst(7))
+                    model.selection = Set(model.items.filter { $0.name == name }.map(\.url))
+                } else if chord == "other" {
+                    // Split view: later steps act on the other pane.
+                    if let other = ActiveBrowser.shared.model?.otherPane { ActiveBrowser.shared.model = other }
                 } else if chord.hasPrefix("tag:") {
                     ActiveBrowser.shared.model?.toggleTag(String(chord.dropFirst(4)))
                 } else if chord.hasPrefix("group:"), let group = GroupBy(rawValue: String(chord.dropFirst(6))) {

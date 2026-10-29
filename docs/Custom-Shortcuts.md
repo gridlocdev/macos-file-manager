@@ -90,6 +90,10 @@ Some things to know:
 | `extract` | Extract | (none) |
 | `downloadNow` | Download Now | (none) |
 | `removeDownload` | Remove Download | (none) |
+| `toggleSplitView` | Split View | F3 |
+| `copyToOtherPane` | Copy to Other Pane | (none) |
+| `moveToOtherPane` | Move to Other Pane | (none) |
+| `connectToServer` | Connect to Server… | Cmd+K |
 | `moveToTrash` | Move to Trash | Cmd+Backspace, Delete |
 | `deleteImmediately` | Delete Immediately… | Opt+Cmd+Backspace, Shift+Delete |
 | `putBack` | Put Back | (none) |

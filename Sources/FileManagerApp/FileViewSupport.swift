@@ -74,7 +74,7 @@ import UniformTypeIdentifiers
 }
 
 /// What a drop does, for the list, the icon view and the sidebar.
-enum FileDrop {
+@MainActor enum FileDrop {
     static func fileURLs(_ info: any NSDraggingInfo) -> [URL] {
         info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
             as? [URL] ?? []

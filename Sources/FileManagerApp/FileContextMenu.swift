@@ -44,6 +44,10 @@ import FileManagerCore
         add(.cut, to: menu)
         add(.copy, to: menu)
         add(.duplicate, to: menu)
+        if model.otherPane != nil {
+            add(.copyToOtherPane, to: menu)
+            add(.moveToOtherPane, to: menu)
+        }
         add(.rename, to: menu)
         menu.addItem(.separator())
         add(.copyPath, to: menu)

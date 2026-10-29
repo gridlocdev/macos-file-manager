@@ -78,8 +78,8 @@ separate terminal app: Terminal, iTerm, Ghostty or another app you choose in
 ### Find is Cmd+F, not F3
 
 In Explorer, F3 and Ctrl+E also start a search. Here search is **Cmd+F** only, and it filters
-the list as you type rather than opening a results page. F3 is kept for a split view, as in
-Dolphin (planned). Cmd+S selects by pattern, like Ctrl+S in Nautilus, since there's nothing to
+the list as you type rather than opening a results page. F3 opens a split view, as in
+Dolphin; see [Tabs and windows](Tabs-and-Windows.md#split-view). Cmd+S selects by pattern, like Ctrl+S in Nautilus, since there's nothing to
 save. See [Searching and selecting](Searching-and-Selecting.md).
 
 ### No Alt+Home

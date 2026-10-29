@@ -41,6 +41,9 @@ Settings → Keyboard.
 | Show Tab 7 | Cmd+7 | Alt+7 |
 | Show Tab 8 | Cmd+8 | Alt+8 |
 | Show Last Tab | Cmd+9 | Alt+9 |
+| Split View | F3 | F3 (Dolphin) |
+| Copy to Other Pane | Edit menu, right-click (split view) | F5 (Total Commander, Dolphin) |
+| Move to Other Pane | Edit menu, right-click (split view) | F6 (Total Commander, Dolphin) |
 | Close tab or window | Cmd+W | Ctrl+W |
 
 ## Going to a place
@@ -54,6 +57,7 @@ Settings → Keyboard.
 | Applications | Shift+Cmd+A | |
 | Trash | Go menu | Recycle Bin |
 | Add to Sidebar | Ctrl+Cmd+T | Pin to Quick access |
+| Connect to Server… | Cmd+K | Map network drive (Explorer), Ctrl+L then smb:// (Nautilus) |
 
 ## Working with files
 

@@ -1,0 +1,47 @@
+import Foundation
+
+/// What you type in Connect to Server, turned into a URL macOS can mount.
+public enum ServerAddress {
+    public enum Problem: Error, Equatable, Sendable {
+        case empty
+        case unsupported(scheme: String)
+        case invalid
+
+        public var message: String {
+            switch self {
+            case .empty: "Type a server address, such as smb://nas.local/share."
+            case .unsupported(let scheme) where scheme == "sftp" || scheme == "ssh":
+                "macOS can't connect to SFTP servers by itself. Use an app such as Cyberduck or macFUSE with SSHFS, then open the mounted folder here."
+            case .unsupported(let scheme): "File Manager can't connect to “\(scheme)” servers. Use smb, nfs or a WebDAV (https) address."
+            case .invalid: "That doesn't look like a server address."
+            }
+        }
+    }
+
+    /// Schemes macOS mounts itself (WebDAV is http/https).
+    public static let schemes = ["smb", "nfs", "afp", "http", "https"]
+
+    /// "smb://nas/share" as is; "\\\\nas\\share" (Windows) and "nas/share" become smb.
+    public static func parse(_ text: String) -> Result<URL, Problem> {
+        var text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return .failure(.empty) }
+        if text.hasPrefix("\\\\") {
+            text = "smb://" + text.dropFirst(2).replacingOccurrences(of: "\\", with: "/")
+        } else if !text.contains("://") {
+            text = "smb://" + text
+        }
+        guard let scheme = text.components(separatedBy: "://").first?.lowercased(), !scheme.isEmpty else {
+            return .failure(.invalid)
+        }
+        guard schemes.contains(scheme) else { return .failure(.unsupported(scheme: scheme)) }
+        // Spaces in share names are common ("Shared Files"); encode what URL won't take.
+        let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed.union(["%"])) ?? text
+        guard let url = URL(string: encoded), let host = url.host(), !host.isEmpty else { return .failure(.invalid) }
+        return .success(url)
+    }
+
+    /// Recently used servers, newest first, without repeats.
+    public static func remember(_ address: String, in recent: [String], limit: Int = 10) -> [String] {
+        Array(([address] + recent.filter { $0.caseInsensitiveCompare(address) != .orderedSame }).prefix(limit))
+    }
+}

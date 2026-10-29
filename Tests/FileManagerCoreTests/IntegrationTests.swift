@@ -105,3 +105,28 @@ import Testing
         }
     }
 }
+
+@Suite struct ServerAddressTests {
+    func url(_ text: String) -> String? { try? ServerAddress.parse(text).get().absoluteString }
+
+    @Test func addresses() {
+        #expect(url("smb://nas.local/share") == "smb://nas.local/share")
+        #expect(url("nas.local/share") == "smb://nas.local/share")
+        #expect(url(#"\\nas\Shared Files"#) == "smb://nas/Shared%20Files")
+        #expect(url("https://dav.example.com/files") == "https://dav.example.com/files")
+        #expect(url("nfs://server/export") == "nfs://server/export")
+    }
+
+    @Test func problems() {
+        #expect(ServerAddress.parse("  ") == .failure(.empty))
+        #expect(ServerAddress.parse("sftp://host/home") == .failure(.unsupported(scheme: "sftp")))
+        #expect(ServerAddress.parse("ftp://host") == .failure(.unsupported(scheme: "ftp")))
+        #expect(ServerAddress.parse("smb://") == .failure(.invalid))
+        #expect(ServerAddress.Problem.unsupported(scheme: "sftp").message.contains("SFTP"))
+    }
+
+    @Test func recentServers() {
+        let recent = ServerAddress.remember("smb://a", in: ["smb://b", "SMB://A", "smb://c"], limit: 3)
+        #expect(recent == ["smb://a", "smb://b", "smb://c"])
+    }
+}

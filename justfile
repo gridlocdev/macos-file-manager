@@ -36,6 +36,16 @@ install: (bundle "release")
     open ~/Applications/"File Manager.app"
     @echo "Installed ~/Applications/File Manager.app"
 
+# Release build zipped for sharing: build/File-Manager-<version>.zip
+dist: (bundle "release")
+    #!/usr/bin/env bash
+    set -euo pipefail
+    version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "{{app}}/Contents/Info.plist")"
+    zip="build/File-Manager-$version.zip"
+    rm -f "$zip"
+    ditto -c -k --sequesterRsrc --keepParent "{{app}}" "$zip"
+    echo "Made $zip"
+
 # Debug bundle: open a demo folder, press keys (e.g. "Backspace,Cmd+H"), save a PNG, print menus
 snapshot keys="" out="build/snapshot.png": (bundle "debug")
     rm -rf build/snapshot-demo

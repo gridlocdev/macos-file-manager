@@ -12,6 +12,7 @@ enum SettingsKey {
     static let confirmTrash = "confirmTrash"
     static let startFolder = "startFolder"
     static let customStartPath = "customStartPath"
+    static let recentServers = "recentServers"
 
     /// Defaults for settings that start on.
     static func registerDefaults() {

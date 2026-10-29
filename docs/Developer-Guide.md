@@ -14,6 +14,7 @@ just test         # run the unit tests
 just run          # build a debug File Manager.app and open it
 just run-attached # same, with logs in the terminal
 just install      # release build into ~/Applications
+just dist         # release build zipped as build/File-Manager-<version>.zip
 just icons        # regenerate the app icon (needs Inkscape)
 just fmt          # format with swift-format
 ```
@@ -51,12 +52,13 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   Navigation.swift             Breadcrumbs, RecentFolders, PinnedFolders, SessionState
   Search.swift                 NamePattern (wildcards, Spotlight predicate), SearchCriteria, Selection
   BatchRename.swift            batch rename options, preview with problems, moves (swaps via temp names)
+  ServerAddress.swift          Connect to Server addresses (smb, \\server\share, nfs, WebDAV); recents
   Archive.swift                zip names; compress/extract with ditto (run by FileStepExecutor)
   ViewSettings.swift           FolderView (mode, sort, groups, zoom), FolderViewMemory, Grouping, ListRow
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
   AppCommands.swift            the menu bar, built from Action + Keymap
-  BrowserWindow.swift          window layout: sidebar, toolbar, address bar, list, status bar
+  BrowserWindow.swift          window layout: sidebar, toolbar, panes (split view), status bars
   BrowserModel.swift           one folder view: navigation, listing, selection, perform(Action)
   FileOperations.swift         jobs with progress/cancel, conflict prompts, undo/redo, TrashLog
   Clipboard.swift              files on the system clipboard; cut state
@@ -80,6 +82,7 @@ Sources/FileManagerApp/        the app
   PreviewPane.swift            the docked preview (Opt+P)
   FolderViewStore.swift        each folder's view, saved in Application Support
   KeymapStore.swift            the keymap in use: standard + Shortcuts.json overrides
+  ConnectToServer.swift        the Connect to Server sheet; NetFS mounting
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
                                ActiveBrowser (the key window's model, for the menu bar)
   DebugSnapshot.swift          debug-only: capture the window, print menus (just snapshot)
