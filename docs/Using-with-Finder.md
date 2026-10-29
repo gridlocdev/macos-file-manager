@@ -46,7 +46,8 @@ computer or a NAS and opens it. Type an address:
 macOS asks for the name and password itself and can keep them in your keychain. A share that's
 already mounted (by Finder, say) opens straight away. Mounted shares show under Locations in the
 sidebar with an Eject button, and the last ten addresses are listed in the window for next
-time.
+time. If you type a password into the address (`smb://name:password@nas/share`), it's used to
+connect but left out of that list; let macOS keep it in the keychain instead.
 
 SFTP isn't on the list: macOS can't mount SFTP servers by itself. Use an app such as Cyberduck
 or macFUSE with SSHFS to mount one, then open the mounted folder in File Manager.

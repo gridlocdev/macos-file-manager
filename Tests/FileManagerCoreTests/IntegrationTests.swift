@@ -134,4 +134,18 @@ import Testing
         let recent = ServerAddress.remember("smb://a", in: ["smb://b", "SMB://A", "smb://c"], limit: 3)
         #expect(recent == ["smb://a", "smb://b", "smb://c"])
     }
+
+    @Test func recentServersLeaveOutPasswords() {
+        #expect(ServerAddress.withoutPassword("smb://alice:secret@nas/share") == "smb://alice@nas/share")
+        #expect(ServerAddress.withoutPassword("alice:secret@nas/share") == "alice@nas/share")
+        #expect(ServerAddress.withoutPassword(#"\\alice:secret@nas\share"#) == #"\\alice@nas\share"#)
+        #expect(ServerAddress.withoutPassword("smb://alice:p@ss@nas") == "smb://alice@nas")
+        #expect(ServerAddress.withoutPassword(#"smb:\\alice:secret@nas\share"#) == #"smb:\\alice@nas\share"#)
+        #expect(ServerAddress.withoutPassword("smb://alice@nas/share") == "smb://alice@nas/share")
+        #expect(ServerAddress.withoutPassword("nas.local:445/share") == "nas.local:445/share")
+        #expect(ServerAddress.withoutPassword("smb://nas/a:b@c") == "smb://nas/a:b@c")
+        // Entries saved before this are cleaned too, and duplicates merge.
+        let recent = ServerAddress.remember("smb://alice@nas", in: ["smb://alice:old@nas", "smb://bob:pw@x"])
+        #expect(recent == ["smb://alice@nas", "smb://bob@x"])
+    }
 }

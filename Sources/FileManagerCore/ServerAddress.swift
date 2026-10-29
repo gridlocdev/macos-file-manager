@@ -44,8 +44,26 @@ public enum ServerAddress {
         return .success(url)
     }
 
-    /// Recently used servers, newest first, without repeats.
+    /// Recently used servers, newest first, without repeats. Passwords are left out (they'd be
+    /// stored in plain text); the keychain keeps them instead.
     public static func remember(_ address: String, in recent: [String], limit: Int = 10) -> [String] {
-        Array(([address] + recent.filter { $0.caseInsensitiveCompare(address) != .orderedSame }).prefix(limit))
+        let address = withoutPassword(address)
+        let others = recent.map(withoutPassword).filter { $0.caseInsensitiveCompare(address) != .orderedSame }
+        var seen = Set<String>()
+        return Array(([address] + others).filter { seen.insert($0.lowercased()).inserted }.prefix(limit))
+    }
+
+    /// "smb://alice:secret@nas/share" → "smb://alice@nas/share", in any form `parse` takes.
+    public static func withoutPassword(_ text: String) -> String {
+        // The host part: after the scheme and slashes, up to the first slash. As in `parse`, a
+        // scheme needs a slash after it ("alice:secret@nas" is a name and password).
+        var start = text.startIndex
+        if let match = text.firstMatch(of: /^(?:[A-Za-z][A-Za-z0-9+.-]*:(?=[\/\\]))?[\/\\]*/) {
+            start = match.range.upperBound
+        }
+        let end = text[start...].firstIndex { $0 == "/" || $0 == "\\" } ?? text.endIndex
+        guard let at = text[start..<end].lastIndex(of: "@"), let colon = text[start..<at].firstIndex(of: ":")
+        else { return text }
+        return String(text[..<colon] + text[at...])
     }
 }
