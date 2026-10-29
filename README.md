@@ -7,7 +7,7 @@ Cmd where Windows and Linux use Ctrl, and keeps the Mac habits worth keeping, li
 rename.
 
 <p align="center">
-  <img src="assets/icon/icon.png" width="96" alt="File Manager app icon: a white standing set of drawers on an amber tile">
+  <img src="assets/icon/icon.png" width="96" alt="File Manager app icon: a white standing set of drawers on a blue tile">
 </p>
 
 <p align="center">

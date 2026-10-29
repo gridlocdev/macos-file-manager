@@ -277,7 +277,7 @@ reach the menu bar of the active app.
 
 ## App icon
 
-The icon is drawn by hand in `assets/icon.svg`: a white standing set of drawers on an amber
+The icon is drawn by hand in `assets/icon.svg`: a white standing set of drawers on a blue
 gradient tile, on Apple's 1024 icon grid (an 824-unit tile at 100,100 with a transparent
 margin). The gaps and handles use the tile's gradient so they read as cut out of the cabinet.
 
