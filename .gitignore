@@ -1,0 +1,42 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+*.xcscmblueprint
+# Package.resolved is committed once the package has dependencies.
+
+# Xcode (generated on demand; this project has no .xcodeproj)
+*.xcodeproj
+*.xcworkspace
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# App bundle output from scripts/bundle.sh
+build/
+
+# SourceKit-LSP / VS Code Swift extension caches
+.sourcekit-lsp/
+.index-build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors (shared VS Code config in .vscode/ is committed)
+*.swp
+*~
+.idea/
+
+# Local Claude Code settings
+.claude/settings.local.json

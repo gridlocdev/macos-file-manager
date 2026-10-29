@@ -1,0 +1,59 @@
+# File Manager
+
+A file manager for macOS with the keyboard habits of Windows Explorer and Linux file managers.
+Backspace goes up a folder, F5 refreshes, Opt+D or Cmd+L lets you type a path (with Tab
+completion), Cmd+H shows hidden files, and F4 opens a terminal in the current folder. It uses
+Cmd where Windows and Linux use Ctrl, and keeps the Mac habits worth keeping, like Return to
+rename.
+
+<p align="center">
+  <img src="assets/icon/icon.png" width="96" alt="File Manager app icon: a white standing set of drawers on an amber tile">
+</p>
+
+<p align="center">
+  <img src="docs/images/window.webp" width="720" alt="File Manager window: sidebar with Favorites and Locations, back, forward and up buttons, an address bar showing the folder path, and a details list with Name, Date Modified, Kind and Size columns, folders first, a dimmed hidden .config folder, and a status bar reading 6 items, Showing hidden files">
+</p>
+
+## What it does
+
+- **Explorer and Linux shortcuts.** Back and forward with Opt+Left/Right or your mouse's side
+  buttons, up with Backspace, refresh with F5, move between panes with F6.
+- **A real address bar.** Type or paste any path, use `~`, and press Tab to complete folder
+  names.
+- **A details list that behaves.** Folders first, natural number sorting (`file2` before
+  `file10`), type-ahead, resizable columns, and live updates when files change.
+- **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
+- **A full menu bar** with every action and its shortcut, so nothing is hidden.
+
+More is planned (cut and paste that really moves files, drag and drop, tabs, search, Quick Look);
+see [PLAN.md](PLAN.md).
+
+## Requirements
+
+macOS 27 or later.
+
+## Install
+
+There are no prebuilt downloads yet. Building it takes one command once Xcode and
+[just](https://github.com/casey/just) are installed:
+
+```bash
+just install
+```
+
+That puts **File Manager.app** in `~/Applications` and opens it. The
+[installing guide](docs/Installing.md) has the details.
+
+## Documentation
+
+**[Read the documentation](docs/Home.md)** for how to use the app, for example:
+
+- [What are all the keyboard shortcuts?](docs/Keyboard-Shortcuts.md)
+- [Why does Return rename instead of open?](docs/Coming-from-Windows-and-Linux.md#return-renames-it-doesnt-open)
+- [How do I type a path, and what does Tab do?](docs/Using-the-App.md#typing-a-path)
+- [A folder says "Can't Open Folder"](docs/Troubleshooting.md)
+
+## For developers
+
+Building, testing, VS Code setup and the code layout are covered in the
+[developer guide](docs/Developer-Guide.md).

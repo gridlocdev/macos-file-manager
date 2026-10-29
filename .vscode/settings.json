@@ -1,0 +1,4 @@
+{
+  "swift.disableAutoResolve": false,
+  "files.exclude": { ".build": true, "build": true }
+}

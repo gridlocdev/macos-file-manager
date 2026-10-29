@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- App icon source. 1024 canvas on Apple's icon grid: an 824-unit tile at (100,100) with a
+     transparent margin. scripts/make-icons.sh crops to the tile, so keep the tile there.
+     Glyph: a standing set of drawers. Gaps and handles use the tile fill so they cut the body. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" gradientUnits="userSpaceOnUse" x1="0" y1="100" x2="0" y2="924">
+      <stop offset="0" stop-color="#FFB547" />
+      <stop offset="1" stop-color="#E07412" />
+    </linearGradient>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)" />
+
+  <!-- Body 220-770 plus feet to 820: centred on the tile. -->
+  <g transform="translate(0 -8)">
+    <rect x="330" y="740" width="64" height="80" rx="14" fill="#FFFFFF" />
+    <rect x="630" y="740" width="64" height="80" rx="14" fill="#FFFFFF" />
+    <rect x="292" y="220" width="440" height="550" rx="44" fill="#FFFFFF" />
+
+    <rect x="292" y="385" width="440" height="28" fill="url(#tile)" />
+    <rect x="292" y="577" width="440" height="28" fill="url(#tile)" />
+
+    <rect x="442" y="284" width="140" height="36" rx="18" fill="url(#tile)" />
+    <rect x="442" y="477" width="140" height="36" rx="18" fill="url(#tile)" />
+    <rect x="442" y="669" width="140" height="36" rx="18" fill="url(#tile)" />
+  </g>
+</svg>
