@@ -31,8 +31,17 @@ struct SidebarView: View {
         }
     }
 
+    /// Each item is also a drop target: drop files on Desktop to move them there.
     private func row(_ item: SidebarItem) -> some View {
-        Label(item.title, systemImage: item.symbol).tag(item.url)
+        Label(item.title, systemImage: item.symbol)
+            .tag(item.url)
+            .dropDestination(for: URL.self) { urls, _ in
+                let files = urls.filter(\.isFileURL)
+                let operation = FileListView.Coordinator.operation(files, into: item.url)
+                guard !files.isEmpty, operation != .none else { return false }
+                model.drop(files, into: item.url, operation: operation)
+                return true
+            }
     }
 
     /// Highlights the item for the current folder; picking one navigates.

@@ -20,6 +20,7 @@ These pages explain **how to use the app** and **where it differs from what you'
 |---|---|
 | [Using the app](Using-the-App.md) | What are the parts of the window? How do I type a path? How do I go back? |
 | [Copying and moving files](Copying-and-Moving-Files.md) | How do cut and paste work? What happens when names clash? Can I undo? Where's Put Back? |
+| [Drag and drop](Drag-and-Drop.md) | When does a drag move and when does it copy? Can I drop on the sidebar? |
 | [Keyboard shortcuts](Keyboard-Shortcuts.md) | What's the shortcut for…? What's the Windows or Linux equivalent? |
 | [Coming from Windows and Linux](Coming-from-Windows-and-Linux.md) | Why Cmd and not Ctrl? Why does Return rename? Which key deletes? |
 | [Settings](Settings.md) | How do I pick my terminal app? Can folders be mixed in with files? |

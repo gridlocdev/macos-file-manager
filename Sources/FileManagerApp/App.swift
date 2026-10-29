@@ -11,6 +11,11 @@ struct FileManagerApp: App {
         }
         .commands { AppCommands() }
 
+        WindowGroup("Info", id: InfoWindow.id, for: [URL].self) { $urls in
+            InfoWindow(urls: urls ?? [])
+        }
+        .windowResizability(.contentSize)
+
         Window("File Operations", id: OperationsWindow.id) {
             OperationsWindow()
         }

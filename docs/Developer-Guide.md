@@ -47,6 +47,7 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   FileStep.swift               FileStep (one change), ExecutedStep (what it did), FileUndo
   TransferPlanner.swift        paste/duplicate planning: conflicts, folder merges; DiskFileTree
   FileStepExecutor.swift       runs FileSteps with FileManager (Trash injectable for tests)
+  DropRules.swift              drag-and-drop move/copy rules; FolderSize; Permissions
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
   AppCommands.swift            the menu bar, built from Action + Keymap
@@ -55,6 +56,9 @@ Sources/FileManagerApp/        the app
   FileOperations.swift         jobs with progress/cancel, conflict prompts, undo/redo, TrashLog
   Clipboard.swift              files on the system clipboard; cut state
   OperationsWindow.swift       the File Operations progress window
+  FileListInteractions.swift   FileTableView (spring loading, Quick Look, Services); drag and
+                               drop and the right-click menu for the list
+  InfoWindow.swift             Get Info windows (one per selection)
   DirectoryLoader.swift        background folder reads; DirectoryWatcher (live updates)
   FileListView.swift           the details list (NSTableView), icons, type-ahead
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
@@ -142,6 +146,31 @@ when the list (`FileTableView`) has focus.
 
 Rename edits the name cell in place (`FileListView.Coordinator.beginRename`). The list holds
 back reloads while the field is open, since a reload would throw the edit away.
+
+## Drag and drop, right-click menu, Quick Look
+
+- **Drag out**: the table's data source writes each row's file URL to the pasteboard, so Finder
+  and other apps get real files.
+- **Drop in**: `validateDrop` retargets to the whole table unless the pointer is over a folder
+  row, and asks `DropRules.operation` (pure, tested) for move/copy from the modifier keys and
+  whether source and target share a `volumeIdentifier`. Accepting a drop calls
+  `BrowserModel.drop`, which goes through `FileOperations.transfer` like Paste, so conflicts,
+  merging and undo all work. Sidebar rows use SwiftUI `dropDestination` with the same rules.
+- **Spring-loaded folders**: `FileTableView` adopts `NSSpringLoadingDestination` and navigates
+  into the folder row under the pointer.
+- **Right-click menu**: `table.menu` with the coordinator as `NSMenuDelegate`;
+  `menuNeedsUpdate` builds an item menu or a folder menu from `Action`s, plus Open With
+  (`NSWorkspace.urlsForApplications(toOpen:)`) and Share (`standardShareMenuItem`). Shift+F10
+  pops the same menu under the first selected row. Services come from `FileTableView` being an
+  `NSServicesMenuRequestor` for file URLs.
+- **Quick Look**: `FileTableView` takes control of `QLPreviewPanel` and is its data source;
+  selection changes reload the panel, and key presses in the panel are forwarded to the table.
+- **Get Info**: `BrowserModel.perform(.getInfo)` publishes `infoRequest`; `BrowserWindow`
+  opens a `WindowGroup(for: [URL].self)` window. Folder sizes come from `FolderSize.measure`
+  in a detached task that stops when the window closes.
+
+Synthetic events can't drive drags or menus, so `just snapshot` doesn't cover these; check them
+by hand.
 
 ## The file list
 

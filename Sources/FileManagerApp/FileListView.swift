@@ -40,6 +40,7 @@ struct FileListView: NSViewRepresentable {
         table.target = context.coordinator
         table.doubleAction = #selector(Coordinator.doubleClicked(_:))
         table.setAccessibilityLabel("Files")
+        context.coordinator.configureInteractions(table)
 
         let scroll = NSScrollView()
         scroll.documentView = table
@@ -59,6 +60,8 @@ struct FileListView: NSViewRepresentable {
         let focusRequest = model.listFocusRequest
         let sort = model.sort
         let renameRequest = model.renameRequest
+        let quickLookRequest = model.quickLookRequest
+        let contextMenuRequest = model.contextMenuRequest
         let cut = Clipboard.shared.cutURLs
 
         let descriptor = NSSortDescriptor(key: sort.column.rawValue, ascending: sort.ascending)
@@ -86,6 +89,14 @@ struct FileListView: NSViewRepresentable {
             coordinator.focusRequest = focusRequest
             DispatchQueue.main.async { table.window?.makeFirstResponder(table) }
         }
+        if quickLookRequest != coordinator.quickLookRequest {
+            coordinator.quickLookRequest = quickLookRequest
+            (table as? FileTableView)?.toggleQuickLook()
+        }
+        if contextMenuRequest != coordinator.contextMenuRequest {
+            coordinator.contextMenuRequest = contextMenuRequest
+            DispatchQueue.main.async { coordinator.showContextMenuFromKeyboard() }
+        }
         if renameRequest != coordinator.renameRequest {
             coordinator.renameRequest = renameRequest
             if let target = model.renameTarget {
@@ -103,6 +114,9 @@ struct FileListView: NSViewRepresentable {
         var cut: Set<URL> = []
         var focusRequest = 0
         var renameRequest = 0
+        var quickLookRequest = 0
+        var contextMenuRequest = 0
+        var menuFromKeyboard = false
         var isUpdating = false
         /// The item being renamed and its text field.
         private var renaming: (url: URL, field: NSTextField, original: String)?
@@ -153,6 +167,7 @@ struct FileListView: NSViewRepresentable {
             model.selection = Set(table.selectedRowIndexes.compactMap {
                 $0 < items.count ? items[$0].url : nil
             })
+            (table as? FileTableView)?.selectionChangedForQuickLook()
         }
 
         func tableView(_ tableView: NSTableView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
@@ -237,10 +252,6 @@ struct FileListView: NSViewRepresentable {
         }
     }
 }
-
-/// The file list's table. `KeyMonitor` checks for it: Return renames and Delete trashes only
-/// while the list has focus.
-final class FileTableView: NSTableView {}
 
 private final class FileCell: NSTableCellView {
     init(identifier: NSUserInterfaceItemIdentifier, withIcon: Bool) {

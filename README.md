@@ -25,11 +25,14 @@ rename.
 - **Cut and paste that moves files**, folder merging like Explorer, Replace / Keep Both / Skip
   when names clash, F2 to rename, and one undo history for everything (copies, moves, renames,
   new folders, trashing).
+- **Drag and drop** that moves on the same disk and copies across disks (Opt copies, Cmd
+  moves), spring-loaded folders, and drops onto sidebar places.
+- **A right-click menu** (also Shift+F10) with Open With, Share and Services, **Get Info** with
+  folder sizes and permissions (Cmd+I or Opt+Return), and **Quick Look** on Space.
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-More is planned (drag and drop, a right-click menu, tabs, search, Quick Look); see
-[PLAN.md](PLAN.md).
+More is planned (tabs, a folder tree, search, icon view); see [PLAN.md](PLAN.md).
 
 ## Requirements
 

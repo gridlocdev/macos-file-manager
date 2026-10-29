@@ -115,4 +115,4 @@ Click **✕** to stop one. Whatever was already copied or moved stays, and **Cmd
 A single large file is copied in one go, so Cancel takes effect after it.
 
 ---
-Next: [Keyboard shortcuts](Keyboard-Shortcuts.md)
+Next: [Drag and drop](Drag-and-Drop.md)

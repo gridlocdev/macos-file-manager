@@ -52,6 +52,15 @@ Settings → Keyboard.
 | Undo | Cmd+Z | Ctrl+Z |
 | Redo | Shift+Cmd+Z | Ctrl+Y, Ctrl+Shift+Z |
 
+## Looking at files
+
+| Action | Keys | Windows / Linux |
+|---|---|---|
+| Quick Look | Space | Space (Nautilus, PowerToys Peek) |
+| Get Info | Cmd+I, Opt+Return | Alt+Enter |
+| Show Context Menu | Shift+F10, right-click | Shift+F10, Menu key |
+| Show in Finder | File menu | |
+
 ## In the file list
 
 | Action | Keys | Windows / Linux |
@@ -61,8 +70,8 @@ Settings → Keyboard.
 | Show Hidden Files | Cmd+H, Shift+Cmd+. | Ctrl+H (Linux) |
 | Open Terminal Here | Opt+Cmd+T, F4 | F4 (Dolphin), Ctrl+Alt+T |
 
-Return, F2, Delete and Shift+Delete only act on files while the file list has the keyboard
-focus, so pressing Return in the sidebar doesn't rename anything.
+Return, F2, Space, Delete, Shift+Delete and Shift+F10 only act on files while the file list has
+the keyboard focus, so pressing Return in the sidebar doesn't rename anything.
 
 While you're typing in the address bar or renaming, Cmd+X, Cmd+C, Cmd+V, Cmd+A, Cmd+Z and
 Cmd+Backspace work on the text instead of on files.

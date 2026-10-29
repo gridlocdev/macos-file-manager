@@ -41,6 +41,22 @@ The key labelled *delete* on a Mac is Backspace, which goes up a folder. Use Cmd
 forward Delete (fn+delete on a MacBook). Forward Delete only works while the file list has the
 focus.
 
+**I can't drop an attachment from Mail, or a photo from Photos.**
+Those apps hand over a promise to make a file rather than the file itself, and File Manager
+can't receive those yet. Drop them in Finder or on the Desktop. See
+[Drag and drop](Drag-and-Drop.md#what-cant-be-dropped-yet).
+
+**A drag copied when I wanted it to move (or the other way round).**
+Between disks a drag copies, on the same disk it moves. Hold Cmd to move or Opt to copy. See
+[Drag and drop](Drag-and-Drop.md#move-or-copy).
+
+**Space doesn't open Quick Look.**
+The file list needs the keyboard focus (click a file first), and something must be selected.
+
+**Get Info says "Calculating…" for a long time.**
+It's adding up every file in the folder. Big folders, or folders on network drives, take a
+while. Closing the window stops it.
+
 **Cmd+H showed hidden files instead of hiding the app.**
 That's on purpose. Use File Manager → Hide File Manager, or click another app.
 

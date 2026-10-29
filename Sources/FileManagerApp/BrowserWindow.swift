@@ -45,6 +45,9 @@ struct BrowserWindow: View {
             model.focusList()
         }
         .onChange(of: foldersFirst) { model.sort.foldersFirst = foldersFirst }
+        .onChange(of: model.infoRequestCount) {
+            openWindow(id: InfoWindow.id, value: model.infoRequest)
+        }
         .onChange(of: FileOperations.shared.showProgress) {
             if FileOperations.shared.showProgress, ActiveBrowser.shared.model === model {
                 openWindow(id: OperationsWindow.id)
@@ -108,10 +111,18 @@ struct StatusBar: View {
         .background(.bar)
     }
 
+    /// "12 items, 3 selected (4.2 MB), 120 GB available", like Explorer's status bar.
     private var summary: String {
         let count = model.items.count
         var text = count == 1 ? "1 item" : "\(count) items"
-        if !model.selection.isEmpty { text += ", \(model.selection.count) selected" }
+        if !model.selection.isEmpty {
+            text += ", \(model.selection.count) selected"
+            let size = model.selectionSize
+            if size > 0 { text += " (\(ByteCountFormatter.string(fromByteCount: size, countStyle: .file)))" }
+        }
+        if let free = model.freeSpace {
+            text += ", \(ByteCountFormatter.string(fromByteCount: free, countStyle: .file)) available"
+        }
         return text
     }
 }

@@ -25,6 +25,15 @@ final class BrowserModel {
     private(set) var listFocusRequest = 0
     /// Scrolled to after the next load (the folder you came up from, a pasted item).
     private(set) var revealAfterLoad: URL?
+    /// Bumped to toggle Quick Look / show the right-click menu from the keyboard.
+    private(set) var quickLookRequest = 0
+    private(set) var contextMenuRequest = 0
+    /// Get Info asks the window to open an Info window for these.
+    private(set) var infoRequest: [URL] = []
+    private(set) var infoRequestCount = 0
+    /// Free space on the current folder's disk, for the status bar.
+    private(set) var freeSpace: Int64?
+
     /// Bumped to start renaming `renameTarget` in the list.
     private(set) var renameRequest = 0
     private(set) var renameTarget: URL?
@@ -161,7 +170,7 @@ final class BrowserModel {
     func canPerform(_ action: Action) -> Bool {
         let ops = FileOperations.shared
         switch action {
-        case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately: return !selection.isEmpty
+        case .open, .rename, .duplicate, .cut, .copy, .deleteImmediately, .quickLook: return !selection.isEmpty
         case .moveToTrash: return !selection.isEmpty && !isTrashFolder
         case .putBack: return !selection.isEmpty && isTrashFolder
         case .paste, .pasteMove: return Clipboard.shared.hasFiles && errorMessage == nil
@@ -214,7 +223,29 @@ final class BrowserModel {
         case .putBack: putBack()
         case .undo: undoOrRedo(undo: true)
         case .redo: undoOrRedo(undo: false)
+        case .getInfo:
+            infoRequest = selection.isEmpty ? [url] : selectedURLs
+            infoRequestCount += 1
+        case .quickLook: quickLookRequest += 1
+        case .showContextMenu: contextMenuRequest += 1
+        case .showInFinder:
+            NSWorkspace.shared.activateFileViewerSelecting(selection.isEmpty ? [url] : selectedURLs)
         }
+    }
+
+    /// Files dropped on the list, a folder in it, or the sidebar.
+    func drop(_ sources: [URL], into folder: URL, operation: DropRules.Operation) {
+        guard operation != .none else { return }
+        let here = url
+        Task {
+            let results = await ops.transfer(sources, into: folder, mode: operation == .copy ? .copy : .move, window: window)
+            if folder.path == here.path, here == url { refresh(selecting: results) } else { refresh() }
+        }
+    }
+
+    /// Total size of the selected files (folders aren't added up, as in Explorer's status bar).
+    var selectionSize: Int64 {
+        items.filter { selection.contains($0.url) && !$0.isFolder }.reduce(0) { $0 + ($1.size ?? 0) }
     }
 
     // MARK: File operations
@@ -341,8 +372,13 @@ final class BrowserModel {
         watcher = DirectoryWatcher(url: target) { [weak self] in self?.refresh() }
         loadTask = Task {
             let result = await DirectoryLoader.list(target)
+            let free = await Task.detached {
+                try? target.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+                    .volumeAvailableCapacityForImportantUsage
+            }.value
             guard !Task.isCancelled, target == url else { return }
             isLoading = false
+            freeSpace = free
             switch result {
             case .success(let listing):
                 allItems = listing

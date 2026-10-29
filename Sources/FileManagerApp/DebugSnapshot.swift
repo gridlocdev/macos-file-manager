@@ -62,7 +62,7 @@ import AppKit
         }
         let codes: [String: UInt16] = [
             "Backspace": 51, "Delete": 117, "Return": 36, "Up": 126, "Down": 125, "Left": 123, "Right": 124,
-            "F2": 120, "F4": 118, "F5": 96, "F6": 97, "Tab": 48, "Esc": 53,
+            "F2": 120, "F4": 118, "F5": 96, "F6": 97, "Tab": 48, "Esc": 53, "Space": 49,
         ]
         // US-layout virtual key codes, so characters(byApplyingModifiers:) works as for real keys.
         let letterCodes: [String: UInt16] = [
@@ -113,7 +113,8 @@ import AppKit
     }
 
     private static func capture(to path: String) {
-        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
+        // The key window, so a Get Info window that just opened is captured.
+        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
             let frameView = window.contentView?.superview
         else {
             print("snapshot: no window")

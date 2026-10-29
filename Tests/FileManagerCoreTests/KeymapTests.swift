@@ -10,9 +10,9 @@ import Testing
         #expect(keymap.conflicts.isEmpty, "\(keymap.conflicts)")
     }
 
-    /// Put Back and Trash are menu-only, as in Finder.
+    /// Put Back, Trash and Show in Finder are menu-only, as in Finder.
     @Test func everyOtherActionHasAShortcut() {
-        for action in Action.allCases where ![.putBack, .goTrash].contains(action) {
+        for action in Action.allCases where ![.putBack, .goTrash, .showInFinder].contains(action) {
             #expect(!keymap.chords(for: action).isEmpty, "\(action) has no shortcut")
         }
     }
@@ -24,6 +24,9 @@ import Testing
         #expect(keymap.menuChord(for: .moveToTrash) == KeyChord(.delete, .command))
         #expect(keymap.action(for: KeyChord(.forwardDelete, .shift)) == .deleteImmediately)
         #expect(keymap.action(for: .char("v", [.command, .option])) == .pasteMove)
+        #expect(keymap.action(for: KeyChord(.space)) == .quickLook)
+        #expect(keymap.action(for: KeyChord(.returnKey, .option)) == .getInfo)
+        #expect(keymap.action(for: KeyChord(.function(10), .shift)) == .showContextMenu)
     }
 
     @Test func textEditingFallbacks() {

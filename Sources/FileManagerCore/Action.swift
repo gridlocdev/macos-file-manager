@@ -4,6 +4,7 @@ public enum Action: String, CaseIterable, Sendable {
     case open
     case newFolder, newTextFile
     case rename, duplicate
+    case getInfo, quickLook, showInFinder, showContextMenu
     case moveToTrash, deleteImmediately, putBack
     case undo, redo
     case cut, copy, paste, pasteMove, copyPath, selectAll
@@ -25,6 +26,10 @@ public enum Action: String, CaseIterable, Sendable {
         case .newTextFile: "New Text File"
         case .rename: "Rename"
         case .duplicate: "Duplicate"
+        case .getInfo: "Get Info"
+        case .quickLook: "Quick Look"
+        case .showInFinder: "Show in Finder"
+        case .showContextMenu: "Show Context Menu"
         case .moveToTrash: "Move to Trash"
         case .deleteImmediately: "Delete Immediately…"
         case .putBack: "Put Back"
@@ -57,10 +62,12 @@ public enum Action: String, CaseIterable, Sendable {
     /// Where it appears in the menu bar; nil for keyboard-only actions.
     public var menu: Menu? {
         switch self {
-        case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack: .file
+        case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
+            .getInfo, .quickLook, .showInFinder:
+            .file
         case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll: .edit
         case .refresh, .toggleHiddenFiles: .view
-        case .focusNextArea, .focusPreviousArea: nil
+        case .focusNextArea, .focusPreviousArea, .showContextMenu: nil
         default: .go
         }
     }
@@ -71,7 +78,8 @@ public enum Action: String, CaseIterable, Sendable {
     public var actsOnFiles: Bool {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
-            .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll:
+            .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll,
+            .getInfo, .quickLook, .showInFinder, .showContextMenu:
             true
         default:
             false
@@ -96,7 +104,7 @@ public enum Action: String, CaseIterable, Sendable {
     /// sidebar doesn't rename and Delete there doesn't trash the list's selection.
     public var needsFileListFocus: Bool {
         switch self {
-        case .rename, .moveToTrash, .deleteImmediately, .open: true
+        case .rename, .moveToTrash, .deleteImmediately, .open, .quickLook, .showContextMenu: true
         default: false
         }
     }

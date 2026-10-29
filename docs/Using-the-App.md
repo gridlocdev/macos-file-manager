@@ -81,6 +81,53 @@ The File and Edit menus have everything for changing files: **New Folder**, **Ne
 **Undo** for all of them. [Copying and moving files](Copying-and-Moving-Files.md) explains each
 one, what happens when names clash, and how folders merge.
 
+## The right-click menu
+
+Right-click an item (or press **Shift+F10**, as in Windows) for a menu of what you can do with
+it. If it isn't already selected, it's selected first.
+
+| On an item | |
+|---|---|
+| **Open**, **Open With** | Open With lists every app that can open the item, the default first, and **Other…** for any app. |
+| **Quick Look** | A preview, as with Space. |
+| **Cut**, **Copy**, **Duplicate**, **Rename** | As in the Edit and File menus. |
+| **Copy Path**, **Get Info** | |
+| **Open Terminal Here** | For a folder: a terminal in that folder. |
+| **Show in Finder** | Opens the item in Finder, selected. |
+| **Move to Trash** (or **Put Back** in the Trash) | |
+| **Share** | AirDrop, Mail, Messages and the other share options. |
+| **Services** | What other apps add for files, if any. |
+
+Right-clicking empty space in the list deselects everything and shows a menu for the folder
+itself: **New Folder**, **New Text File**, **Paste**, **Sort By**, **Show Hidden Files**,
+**Refresh**, **Open Terminal Here**, **Copy Path**, **Get Info** and **Show in Finder**.
+
+## Quick Look
+
+Press **Space** to preview the selected items without opening them: pictures, PDFs, videos,
+text, documents and more. Press Space again (or Esc) to close it. With the preview open, the
+arrow keys move through the list and the preview follows.
+
+## Get Info
+
+**Cmd+I** or **Opt+Return** (Alt+Enter in Windows) opens an Info window for the selection,
+like Explorer's Properties. With nothing selected, it shows the folder you're in.
+
+- **One item**: size (folders are added up in the background, with how many items and how
+  much space they take on disk), where it is, when it was created, modified and last opened,
+  which app opens it, and its permissions for you, the group and everyone (with the Unix mode
+  as `drwxr-xr-x` / `755`).
+- **Several items**: how many, and their total size.
+
+The window stays open while you work, so you can open several. Close it with Cmd+W.
+
+## The status bar
+
+The bar under the list shows how many items there are, how many are selected and the total size
+of the selected files, and how much space is free on the disk:
+*12 items, 3 selected (4.2 MB), 120 GB available*. As in Explorer, selected folders aren't added
+up there; use Get Info for that.
+
 ## Moving around with the keyboard
 
 **F6** moves the keyboard focus between the sidebar, the address bar and the file list, like F6

@@ -24,6 +24,10 @@ different, and why.
   `name - Copy`, and **Shift+Delete** deletes without the Trash (after asking).
 - One undo history for the whole app, like Explorer's: Cmd+Z undoes copies, moves, renames,
   new folders and trashing.
+- **Shift+F10** opens the right-click menu, and **Alt+Enter** (here Opt+Return) opens an item's
+  properties (Get Info).
+- Dragging moves on the same disk and copies to another disk, as in Explorer. To force it,
+  hold **Opt** to copy or **Cmd** to move (Explorer uses Ctrl and Shift).
 - Folders are listed before files, and names with numbers sort by value (`file2` before
   `file10`).
 
