@@ -49,6 +49,9 @@ sidebar with an Eject button, and the last ten addresses are listed in the windo
 time. If you type a password into the address (`smb://name:password@nas/share`), it's used to
 connect but left out of that list; let macOS keep it in the keychain instead.
 
+WebDAV needs an `https://` address. Plain `http://` is refused because it would send your
+password and files unencrypted; most servers answer on `https://` too.
+
 SFTP isn't on the list: macOS can't mount SFTP servers by itself. Use an app such as Cyberduck
 or macFUSE with SSHFS to mount one, then open the mounted folder in File Manager.
 

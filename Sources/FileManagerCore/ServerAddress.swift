@@ -12,14 +12,16 @@ public enum ServerAddress {
             case .empty: "Type a server address, such as smb://nas.local/share."
             case .unsupported(let scheme) where scheme == "sftp" || scheme == "ssh":
                 "macOS can't connect to SFTP servers by itself. Use an app such as Cyberduck or macFUSE with SSHFS, then open the mounted folder here."
+            case .unsupported(let scheme) where scheme == "http":
+                "WebDAV over http:// sends your password and files unencrypted. Use the server's https:// address instead."
             case .unsupported(let scheme): "File Manager can't connect to “\(scheme)” servers. Use smb, nfs or a WebDAV (https) address."
             case .invalid: "That doesn't look like a server address."
             }
         }
     }
 
-    /// Schemes macOS mounts itself (WebDAV is http/https).
-    public static let schemes = ["smb", "nfs", "afp", "http", "https"]
+    /// Schemes macOS mounts itself (WebDAV is https; plain http is refused as unencrypted).
+    public static let schemes = ["smb", "nfs", "afp", "https"]
 
     /// "smb://nas/share" as is; "\\\\nas\\share" (Windows) and "nas/share" become smb.
     public static func parse(_ text: String) -> Result<URL, Problem> {

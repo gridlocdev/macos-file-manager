@@ -128,6 +128,9 @@ import Testing
         #expect(ServerAddress.parse("ftp://host") == .failure(.unsupported(scheme: "ftp")))
         #expect(ServerAddress.parse("smb://") == .failure(.invalid))
         #expect(ServerAddress.Problem.unsupported(scheme: "sftp").message.contains("SFTP"))
+        #expect(ServerAddress.parse("http://dav.example.com/files") == .failure(.unsupported(scheme: "http")))
+        #expect(ServerAddress.parse("HTTP://dav.example.com") == .failure(.unsupported(scheme: "http")))
+        #expect(ServerAddress.Problem.unsupported(scheme: "http").message.contains("https://"))
     }
 
     @Test func recentServers() {
