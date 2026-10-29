@@ -46,7 +46,9 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   FileItem.swift               a listing row, and FileSort (folders first, natural names)
   FileNaming.swift             Keep Both / Duplicate / New Folder names, name checks
   FileStep.swift               FileStep (one change), ExecutedStep (what it did), FileUndo
-  TransferPlanner.swift        paste/duplicate planning: conflicts, folder merges; DiskFileTree
+  TransferPlanner.swift        paste/duplicate planning: conflicts, folder merges; DiskFileTree;
+                               ConflictQuestions (ask each, or one answer for the rest)
+  UndoHistory.swift            the app-wide undo/redo stacks of file operations
   FileStepExecutor.swift       runs FileSteps with FileManager (Trash injectable for tests)
   DropRules.swift              drag-and-drop move/copy rules; FolderSize; Permissions
   Navigation.swift             Breadcrumbs, RecentFolders, PinnedFolders, SessionState
@@ -155,13 +157,15 @@ Every change to files is a list of `FileStep`s (copy, move, create, trash, delet
 3. Running an undo produces executed steps too, and their inverse is the redo.
 
 `FileOperations` (app target) wraps this: each run is a `FileJob` on a detached task with
-progress and Cancel, pushed onto one app-wide undo stack (like Explorer). It also writes
+progress and Cancel, pushed onto one app-wide `UndoHistory` (like Explorer). Tags it sets are
+posted as a `TagsChanged` message, which every `BrowserModel` observes. It also writes
 `TrashLog` (`~/Library/Application Support/File Manager/trash-log.json`), which maps Trash paths
 to original paths for Put Back; macOS doesn't share Finder's own record.
 
 Paste and duplicate go through `TransferPlanner`, which is pure (it reads through the `FileTree`
 protocol): first `conflicts(…)` lists the clashes, the app asks about each (Replace / Keep Both /
-Skip / Stop, with "do this for the rest"), then `plan(…)` produces the steps. Folders with the
+Skip / Stop, with "do this for the rest"), then `plan(…)` produces the steps. `ConflictQuestions.answers` does the asking; `transfer`
+takes an `ask` closure in place of the alerts. Folders with the
 same name merge; Replace trashes the existing item first; copying into the same folder
 duplicates. The planner tests use an in-memory `FakeTree`; the executor tests run in a temp
 folder with a fake Trash.

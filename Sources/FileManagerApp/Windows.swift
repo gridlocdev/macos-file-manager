@@ -96,7 +96,6 @@ final class Windows {
     /// The first open window's model (for the snapshot hook, and for opening folders sent from
     /// other apps when no window is key).
     var firstModel: BrowserModel? { order.lazy.compactMap { self.entries[$0]?.model }.first }
-    var allModels: [BrowserModel] { order.compactMap { entries[$0]?.model } }
 
     var hasClosedTabs: Bool { !closedTabs.isEmpty }
 

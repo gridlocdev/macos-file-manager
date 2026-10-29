@@ -188,3 +188,31 @@ public struct DiskFileTree: FileTree, Sendable {
         (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
     }
 }
+
+/// Paste and drop ask about each conflict in turn (Replace / Keep Both / Skip / Stop); an answer
+/// can be applied to the rest.
+public enum ConflictQuestions {
+    /// An answer, and whether it goes for every remaining conflict. Nil means Stop.
+    public typealias Answer = (resolution: ConflictResolution, applyToRest: Bool)?
+
+    /// Asks `ask` about each conflict (with how many come after it) until one is answered for
+    /// the rest. Nil if the user stopped.
+    public static func answers(
+        for conflicts: [TransferConflict],
+        isolation: isolated (any Actor)? = #isolation,
+        ask: (TransferConflict, _ remaining: Int) async -> Answer
+    ) async -> [URL: ConflictResolution]? {
+        var answers: [URL: ConflictResolution] = [:]
+        var forAll: ConflictResolution?
+        for (index, conflict) in conflicts.enumerated() {
+            if let forAll {
+                answers[conflict.destination] = forAll
+                continue
+            }
+            guard let answer = await ask(conflict, conflicts.count - index - 1) else { return nil }
+            answers[conflict.destination] = answer.resolution
+            if answer.applyToRest { forAll = answer.resolution }
+        }
+        return answers
+    }
+}

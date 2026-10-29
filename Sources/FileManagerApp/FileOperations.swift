@@ -38,14 +38,9 @@ final class FileOperations {
     /// Set when a job has run long enough to show the progress window.
     private(set) var showProgress = false
 
-    private struct UndoEntry {
-        var title: String
-        var steps: [FileStep]
-    }
-    private var undoStack: [UndoEntry] = []
-    private var redoStack: [UndoEntry] = []
-    var canUndo: Bool { !undoStack.isEmpty }
-    var canRedo: Bool { !redoStack.isEmpty }
+    private var history = UndoHistory()
+    var canUndo: Bool { history.canUndo }
+    var canRedo: Bool { history.canRedo }
 
     let trashLog: TrashLog
 
@@ -89,16 +84,13 @@ final class FileOperations {
         trashLog.update(with: outcome.executed)
 
         if let inverse = FileUndo.inverse(of: outcome.executed), !inverse.isEmpty {
-            let entry = UndoEntry(title: title, steps: inverse)
+            let entry = UndoHistory.Entry(title: title, steps: inverse)
             switch history {
-            case .record:
-                undoStack.append(entry)
-                redoStack.removeAll()
-            case .undo: redoStack.append(entry)
-            case .redo: undoStack.append(entry)
+            case .record: self.history.record(entry, from: .action)
+            case .undo: self.history.record(entry, from: .undo)
+            case .redo: self.history.record(entry, from: .redo)
             case .none: break
             }
-            if undoStack.count > 100 { undoStack.removeFirst() }
         }
         if let error = outcome.error {
             showError(error, title: "\(title) stopped", window: window)
@@ -106,18 +98,18 @@ final class FileOperations {
         // Tags just set can read back stale for a moment, so windows are told what they are.
         var tags: [String: [String]] = [:]
         for case .tagged(let url, _, let to) in outcome.executed { tags[url.normalized.path] = to }
-        if !tags.isEmpty { Windows.shared.allModels.forEach { $0.tagsChanged(tags) } }
+        if !tags.isEmpty { NotificationCenter.default.post(TagsChanged(tags: tags), subject: self) }
         return outcome
     }
 
     func undo(window: NSWindow?) async -> [URL] {
-        guard let entry = undoStack.popLast() else { return [] }
+        guard let entry = history.popUndo() else { return [] }
         let outcome = await run("Undo \(entry.title)", steps: entry.steps, history: .undo, window: window)
         return outcome.executed.compactMap(\.resultURL)
     }
 
     func redo(window: NSWindow?) async -> [URL] {
-        guard let entry = redoStack.popLast() else { return [] }
+        guard let entry = history.popRedo() else { return [] }
         let outcome = await run(entry.title.replacingOccurrences(of: "Undo ", with: ""), steps: entry.steps,
             history: .redo, window: window)
         return outcome.executed.compactMap(\.resultURL)
@@ -125,8 +117,14 @@ final class FileOperations {
 
     // MARK: Copy and move
 
-    /// Copies or moves items into a folder, asking about each conflict. Returns the new items.
-    func transfer(_ sources: [URL], into folder: URL, mode: TransferMode, window: NSWindow?) async -> [URL] {
+    /// Asks about one conflict, given how many come after it. Nil means Stop.
+    typealias ConflictAsker = @MainActor (TransferConflict, _ remaining: Int) async -> ConflictQuestions.Answer
+
+    /// Copies or moves items into a folder, asking about each conflict (with an alert on
+    /// `window`, unless `ask` is given). Returns the new items.
+    func transfer(
+        _ sources: [URL], into folder: URL, mode: TransferMode, window: NSWindow?, ask: ConflictAsker? = nil
+    ) async -> [URL] {
         guard !sources.isEmpty else { return [] }
         let conflicts: [TransferConflict]
         do {
@@ -138,20 +136,10 @@ final class FileOperations {
             return []
         }
 
-        var answers: [URL: ConflictResolution] = [:]
-        var forAll: ConflictResolution?
-        for (index, conflict) in conflicts.enumerated() {
-            if let forAll {
-                answers[conflict.destination] = forAll
-                continue
-            }
-            guard let (answer, applyToAll) = await ask(conflict, mode: mode, remaining: conflicts.count - index - 1, window: window)
-            else { return [] }
-            answers[conflict.destination] = answer
-            if applyToAll { forAll = answer }
+        let ask = ask ?? { [unowned self] conflict, remaining in
+            await self.ask(conflict, mode: mode, remaining: remaining, window: window)
         }
-
-        let resolved = answers
+        guard let resolved = await ConflictQuestions.answers(for: conflicts, ask: ask) else { return [] }
         guard let plan = try? await Task.detached(operation: {
             try TransferPlanner(tree: DiskFileTree()).plan(sources, into: folder, mode: mode) {
                 resolved[$0.destination] ?? .skip
@@ -170,7 +158,7 @@ final class FileOperations {
     /// Replace / Keep Both / Skip, with "do this for the rest". Nil means Stop.
     private func ask(
         _ conflict: TransferConflict, mode: TransferMode, remaining: Int, window: NSWindow?
-    ) async -> (ConflictResolution, Bool)? {
+    ) async -> ConflictQuestions.Answer {
         let name = conflict.destination.lastPathComponent
         let folder = FileManager.default.displayName(atPath: conflict.destination.deletingLastPathComponent().path)
         let alert = NSAlert()
@@ -252,6 +240,13 @@ final class FileOperations {
         alert.informativeText = error.localizedDescription
         Task { _ = await present(alert, window: window) }
     }
+}
+
+/// Tags set by a file operation, keyed by path, so every window can show them at once (tags
+/// just set can read back stale for a moment).
+struct TagsChanged: NotificationCenter.MainActorMessage {
+    typealias Subject = FileOperations
+    var tags: [String: [String]]
 }
 
 /// Where each item this app moved to the Trash came from, so Put Back works. Stored in

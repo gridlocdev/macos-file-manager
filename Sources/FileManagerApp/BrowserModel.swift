@@ -93,6 +93,7 @@ final class BrowserModel {
     private var started = false
     private var lastSelectPattern = ""
     private var restoringView = false
+    @ObservationIgnored private var tagsObserver: NotificationCenter.ObservationToken?
 
     private let services: BrowserServices
 
@@ -115,10 +116,17 @@ final class BrowserModel {
         search.onUpdate = { [weak self] found in self?.searchUpdated(found) }
     }
 
+    isolated deinit {
+        if let tagsObserver { NotificationCenter.default.removeObserver(tagsObserver) }
+    }
+
     /// Loads the first folder. Called once the window appears.
     func start() {
         guard !started else { return }
         started = true
+        tagsObserver = NotificationCenter.default.addObserver(of: services.operations, for: TagsChanged.self) {
+            [weak self] message in self?.tagsChanged(message.tags)
+        }
         restoreView(for: url)
         services.sidebar.visited(url.path)
         load()
@@ -702,7 +710,7 @@ final class BrowserModel {
     }
 
     /// Tags changed by a file operation (in any window), keyed by path.
-    func tagsChanged(_ tags: [String: [String]]) {
+    private func tagsChanged(_ tags: [String: [String]]) {
         let inFolder = listing.updateTags(tags)
         let inResults = search.updateTags(tags)
         if inFolder || inResults { applyFilterAndSort() }
