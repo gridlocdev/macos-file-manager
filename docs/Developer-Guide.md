@@ -92,6 +92,7 @@ Sources/FileManagerApp/        the app
   BatchRenameView.swift        the batch rename sheet with its live preview
   FileListView.swift           the details list (NSTableView): columns, group rows, zoom, column chooser
   FileIconView.swift           the icon view (NSCollectionView), thumbnails, Cmd+scroll zoom, type-ahead
+  SpringLoading.swift          springLoaded(into:): hold a drag on a breadcrumb or Back/Forward to go there
   FileViewSupport.swift        shared by both views: InlineRename, IconCache (one, app-wide), FileDrop, FileFormat
   Hover.swift                  onMouseOver (an AppKit tracking area: .onHover never fires in the toolbar),
                                pointerCursor() for every clickable SwiftUI control, SidebarHover,
@@ -226,7 +227,11 @@ back reloads while the field is open, since a reload would throw the edit away.
   `BrowserModel.drop`, which goes through `FileOperations.transfer` like Paste, so conflicts,
   merging and undo all work. Sidebar rows use SwiftUI `dropDestination` with the same rules.
 - **Spring-loaded folders**: `FileTableView` adopts `NSSpringLoadingDestination` and navigates
-  into the folder row under the pointer.
+  into the folder row under the pointer. Breadcrumbs and Back/Forward use `springLoaded(into:)`
+  (SpringLoading.swift): a SwiftUI `DropDelegate` that runs an action after a second's hold
+  (Back/Forward repeat it) and drops into a folder, or refuses the drop when given none. It
+  reads the files from the drag pasteboard (`FileDrop.draggedFiles`), since SwiftUI hands a
+  delegate item providers rather than the dragging info.
 - **Right-click menu**: `table.menu` with the coordinator as `NSMenuDelegate`;
   `menuNeedsUpdate` builds an item menu or a folder menu from `Action`s, plus Open With
   (`NSWorkspace.urlsForApplications(toOpen:)`) and Share (`standardShareMenuItem`). Shift+F10

@@ -47,10 +47,17 @@ struct BrowserWindow: View {
                     .disabled(!active.canPerform(.goBack))
                     .help("Back (Opt+Left)")
                     .pointerCursor()
+                    // Hold a dragged file here to go back; it can't be dropped here.
+                    .springLoaded(into: nil, model: active, repeats: true) {
+                        if active.canPerform(.goBack) { active.perform(.goBack) }
+                    }
                 Button("Forward", systemImage: "chevron.right") { active.perform(.goForward) }
                     .disabled(!active.canPerform(.goForward))
                     .help("Forward (Opt+Right)")
                     .pointerCursor()
+                    .springLoaded(into: nil, model: active, repeats: true) {
+                        if active.canPerform(.goForward) { active.perform(.goForward) }
+                    }
                 Button("Up", systemImage: "arrow.up") { active.perform(.goUp) }
                     .disabled(!active.canPerform(.goUp))
                     .help("Enclosing folder (Backspace)")

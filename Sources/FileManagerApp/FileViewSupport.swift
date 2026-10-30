@@ -137,6 +137,13 @@ private struct UncheckedImage: @unchecked Sendable {
             as? [URL] ?? []
     }
 
+    /// The files in the drag going on now (for SwiftUI drop targets, which aren't handed the
+    /// dragging info).
+    static func draggedFiles() -> [URL] {
+        NSPasteboard(name: .drag).readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
+            as? [URL] ?? []
+    }
+
     /// Move on the same disk, copy across disks; Opt copies, Cmd moves.
     static func operation(_ sources: [URL], into folder: URL) -> DropRules.Operation {
         let flags = NSEvent.modifierFlags

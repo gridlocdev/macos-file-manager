@@ -98,6 +98,10 @@ private struct Breadcrumbs: View {
                     .foregroundStyle(segment.url.isSameFile(as: model.url) ? .primary : .secondary)
                     .lineLimit(1)
                     .fixedSize()
+                    // Drop on a segment to put files in that folder; hold to open it.
+                    .springLoaded(into: segment.url, model: model) {
+                        if !segment.url.isSameFile(as: model.url) { model.navigate(to: segment.url) }
+                    }
                 SubfolderMenu(folder: segment.url, showHidden: model.showHiddenFiles, current: model.url) { go($0) }
             }
         }

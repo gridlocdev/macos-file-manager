@@ -24,6 +24,7 @@ In Explorer, Ctrl copies and Shift moves. On a Mac the keys are Opt and Cmd, the
 - **On empty space in the list** (or a file): into the folder you're looking at.
 - **On a sidebar item** (Desktop, Downloads, a drive, a folder in the tree…): into that
   place. Dropping **between** pinned folders pins it instead; see [The sidebar](Sidebar.md).
+- **On a folder in the address bar** (one of the breadcrumbs): into that folder.
 - **Onto another app**: Mail attaches the file, an editor opens it, and so on. Dropping on the
   Trash in the Dock moves it to the Trash.
 
@@ -33,6 +34,14 @@ Hold a dragged item over a folder for a moment and the folder opens, so you can 
 before dropping. Keep hovering to keep opening folders. This uses the macOS setting in System
 Settings → Accessibility → Pointer Control → *Spring-loading* (on by default), including its
 delay.
+
+The toolbar works the same way, so you can move a file anywhere without letting go of the mouse:
+
+- Hold over a **breadcrumb** for a second to open that folder (or drop on it to put the file
+  there).
+- Hold over **Back** or **Forward** for a second to go back or forward; keep holding to go one
+  more step each second. You can't drop on these buttons: the pointer shows that a drop there
+  does nothing.
 
 ## Names that clash and undo
 
