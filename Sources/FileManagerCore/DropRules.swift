@@ -8,21 +8,17 @@ public enum DropRules {
     /// - sources: the dragged items.
     /// - folder: where they'd land.
     /// - sameVolume: whether two URLs are on the same disk.
+    /// - sameItem: whether two URLs are the same item (`URL.isSameItem` for the real disk).
     public static func operation(
         dropping sources: [URL], into folder: URL,
         option: Bool, command: Bool,
-        sameVolume: (URL, URL) -> Bool
+        sameVolume: (URL, URL) -> Bool,
+        sameItem: (URL, URL) -> Bool = { $0.standardizedFileURL.path == $1.standardizedFileURL.path }
     ) -> Operation {
-        let folderPath = folder.standardizedFileURL.path
-        for source in sources {
-            let path = source.standardizedFileURL.path
-            // Onto itself or into its own subfolder.
-            if path == folderPath || folderPath.hasPrefix(path + "/") { return .none }
-        }
+        // Onto itself or into its own subfolder.
+        for source in sources where folder.isItemOrInside(source, isSameItem: sameItem) { return .none }
         if option { return .copy }
-        let alreadyThere = sources.allSatisfy {
-            $0.standardizedFileURL.deletingLastPathComponent().path == folderPath
-        }
+        let alreadyThere = sources.allSatisfy { sameItem($0.deletingLastPathComponent(), folder) }
         if command { return alreadyThere ? .none : .move }
         // Dropping back where they came from does nothing (copy with Opt to duplicate).
         if alreadyThere { return .none }

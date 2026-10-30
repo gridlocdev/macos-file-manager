@@ -84,8 +84,9 @@ import UniformTypeIdentifiers
     static func operation(_ sources: [URL], into folder: URL) -> DropRules.Operation {
         let flags = NSEvent.modifierFlags
         return DropRules.operation(
-            dropping: sources, into: folder, option: flags.contains(.option), command: flags.contains(.command),
-            sameVolume: sameVolume)
+            // The real path, so a symlinked folder on the way up is seen through.
+            dropping: sources, into: folder.realPath, option: flags.contains(.option), command: flags.contains(.command),
+            sameVolume: sameVolume, sameItem: { $0.isSameItem(as: $1) })
     }
 
     static func sameVolume(_ a: URL, _ b: URL) -> Bool {

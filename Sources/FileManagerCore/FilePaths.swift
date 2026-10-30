@@ -15,6 +15,33 @@ extension URL {
     /// Same file or folder as `other`, ignoring a trailing "/".
     public func isSameFile(as other: URL) -> Bool { path == other.path }
 
+    /// The same item on disk as `other`, however each is spelled: through a symlinked folder
+    /// ("/Users/me/link/x"), or in other case on a case-insensitive disk ("/users/me"). Reads the
+    /// disk (`isSameFile` doesn't); a last component that is a symlink is the link itself.
+    public func isSameItem(as other: URL) -> Bool {
+        if isSameFile(as: other) { return true }
+        func identifier(_ url: URL) -> NSObject? {
+            var url = url
+            url.removeCachedResourceValue(forKey: .fileResourceIdentifierKey)
+            return (try? url.resourceValues(forKeys: [.fileResourceIdentifierKey]))?.fileResourceIdentifier as? NSObject
+        }
+        guard let mine = identifier(self), let theirs = identifier(other) else { return false }
+        return mine.isEqual(theirs)
+    }
+
+    /// `folder` itself or somewhere inside it, by `isSameItem`: whether `folder` is this URL or
+    /// one of the folders above it. Use on a `realPath`: a symlinked folder on the way up would
+    /// otherwise be compared as the link.
+    public func isItemOrInside(_ folder: URL, isSameItem: (URL, URL) -> Bool) -> Bool {
+        var current = self.normalized
+        while true {
+            if isSameItem(current, folder) { return true }
+            let up = current.deletingLastPathComponent().normalized
+            if up.path == current.path || current.path == "/" { return false }
+            current = up
+        }
+    }
+
     /// Somewhere below `folder` (not `folder` itself).
     public func isInside(_ folder: URL) -> Bool {
         let base = folder.path == "/" ? "" : folder.path

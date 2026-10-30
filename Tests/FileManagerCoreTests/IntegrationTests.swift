@@ -106,6 +106,38 @@ import Testing
     }
 }
 
+/// The planner on the real disk: the same folder spelled another way is still the same folder.
+@Suite struct SameItemTests {
+    @Test func intoItselfThroughOtherCaseOrASymlink() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("fm-same-\(UUID().uuidString)").realPath
+        try fm.createDirectory(at: root.appendingPathComponent("Proj/sub"), withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+        let proj = root.appendingPathComponent("Proj")
+        let link = root.appendingPathComponent("link")
+        try fm.createSymbolicLink(at: link, withDestinationURL: proj)
+        let planner = TransferPlanner(tree: DiskFileTree())
+
+        #expect(throws: TransferError.intoItself("Proj")) {
+            try planner.plan([proj], into: link.appendingPathComponent("sub"), mode: .copy) { _ in .skip }
+        }
+        #expect(DropRules.operation(dropping: [proj], into: link.appendingPathComponent("sub").realPath, option: true,
+            command: false, sameVolume: { _, _ in true }, sameItem: { $0.isSameItem(as: $1) }) == .none)
+        // The temporary folder's disk is case-insensitive on a standard Mac.
+        let otherCase = root.appendingPathComponent("proj/SUB")
+        if fm.fileExists(atPath: otherCase.path) {
+            #expect(throws: TransferError.intoItself("Proj")) {
+                try planner.plan([proj], into: otherCase, mode: .copy) { _ in .skip }
+            }
+            // Pasting into its own folder spelled another way duplicates rather than clashing.
+            let plan = try planner.plan([proj.appendingPathComponent("sub")], into: root.appendingPathComponent("PROJ"),
+                mode: .copy) { _ in .replace }
+            #expect(plan.steps.count == 1)
+            #expect(plan.steps.first.map { if case .copy = $0 { true } else { false } } == true)
+        }
+    }
+}
+
 @Suite struct ServerAddressTests {
     func url(_ text: String) -> String? { try? ServerAddress.parse(text).get().absoluteString }
 

@@ -5,6 +5,15 @@ public protocol FileTree {
     func entry(at url: URL) -> FileTreeEntry?
     /// Items directly inside a folder.
     func children(of folder: URL) -> [URL]
+    /// The same item, however each URL is spelled (see `URL.isSameItem`).
+    func isSameItem(_ a: URL, _ b: URL) -> Bool
+    /// The path with symlinks followed (see `URL.realPath`).
+    func realPath(_ url: URL) -> URL
+}
+
+extension FileTree {
+    public func isSameItem(_ a: URL, _ b: URL) -> Bool { a.standardizedFileURL.path == b.standardizedFileURL.path }
+    public func realPath(_ url: URL) -> URL { url }
 }
 
 public struct FileTreeEntry: Hashable, Sendable {
@@ -79,11 +88,10 @@ public struct TransferPlanner {
         let folder = folder.standardizedFileURL
         for source in sources.map(\.standardizedFileURL) {
             guard let entry = tree.entry(at: source) else { continue }
-            if source == folder || folder.path.hasPrefix(source.path + "/") {
+            if tree.realPath(folder).isItemOrInside(source, isSameItem: tree.isSameItem) {
                 throw TransferError.intoItself(source.lastPathComponent)
             }
-            // Compare paths: URLs from deletingLastPathComponent() end in "/" and don't compare equal.
-            if source.deletingLastPathComponent().path == folder.path {
+            if tree.isSameItem(source.deletingLastPathComponent(), folder) {
                 guard mode == .copy else { continue }
                 let name = FileNaming.duplicate(
                     source.lastPathComponent, isFolder: entry.isFolder, existing: names(in: folder, state))
@@ -137,7 +145,7 @@ public struct TransferPlanner {
         case .skip:
             return nil
         case .replace:
-            if source.path.hasPrefix(target.path + "/") {
+            if tree.realPath(source.deletingLastPathComponent()).isItemOrInside(target, isSameItem: tree.isSameItem) {
                 throw TransferError.replacesItsOwnFolder(target.lastPathComponent)
             }
             state.add(.trash(target), units: 1)
@@ -193,6 +201,9 @@ public struct DiskFileTree: FileTree, Sendable {
     public func children(of folder: URL) -> [URL] {
         (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
     }
+
+    public func isSameItem(_ a: URL, _ b: URL) -> Bool { a.isSameItem(as: b) }
+    public func realPath(_ url: URL) -> URL { url.realPath }
 }
 
 /// Paste and drop ask about each conflict in turn (Replace / Keep Both / Skip / Stop); an answer
