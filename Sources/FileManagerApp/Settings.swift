@@ -215,6 +215,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 440)
+        .background(CloseOnEscape())
         .fixedSize()
     }
 
@@ -242,6 +243,31 @@ struct SettingsView: View {
         panel.prompt = "Choose"
         if panel.runModal() == .OK, let url = panel.url {
             customTerminalPath = url.path
+        }
+    }
+}
+
+/// Esc closes the Settings window, as in a dialog. Not `onExitCommand`: nothing in the window
+/// has focus, so the window gets Esc and drops it. (KeyMonitor only handles browser windows.)
+private struct CloseOnEscape: NSViewRepresentable {
+    func makeNSView(context: Context) -> Watcher { Watcher() }
+    func updateNSView(_ view: Watcher, context: Context) {}
+
+    final class Watcher: NSView {
+        private var monitor: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let window = self?.window, event.window === window, event.keyCode == 53,
+                    event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty
+                else { return event }
+                window.performClose(nil)
+                return nil
+            }
         }
     }
 }

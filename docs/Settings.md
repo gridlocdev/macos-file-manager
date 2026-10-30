@@ -1,7 +1,7 @@
 # Settings
 
 Open settings with **File Manager → Settings…** or **Cmd+,**. Changes apply straight away to
-every window.
+every window. Press **Esc** to close it.
 
 ## Files
 
