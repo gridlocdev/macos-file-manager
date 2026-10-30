@@ -304,7 +304,11 @@ only sees entries added, removed or renamed, not edits inside files, and is kept
 folder changes.
 
 Icons: `IconCache.shared` holds per-type icons and up to 5000 per-item ones (folders, apps),
-read in the background with a generic icon meanwhile. The icon view's `ThumbnailCache` is an
+read in the background with a generic icon meanwhile. Desktop, Documents, Downloads and the
+other TCC-guarded home folders never go to `icon(forFile:)`, which looks inside the folder and
+would raise the access prompt just for listing Home; their icons come from CoreTypes.bundle.
+iCloud items opened, downloaded or evicted are polled by `BrowserModel.watchDownloads` (the
+folder's watcher sees nothing) until they settle. The icon view's `ThumbnailCache` is an
 `NSCache` limited by pixel bytes, and cancels a thumbnail when its item scrolls out of view. The
 address bar's › menus list their folder only when clicked (an `NSMenu`; a SwiftUI `Menu` builds
 its items with the view), and disk names come from `VolumeNames`, re-read on mount.

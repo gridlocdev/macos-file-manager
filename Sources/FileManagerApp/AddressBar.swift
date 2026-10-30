@@ -14,7 +14,6 @@ struct AddressBar: View {
             if editing {
                 TextField("Path", text: $model.addressText)
                     .textFieldStyle(.plain)
-                    .font(.body.monospaced())
                     .padding(.horizontal, 10)
                     .focused($focused)
                     .onAppear { focused = true }
@@ -88,11 +87,10 @@ private struct Breadcrumbs: View {
             }
             ForEach(visible, id: \.url) { segment in
                 Button(segment.title) { go(segment.url) }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(CrumbButtonStyle())
                     .foregroundStyle(segment.url.isSameFile(as: model.url) ? .primary : .secondary)
                     .lineLimit(1)
                     .fixedSize()
-                    .padding(.horizontal, 3)
                 SubfolderMenu(folder: segment.url, showHidden: model.showHiddenFiles, current: model.url) { go($0) }
             }
         }
@@ -104,6 +102,29 @@ private struct Breadcrumbs: View {
         model.focusList()
     }
 
+}
+
+/// A breadcrumb segment: plain text with a rounded highlight under the mouse, like a toolbar button.
+private struct CrumbButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Crumb(configuration: configuration)
+    }
+
+    private struct Crumb: View {
+        let configuration: Configuration
+        @State private var hovering = false
+
+        var body: some View {
+            configuration.label
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(.primary.opacity(configuration.isPressed ? 0.16 : hovering ? 0.08 : 0)))
+                .contentShape(Rectangle())
+                .onHover { hovering = $0 }
+        }
+    }
 }
 
 /// Disk names for the breadcrumbs, read once and again when a disk is mounted or unmounted

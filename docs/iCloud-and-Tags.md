@@ -15,8 +15,9 @@ icon in the icon view:
 
 Select items and use **File → Download Now** to download them without opening them, or
 **File → Remove Download** to free the space they take on this Mac while keeping them in iCloud.
-Both are on the right-click menu too, when they apply. The list updates as the download goes;
-press F5 if it seems stuck.
+Both are on the right-click menu too, when they apply. The list updates as the download goes,
+and so does a file downloaded by opening it (double-click, Open With, any way): its cloud
+goes away once it's on this Mac. Press F5 if it seems stuck.
 
 Download Now and Remove Download change only what's kept on this Mac, not the files, so they
 aren't on the undo list.

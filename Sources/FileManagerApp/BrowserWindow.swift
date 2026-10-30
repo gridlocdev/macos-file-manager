@@ -36,9 +36,10 @@ struct BrowserWindow: View {
                 }
             }
         }
-        .navigationTitle(active.title)
+        // Split, both folders, left first ("Documents + Downloads").
+        .navigationTitle(split.map { "\(model.title) + \($0.title)" } ?? model.title)
         // The address bar shows where you are; the title would only crowd it out. The title is
-        // still used by the Window menu.
+        // still used by the tab bar and the Window menu.
         .toolbar(removing: .title)
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {

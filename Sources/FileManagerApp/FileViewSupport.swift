@@ -74,6 +74,7 @@ import UniformTypeIdentifiers
         }
         let path = item.url.path
         if let cached = byPath.object(forKey: path as NSString) { return cached }
+        if item.isFolder, let special = specialFolderIcon(path) { return special }
         let placeholder =
             item.isFolder ? typeIcon("/folder", .folder) : ext == "app" ? typeIcon("/app", .application) : typeIcon("", .data)
         let first = waiting[path] == nil
@@ -85,6 +86,29 @@ import UniformTypeIdentifiers
             }
         }
         return placeholder
+    }
+
+    /// Asking for the icon of a folder macOS guards (Desktop, Documents, Downloads…) looks inside
+    /// it, which brings up the folder-access prompt just for listing Home. Those folders always
+    /// have the system's own icon, so it's taken from CoreTypes instead.
+    private static let specialFolders: [String: String] = {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return [
+            home + "/Desktop": "DesktopFolderIcon", home + "/Documents": "DocumentsFolderIcon",
+            home + "/Downloads": "DownloadsFolder", home + "/Pictures": "PicturesFolderIcon",
+            home + "/Movies": "MovieFolderIcon", home + "/Music": "MusicFolderIcon",
+            home + "/Library/Mobile Documents": "GenericFolderIcon",
+            home + "/Library/Mobile Documents/com~apple~CloudDocs": "GenericFolderIcon",
+        ]
+    }()
+
+    private func specialFolderIcon(_ path: String) -> NSImage? {
+        guard let name = Self.specialFolders[path] else { return nil }
+        if let cached = byType["/special/" + name] { return cached }
+        let file = "/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/\(name).icns"
+        let icon = NSImage(contentsOfFile: file) ?? NSWorkspace.shared.icon(for: .folder)
+        byType["/special/" + name] = icon
+        return icon
     }
 
     private func loaded(_ icon: NSImage, for path: String) {

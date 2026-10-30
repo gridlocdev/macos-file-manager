@@ -194,8 +194,9 @@ final class BrowserModel {
         if let folder = chosen.first(where: \.isFolder) {
             navigate(to: folder.url)
         }
-        let files = chosen.filter { !$0.isFolder }.map(\.url)
-        for file in files { NSWorkspace.shared.open(file) }
+        let files = chosen.filter { !$0.isFolder }
+        for file in files { NSWorkspace.shared.open(file.url) }
+        watchDownloads(files)
     }
 
     // MARK: Address bar
@@ -742,13 +743,37 @@ final class BrowserModel {
                 return
             }
         }
-        // The folder doesn't change, so its watcher won't notice; check back a few times.
+        watchDownloads(selectedItems.filter { $0.cloud != nil }, evicting: !download)
+    }
+
+    /// Items only in iCloud get downloaded when opened (or on Download Now), and Remove Download
+    /// takes the local copy away. The folder itself doesn't change, so its watcher won't notice:
+    /// check the items every couple of seconds and reload when one of them changes, until each
+    /// is downloaded (or evicted), or after ten minutes.
+    func watchDownloads(_ items: [FileItem], evicting: Bool = false) {
+        let settled: CloudStatus = evicting ? .notDownloaded : .current
+        let pending = { (status: CloudStatus?) in status != nil && status != settled }
+        var watched = Dictionary(
+            items.filter { pending($0.cloud) }.map { ($0.url, $0.cloud) }, uniquingKeysWith: { a, _ in a })
+        guard !watched.isEmpty else { return }
         downloadCheck?.cancel()
         downloadCheck = Task { [weak self] in
-            for delay in [1, 3, 8] {
-                try? await Task.sleep(for: .seconds(delay))
+            for _ in 0..<300 {
+                try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
-                self?.refresh()
+                let urls = Array(watched.keys)
+                let now = await Task.detached(priority: .utility) {
+                    urls.map { ($0, DirectoryLoader.cloudStatus(of: $0)) }
+                }.value
+                guard !Task.isCancelled, let self else { return }
+                var changed = false
+                for (url, status) in now where status != watched[url] {
+                    changed = true
+                    watched[url] = status
+                }
+                if changed { refresh() }
+                watched = watched.filter { pending($0.value) }
+                if watched.isEmpty { return }
             }
         }
     }

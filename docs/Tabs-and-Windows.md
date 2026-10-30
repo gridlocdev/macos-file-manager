@@ -43,7 +43,8 @@ to the tab first (hovering a file over a folder in the list opens it).
 
 Press **F3** (or **View → Split View**, or the toolbar's split button) to show two folders side by
 side in one window, as in Dolphin. The new pane opens on the same folder; F3 again closes the
-split, keeping the folder of the pane you were in.
+split, keeping the folder of the pane you were in. While split, the tab (and the Window menu)
+shows both folders, left first: *Documents + Downloads*.
 
 ```
 ┌─────────┬───────────────────┬───────────────────┐

@@ -66,14 +66,23 @@ enum DirectoryLoader {
         var tagURL = url
         tagURL.removeCachedResourceValue(forKey: .tagNamesKey)
         item.tags = (try? tagURL.resourceValues(forKeys: [.tagNamesKey]))?.tagNames ?? []
-        if values?.isUbiquitousItem == true {
-            item.cloud =
-                values?.ubiquitousItemIsDownloading == true ? .downloading
-                : values?.ubiquitousItemIsUploading == true ? .uploading
-                : values?.ubiquitousItemDownloadingStatus == .current ? .current
-                : .notDownloaded
-        }
+        item.cloud = values.flatMap(cloudStatus)
         return item
+    }
+
+    /// The iCloud state read afresh (the URL's cached values would hand back the old one).
+    static func cloudStatus(of url: URL) -> CloudStatus? {
+        var url = url
+        url.removeAllCachedResourceValues()
+        return (try? url.resourceValues(forKeys: Set(keys))).flatMap(cloudStatus)
+    }
+
+    private static func cloudStatus(_ values: URLResourceValues) -> CloudStatus? {
+        guard values.isUbiquitousItem == true else { return nil }
+        return values.ubiquitousItemIsDownloading == true ? .downloading
+            : values.ubiquitousItemIsUploading == true ? .uploading
+            : values.ubiquitousItemDownloadingStatus == .current ? .current
+            : .notDownloaded
     }
 
     /// With "Show all file extensions" on (the default), the real name ("notes.txt"); apps

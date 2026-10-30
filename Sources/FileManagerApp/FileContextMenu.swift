@@ -235,6 +235,7 @@ import FileManagerCore
     @objc func openWith(_ sender: NSMenuItem) {
         guard let app = sender.representedObject as? URL else { return }
         NSWorkspace.shared.open(model.selectedURLs, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+        model.watchDownloads(model.selectedItems)
     }
 
     @objc func openWithOther(_ sender: NSMenuItem) {
@@ -242,8 +243,9 @@ import FileManagerCore
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.prompt = "Open"
-        let urls = model.selectedURLs
+        let items = model.selectedItems
         guard panel.runModal() == .OK, let app = panel.url else { return }
-        NSWorkspace.shared.open(urls, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+        NSWorkspace.shared.open(items.map(\.url), withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+        model.watchDownloads(items)
     }
 }

@@ -35,7 +35,7 @@ Each File Manager tab shows one folder. Open a new tab with **Cmd+T** and a new 
 Like Explorer's, the address bar shows the path as a row of folders:
 `Macintosh HD › Users › you › Documents ›`.
 
-- **Click a folder** to go straight to it.
+- **Click a folder** to go straight to it (it's highlighted under the mouse, like a button).
 - **Click a ›** for a menu of the folders inside the one before it, and pick one to go there.
   The folder you're in (or on the way to) is ticked.
 - When the path is too long to fit, the folders at the start go into a **…** menu.
