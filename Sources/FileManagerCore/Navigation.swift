@@ -9,8 +9,23 @@ public enum Breadcrumbs {
 
     /// - volumes: mount point path → disk name, for disks other than the startup disk.
     /// - startupDiskName: the title for "/".
-    public static func segments(for url: URL, volumes: [String: String], startupDiskName: String) -> [Segment] {
+    /// - home: when given, the home folder and everything above it are one "~" segment.
+    public static func segments(
+        for url: URL, volumes: [String: String], startupDiskName: String, home: URL? = nil
+    ) -> [Segment] {
         let path = url.standardizedFileURL.path
+        if let home {
+            let homePath = home.standardizedFileURL.path
+            if homePath != "/", path == homePath || path.hasPrefix(homePath + "/") {
+                var segments = [Segment(title: "~", url: URL(filePath: homePath))]
+                var current = homePath
+                for part in path.dropFirst(homePath.count).split(separator: "/") {
+                    current = (current as NSString).appendingPathComponent(String(part))
+                    segments.append(Segment(title: String(part), url: URL(filePath: current)))
+                }
+                return segments
+            }
+        }
         // The most specific mounted disk the folder is on ("/Volumes/USB").
         let mount = volumes.keys
             .filter { $0 != "/" && (path == $0 || path.hasPrefix($0 + "/")) }

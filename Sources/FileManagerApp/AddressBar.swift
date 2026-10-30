@@ -50,10 +50,12 @@ struct AddressBar: View {
 private struct Breadcrumbs: View {
     var model: BrowserModel
     var startEditing: () -> Void
+    @AppStorage(SettingsKey.shortenHomePath) private var shortenHomePath = true
 
     var body: some View {
         let segments = FileManagerCore.Breadcrumbs.segments(
-            for: model.url, volumes: VolumeNames.shared.names, startupDiskName: VolumeNames.shared.startupDisk)
+            for: model.url, volumes: VolumeNames.shared.names, startupDiskName: VolumeNames.shared.startupDisk,
+            home: shortenHomePath ? model.home : nil)
         HStack(spacing: 0) {
             // The longest tail of the path that fits; earlier folders go in a "…" menu.
             ViewThatFits(in: .horizontal) {

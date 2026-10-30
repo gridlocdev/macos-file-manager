@@ -33,6 +33,13 @@ or any folder you choose with **Other Folder…**. If that folder isn't there (o
 unplugged), Home is used. New windows and tabs opened from a window (Cmd+N, Cmd+T) show the same
 folder as the window you're in, as in Explorer.
 
+## Path Bar
+
+**Shorten home path in breadcrumbs** (on by default) shows your home folder as one **~** folder
+in the address bar, so `Macintosh HD › Users › you › Documents` reads `~ › Documents`. Click
+**~** to go home. Folders outside your home folder show their full path either way. See
+[The address bar](Using-the-App.md#the-address-bar).
+
 ## Keyboard
 
 **Edit Shortcuts File…** opens your shortcuts file (making a starter one the first time) and

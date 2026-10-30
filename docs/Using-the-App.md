@@ -33,7 +33,9 @@ Each File Manager tab shows one folder. Open a new tab with **Cmd+T** and a new 
 ## The address bar
 
 Like Explorer's, the address bar shows the path as a row of folders:
-`Macintosh HD › Users › you › Documents ›`.
+`~ › Documents ›`. Your home folder is shown as **~**; to see the full
+`Macintosh HD › Users › you › Documents ›` instead, turn off **Shorten home path in
+breadcrumbs** in [Settings](Settings.md#path-bar).
 
 - **Click a folder** to go straight to it (it's highlighted under the mouse, like a button).
 - **Click a ›** for a menu of the folders inside the one before it, and pick one to go there.

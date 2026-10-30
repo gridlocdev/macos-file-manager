@@ -24,6 +24,20 @@ import Testing
         #expect(segments.map(\.title) == ["HD"])
     }
 
+    @Test func homeShortened() {
+        let home = URL(filePath: "/Users/me")
+        let inside = Breadcrumbs.segments(
+            for: URL(filePath: "/Users/me/src/app"), volumes: [:], startupDiskName: "HD", home: home)
+        #expect(inside.map(\.title) == ["~", "src", "app"])
+        #expect(inside.map(\.url.path) == ["/Users/me", "/Users/me/src", "/Users/me/src/app"])
+        let atHome = Breadcrumbs.segments(for: home, volumes: [:], startupDiskName: "HD", home: home)
+        #expect(atHome.map(\.title) == ["~"])
+        // Outside home (and a folder whose name only starts the same) keeps the full path.
+        let outside = Breadcrumbs.segments(
+            for: URL(filePath: "/Users/meg"), volumes: [:], startupDiskName: "HD", home: home)
+        #expect(outside.map(\.title) == ["HD", "Users", "meg"])
+    }
+
     @Test func diskWithSimilarName() {
         let segments = Breadcrumbs.segments(
             for: URL(filePath: "/Volumes/USB2/x"), volumes: ["/Volumes/USB": "USB"], startupDiskName: "HD")

@@ -13,10 +13,13 @@ enum SettingsKey {
     static let startFolder = "startFolder"
     static let customStartPath = "customStartPath"
     static let recentServers = "recentServers"
+    static let shortenHomePath = "shortenHomePath"
 
     /// Defaults for settings that start on.
     static func registerDefaults() {
-        UserDefaults.standard.register(defaults: [showAllExtensions: true, foldersFirst: true, reopenSession: true])
+        UserDefaults.standard.register(defaults: [
+            showAllExtensions: true, foldersFirst: true, reopenSession: true, shortenHomePath: true,
+        ])
     }
 }
 
@@ -142,6 +145,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.confirmTrash) private var confirmTrash = false
     @AppStorage(SettingsKey.startFolder) private var startFolder = StartFolder.home
     @AppStorage(SettingsKey.customStartPath) private var customStartPath = ""
+    @AppStorage(SettingsKey.shortenHomePath) private var shortenHomePath = true
 
     var body: some View {
         Form {
@@ -167,6 +171,12 @@ struct SettingsView: View {
                         }
                     }
                 }
+            }
+            Section("Path Bar") {
+                Toggle("Shorten home path in breadcrumbs", isOn: $shortenHomePath).pointerCursor()
+                Text("Shows your home folder as ~ instead of Root › Users › \(NSUserName()).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Keyboard") {
                 LabeledContent("Shortcuts") {
