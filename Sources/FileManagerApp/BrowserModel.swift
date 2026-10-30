@@ -575,13 +575,29 @@ final class BrowserModel {
         }
     }
 
+    /// The listing (or search results) sorted, kept until either or the sort changes, so a Find
+    /// keystroke or a refresh that changed nothing only filters (sorting 100k names is slow).
+    @ObservationIgnored private var sortedSource: (source: [FileItem], sort: FileSort, sorted: [FileItem])?
+
     private func applyFilterAndSort() {
         let source = isSearchingSubfolders ? search.results : listing.items
-        var visible = showHiddenFiles ? source : source.filter { !$0.isHidden }
+        let sorted: [FileItem]
+        if let cache = sortedSource, cache.sort == sort, cache.source == source {
+            sorted = cache.sorted
+        } else {
+            sorted = sort.sorted(source)
+            sortedSource = (source, sort, sorted)
+        }
+        // Filtering keeps the order.
+        var visible = showHiddenFiles ? sorted : sorted.filter { !$0.isHidden }
         if isSearchOpen { visible = criteria.filter(visible) }
-        rows = Grouping.rows(sort.sorted(visible), by: view.groupBy)
-        items = rows.compactMap(\.item)
-        listingVersion += 1
+        let newRows = Grouping.rows(visible, by: view.groupBy)
+        // Only a real change reloads the views.
+        if newRows != rows || listingVersion == 0 {
+            rows = newRows
+            items = rows.compactMap(\.item)
+            listingVersion += 1
+        }
         // Nothing hidden by a filter stays selected (it would be trashed unseen).
         let shown = Set(items.map(\.url))
         if !selection.isSubset(of: shown) { selection.formIntersection(shown) }
