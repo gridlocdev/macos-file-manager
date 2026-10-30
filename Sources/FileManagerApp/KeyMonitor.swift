@@ -148,8 +148,11 @@ extension KeyChord {
         case 80: key = .function(19)
         case 90: key = .function(20)
         default:
-            // The key as typed without modifiers, so Cmd+Shift+. is "." not ">".
-            guard let chars = event.characters(byApplyingModifiers: []), !chars.isEmpty else { return nil }
+            // The key as typed without Shift, so Cmd+Shift+. is "." not ">". Cmd is applied:
+            // layouts such as AZERTY (digits need Shift) and Dvorak-QWERTY⌘ have a Command layer,
+            // which is what Cmd+1 and Cmd+C mean there.
+            guard let chars = event.characters(byApplyingModifiers: flags.intersection(.command)), !chars.isEmpty
+            else { return nil }
             key = .character(chars.lowercased())
         }
         self.init(key, modifiers)

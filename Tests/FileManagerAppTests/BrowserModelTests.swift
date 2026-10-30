@@ -214,6 +214,11 @@ import Testing
         #expect(KeyChord(event(105, "")) == KeyChord(.function(13)))
         #expect(KeyChord(event(90, "")) == KeyChord(.function(20)))
     }
+
+    @Test func commandChordsReadTheKeyAsTyped() {
+        #expect(KeyChord(event(18, "1", .command)) == .char("1", .command))
+        #expect(KeyChord(event(47, ">", [.command, .shift])) == .char(".", [.command, .shift]))
+    }
 }
 
 @MainActor @Suite struct WindowsTests {
