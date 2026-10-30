@@ -50,6 +50,11 @@ import FileManagerCore
             add(.moveToOtherPane, to: menu)
         }
         add(.rename, to: menu)
+        if model.isTrashFolder {
+            add(.putBack, to: menu)
+        } else {
+            add(.moveToTrash, to: menu)
+        }
         menu.addItem(.separator())
         add(.copyPath, to: menu)
         add(.getInfo, to: menu)
@@ -66,12 +71,6 @@ import FileManagerCore
         }
         add(.showInFinder, to: menu)
         if selected.contains(where: \.isFolder) { add(.addToSidebar, to: menu) }
-        menu.addItem(.separator())
-        if model.isTrashFolder {
-            add(.putBack, to: menu)
-        } else {
-            add(.moveToTrash, to: menu)
-        }
         menu.addItem(.separator())
         menu.addItem(NSSharingServicePicker(items: urls).standardShareMenuItem)
     }

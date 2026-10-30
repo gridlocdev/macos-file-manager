@@ -109,10 +109,10 @@ it. If it isn't already selected, it's selected first.
 | **Open Containing Folder** | On results from searching subfolders: opens the folder the item is in, with the item selected. |
 | **Quick Look** | A preview, as with Space. |
 | **Cut**, **Copy**, **Duplicate**, **Rename** | As in the Edit and File menus. |
+| **Move to Trash** (or **Put Back** in the Trash) | |
 | **Copy Path**, **Get Info** | |
 | **Open Terminal Here** | For a folder: a terminal in that folder. |
 | **Show in Finder** | Opens the item in Finder, selected. |
-| **Move to Trash** (or **Put Back** in the Trash) | |
 | **Share** | AirDrop, Mail, Messages and the other share options. |
 | **Services** | What other apps add for files, if any. |
 
