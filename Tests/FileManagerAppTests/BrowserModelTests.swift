@@ -53,8 +53,11 @@ import Testing
             return target
         }
         let state = root.appending(path: "State")
+        let presenter = presenter
         services = BrowserServices(
-            operations: FileOperations(trashLog: TrashLog(file: state.appending(path: "trash-log.json")), executor: executor),
+            operations: FileOperations(
+                trashLog: TrashLog(file: state.appending(path: "trash-log.json")), executor: executor,
+                reportError: { title, _ in presenter.problems.append(title) }),
             windows: Windows(defaults: defaults),
             sidebar: SidebarStore(defaults: defaults),
             folderViews: FolderViewStore(file: state.appending(path: "FolderViews.json")),
@@ -216,5 +219,40 @@ import Testing
         #expect(ops.canRedo)
         _ = await ops.redo(window: nil)
         #expect(sandbox.exists("Receipts/notes.txt"))
+    }
+
+    @Test func anUndoThatStopsKeepsTheRest() async throws {
+        let ops = sandbox.services.operations
+        let fm = FileManager.default
+        let r = sandbox.root
+        await ops.run(
+            "Move", steps: [.move(r.appending(path: "notes.txt"), to: r.appending(path: "Receipts/notes.txt")),
+                .move(r.appending(path: "file2.txt"), to: r.appending(path: "Receipts/file2.txt"))],
+            window: nil)
+        // Undo puts file2 back, then can't put notes back: something has taken its place.
+        try Data("new".utf8).write(to: r.appending(path: "notes.txt"))
+        _ = await ops.undo(window: nil)
+        #expect(sandbox.exists("file2.txt") && sandbox.exists("Receipts/notes.txt"))
+        #expect(ops.canUndo && ops.canRedo)
+        // Once the way is clear, Undo finishes the job.
+        try fm.removeItem(at: r.appending(path: "notes.txt"))
+        _ = await ops.undo(window: nil)
+        #expect(sandbox.exists("notes.txt") && !sandbox.exists("Receipts/notes.txt"))
+        #expect(!ops.canUndo)
+    }
+
+    @Test func undoesRunOneAfterTheOther() async throws {
+        let ops = sandbox.services.operations
+        let r = sandbox.root
+        await ops.run("Move", steps: [.move(r.appending(path: "notes.txt"), to: r.appending(path: "Receipts/notes.txt"))], window: nil)
+        await ops.run(
+            "Move", steps: [.move(r.appending(path: "Receipts/notes.txt"), to: r.appending(path: "Projects/notes.txt"))],
+            window: nil)
+        // The second undo needs the first one's result.
+        async let first = ops.undo(window: nil)
+        async let second = ops.undo(window: nil)
+        _ = await (first, second)
+        #expect(sandbox.exists("notes.txt"))
+        #expect(!ops.canUndo)
     }
 }

@@ -22,6 +22,8 @@ public struct FileStepExecutor: Sendable {
         public var executed: [ExecutedStep] = []
         public var error: Error?
         public var cancelled = false
+        /// How many of the steps were run (fully, or a copy cut short by Cancel); the rest weren't.
+        public var stepsRun = 0
         public init() {}
     }
 
@@ -60,6 +62,7 @@ public struct FileStepExecutor: Sendable {
                     outcome.executed.append(.copied(from, to: to))
                     if isCancelled() {
                         outcome.cancelled = true
+                        outcome.stepsRun = index + 1
                         return outcome
                     }
                 case .move(let from, let to):
@@ -96,6 +99,7 @@ public struct FileStepExecutor: Sendable {
                     try (url as NSURL).setResourceValue(tags, forKey: .tagNamesKey)
                     outcome.executed.append(.tagged(url, from: old, to: tags))
                 }
+                outcome.stepsRun = index + 1
                 progress(index)
             } catch {
                 outcome.error = error

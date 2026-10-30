@@ -47,9 +47,16 @@ final class FileOperations {
     /// Runs the steps; tests give it one with a scratch Trash.
     private let executor: FileStepExecutor
 
-    init(trashLog: TrashLog = TrashLog(), executor: FileStepExecutor = FileStepExecutor()) {
+    /// Shows an error (title, error); tests give one that records it instead of an alert.
+    private let reportError: (@MainActor (String, Error) -> Void)?
+
+    init(
+        trashLog: TrashLog = TrashLog(), executor: FileStepExecutor = FileStepExecutor(),
+        reportError: (@MainActor (String, Error) -> Void)? = nil
+    ) {
         self.trashLog = trashLog
         self.executor = executor
+        self.reportError = reportError
     }
 
     // MARK: Running steps
@@ -84,8 +91,6 @@ final class FileOperations {
         let outcome = await task.value
 
         reveal.cancel()
-        jobs.removeAll { $0 === job }
-        if jobs.isEmpty { showProgress = false }
         trashLog.update(with: outcome.executed)
 
         if let inverse = FileUndo.inverse(of: outcome.executed), !inverse.isEmpty {
@@ -97,6 +102,13 @@ final class FileOperations {
             case .none: break
             }
         }
+        // Only once its undo is recorded, so an undo waiting for it undoes the right thing.
+        jobs.removeAll { $0 === job }
+        if jobs.isEmpty {
+            showProgress = false
+            for waiter in idleWaiters { waiter.resume() }
+            idleWaiters.removeAll()
+        }
         if let error = outcome.error {
             showError(error, title: "\(title) stopped", window: window)
         }
@@ -107,17 +119,37 @@ final class FileOperations {
         return outcome
     }
 
+    /// Undo and redo wait for running jobs, so two in a row don't run at once and one pressed
+    /// during a copy undoes that copy, not the change before it.
     func undo(window: NSWindow?) async -> [URL] {
+        await untilIdle()
         guard let entry = history.popUndo() else { return [] }
         let outcome = await run("Undo \(entry.title)", steps: entry.steps, history: .undo, window: window)
+        putBackUnrun(entry, outcome, from: .undo)
         return outcome.executed.compactMap(\.resultURL)
     }
 
     func redo(window: NSWindow?) async -> [URL] {
+        await untilIdle()
         guard let entry = history.popRedo() else { return [] }
         let outcome = await run(entry.title.replacingOccurrences(of: "Undo ", with: ""), steps: entry.steps,
             history: .redo, window: window)
+        putBackUnrun(entry, outcome, from: .redo)
         return outcome.executed.compactMap(\.resultURL)
+    }
+
+    /// An undo or redo that stopped partway keeps the steps it didn't get to.
+    private func putBackUnrun(_ entry: UndoHistory.Entry, _ outcome: FileStepExecutor.Outcome, from source: UndoHistory.Source) {
+        guard outcome.stepsRun < entry.steps.count else { return }
+        history.putBack(.init(title: entry.title, steps: Array(entry.steps[outcome.stepsRun...])), from: source)
+    }
+
+    @ObservationIgnored private var idleWaiters: [CheckedContinuation<Void, Never>] = []
+
+    private func untilIdle() async {
+        while !jobs.isEmpty {
+            await withCheckedContinuation { idleWaiters.append($0) }
+        }
     }
 
     // MARK: Copy and move
@@ -245,6 +277,7 @@ final class FileOperations {
     }
 
     func showError(_ error: Error, title: String, window: NSWindow?) {
+        if let reportError { return reportError(title, error) }
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = title

@@ -38,4 +38,14 @@ public struct UndoHistory: Sendable {
 
     public mutating func popUndo() -> Entry? { undoStack.popLast() }
     public mutating func popRedo() -> Entry? { redoStack.popLast() }
+
+    /// Puts the steps of a popped entry that didn't run (an undo or redo stopped by an error or
+    /// Stop) back on the stack they came from (`.undo`: the undo stack), to be tried again.
+    public mutating func putBack(_ entry: Entry, from source: Source) {
+        switch source {
+        case .undo: undoStack.append(entry)
+        case .redo: redoStack.append(entry)
+        case .action: break
+        }
+    }
 }

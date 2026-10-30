@@ -111,6 +111,10 @@ was.
 
 While you're typing in the address bar or renaming, Cmd+Z undoes typing instead.
 
+Undo and redo wait for anything still running to finish, so Cmd+Z during a copy undoes that
+copy once it's done. If an undo stops partway (say, something new has taken an item's old name),
+what it couldn't do stays in the history: clear the way and press Cmd+Z again.
+
 ## Progress and cancelling
 
 Copies and moves run in the background. If one takes more than a moment, the
