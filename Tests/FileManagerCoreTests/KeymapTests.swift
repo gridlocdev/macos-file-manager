@@ -108,6 +108,14 @@ import Testing
         }
     }
 
+    @Test func arrowChordsMoveTheCursorInText() {
+        #expect(KeyChord(.up, .command).textSelector == "moveToBeginningOfDocument:")
+        #expect(KeyChord(.up, [.command, .shift]).textSelector == "moveToBeginningOfDocumentAndModifySelection:")
+        #expect(KeyChord(.left, .option).textSelector == "moveWordLeft:")
+        #expect(KeyChord.char("n", .command).textSelector == nil)
+        #expect(KeyChord(.up, .control).textSelector == nil)
+    }
+
     @Test func oneBadEntryDoesntSpoilTheFile() throws {
         let json = Data(#"{"rename": "F2", "refresh": ["F9"], "_note": "hi"}"#.utf8)
         let (overrides, problems) = try #require(Keymap.overrides(fromJSON: json))

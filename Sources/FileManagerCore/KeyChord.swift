@@ -29,6 +29,28 @@ public struct KeyChord: Hashable, Sendable, CustomStringConvertible {
         KeyChord(.character(c.lowercased()), modifiers)
     }
 
+    /// What an arrow chord does in a text field ("moveToBeginningOfDocument:" for Cmd+Up), for
+    /// a menu shortcut pressed while text is being edited. Nil for other chords.
+    public var textSelector: String? {
+        let move: String
+        switch (key, modifiers.subtracting(.shift)) {
+        case (.up, .command): move = "moveToBeginningOfDocument"
+        case (.down, .command): move = "moveToEndOfDocument"
+        case (.left, .command): move = "moveToLeftEndOfLine"
+        case (.right, .command): move = "moveToRightEndOfLine"
+        case (.up, .option): move = "moveToBeginningOfParagraph"
+        case (.down, .option): move = "moveToEndOfParagraph"
+        case (.left, .option): move = "moveWordLeft"
+        case (.right, .option): move = "moveWordRight"
+        case (.up, []): move = "moveUp"
+        case (.down, []): move = "moveDown"
+        case (.left, []): move = "moveLeft"
+        case (.right, []): move = "moveRight"
+        default: return nil
+        }
+        return move + (modifiers.contains(.shift) ? "AndModifySelection:" : ":")
+    }
+
     /// The spelling used in the docs, e.g. "Cmd+Shift+N", "Opt+Up", "F5".
     public var description: String {
         var parts: [String] = []

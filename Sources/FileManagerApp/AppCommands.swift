@@ -137,6 +137,12 @@ struct AppCommands: Commands {
         let keyWindow = NSApp.keyWindow
         let editingText = keyWindow?.firstResponder is NSText
         let inBrowser = keyWindow != nil && keyWindow === browser?.window
+        // Cmd+Up (Go Up) while renaming or typing a path moves the cursor, as in any text field,
+        // rather than leaving the folder and throwing the text away.
+        if editingText, let selector = keymap.menuChord(for: action)?.textSelector {
+            NSApp.sendAction(Selector(selector), to: nil, from: nil)
+            return
+        }
         if action.actsOnFiles, editingText || !inBrowser {
             if let selector = action.textSelector {
                 NSApp.sendAction(Selector(selector), to: nil, from: nil)

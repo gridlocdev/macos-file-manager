@@ -108,7 +108,8 @@ Return, F2, Space, Delete, Shift+Delete, Shift+F10 and Esc only act on files whi
 the keyboard focus, so pressing Return in the sidebar doesn't rename anything.
 
 While you're typing in the address bar or renaming, Cmd+X, Cmd+C, Cmd+V, Cmd+A, Cmd+Z and
-Cmd+Backspace work on the text instead of on files.
+Cmd+Backspace work on the text instead of on files, and Cmd+Up and the other arrow shortcuts
+move the cursor instead of leaving the folder.
 
 ## Views
 
