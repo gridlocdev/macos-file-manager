@@ -1,3 +1,5 @@
+import Foundation
+
 /// Shortcuts for each action. The first chord containing Cmd is the one shown in the menu bar;
 /// the app's key handler accepts all of them.
 public struct Keymap: Sendable {
@@ -112,6 +114,23 @@ extension Keymap {
     /// (an empty list takes its shortcuts away). A chord given to an action is taken from any
     /// other action that had it. Unknown actions and chords that can't be read are skipped and
     /// reported in `problems`.
+    /// Reads a shortcuts file: an object of action names to lists of shortcuts. An entry that
+    /// isn't a list of strings is reported and left out, rather than spoiling the whole file.
+    /// Nil if the file isn't a JSON object at all.
+    public static func overrides(fromJSON data: Data) -> (overrides: [String: [String]], problems: [String])? {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        var overrides: [String: [String]] = [:]
+        var problems: [String] = []
+        for (name, value) in object.sorted(by: { $0.key < $1.key }) {
+            if let list = value as? [String] {
+                overrides[name] = list
+            } else if !name.hasPrefix("_") {
+                problems.append("\(name): should be a list of shortcuts, like [\"F2\"].")
+            }
+        }
+        return (overrides, problems)
+    }
+
     public func applying(_ overrides: [String: [String]]) -> (keymap: Keymap, problems: [String]) {
         var bindings = self.bindings
         var problems: [String] = []

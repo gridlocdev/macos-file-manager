@@ -30,12 +30,14 @@ final class KeymapStore {
             problems = []
             return
         }
-        guard let overrides = try? JSONDecoder().decode([String: [String]].self, from: data) else {
+        guard let (overrides, unread) = Keymap.overrides(fromJSON: data) else {
             keymap = .standard
             problems = ["Shortcuts.json isn't valid: it should map action names to lists of shortcuts."]
             return
         }
-        (keymap, problems) = Keymap.standard.applying(overrides)
+        let (applied, applyProblems) = Keymap.standard.applying(overrides)
+        keymap = applied
+        problems = unread + applyProblems
     }
 
     /// Opens the file in your text editor, writing a starter file first if there isn't one.

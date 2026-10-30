@@ -107,4 +107,12 @@ import Testing
             $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "*", with: "")
         }
     }
+
+    @Test func oneBadEntryDoesntSpoilTheFile() throws {
+        let json = Data(#"{"rename": "F2", "refresh": ["F9"], "_note": "hi"}"#.utf8)
+        let (overrides, problems) = try #require(Keymap.overrides(fromJSON: json))
+        #expect(overrides == ["refresh": ["F9"]])
+        #expect(problems.count == 1 && problems[0].hasPrefix("rename"))
+        #expect(Keymap.overrides(fromJSON: Data("[1]".utf8)) == nil)
+    }
 }
