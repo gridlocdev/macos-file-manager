@@ -120,6 +120,9 @@ import Testing
         #expect(url("smb:/nas/share") == "smb://nas/share")
         #expect(url("192.168.50.158/share") == "smb://192.168.50.158/share")
         #expect(url("nas:445/share") == "smb://nas:445/share")
+        // IPv6 keeps its brackets; brackets in a share name are encoded.
+        #expect(url("smb://[fe80::1]/share") == "smb://[fe80::1]/share")
+        #expect(url("[fe80::1]:445/Photos [2024]") == "smb://[fe80::1]:445/Photos%20%5B2024%5D")
     }
 
     @Test func problems() {

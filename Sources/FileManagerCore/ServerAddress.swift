@@ -40,8 +40,14 @@ public enum ServerAddress {
             return .failure(.invalid)
         }
         guard schemes.contains(scheme) else { return .failure(.unsupported(scheme: scheme)) }
-        // Spaces in share names are common ("Shared Files"); encode what URL won't take.
-        let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed.union(["%"])) ?? text
+        // Spaces in share names are common ("Shared Files"); encode what URL won't take. The
+        // server part keeps the brackets of an IPv6 address ("[fe80::1]"); the path encodes them.
+        let schemeEnd = text.range(of: "://")!.upperBound
+        let pathStart = text[schemeEnd...].firstIndex(of: "/") ?? text.endIndex
+        let allowed = CharacterSet.urlFragmentAllowed.union(["%"])
+        let server = text[schemeEnd..<pathStart].addingPercentEncoding(withAllowedCharacters: allowed.union(["[", "]"]))
+        let path = text[pathStart...].addingPercentEncoding(withAllowedCharacters: allowed)
+        let encoded = server.flatMap { server in path.map { text[..<schemeEnd] + server + $0 } } ?? text
         guard let url = URL(string: encoded), let host = url.host(), !host.isEmpty else { return .failure(.invalid) }
         return .success(url)
     }

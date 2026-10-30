@@ -39,7 +39,7 @@ computer or a NAS and opens it. Type an address:
 
 | Server | Address |
 |---|---|
-| Windows share, NAS, Samba (SMB) | `smb://nas.local/share`, `nas.local/share`, `192.168.1.20/share`, or `\\nas\share` as on Windows (`smb:\\nas\share` works too) |
+| Windows share, NAS, Samba (SMB) | `smb://nas.local/share`, `nas.local/share`, `192.168.1.20/share`, `[fe80::1]/share` (IPv6), or `\\nas\share` as on Windows (`smb:\\nas\share` works too) |
 | NFS | `nfs://server/export` |
 | WebDAV | `https://dav.example.com/files` |
 
