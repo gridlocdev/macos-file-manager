@@ -69,12 +69,20 @@ public struct TransferPlanner {
 
     /// The conflicts the user has to decide, in order.
     public func conflicts(_ sources: [URL], into folder: URL, mode: TransferMode) throws -> [TransferConflict] {
+        try planAsking(sources, into: folder, mode: mode).conflicts
+    }
+
+    /// The conflicts, and the plan if there are none (it's final then: nothing to ask), so a
+    /// paste without clashes walks its sources once.
+    public func planAsking(_ sources: [URL], into folder: URL, mode: TransferMode) throws
+        -> (plan: TransferPlan, conflicts: [TransferConflict])
+    {
         var found: [TransferConflict] = []
-        _ = try plan(sources, into: folder, mode: mode) { conflict in
+        let plan = try plan(sources, into: folder, mode: mode) { conflict in
             found.append(conflict)
             return .skip
         }
-        return found
+        return (plan, found)
     }
 
     /// - `resolve` answers each conflict.
@@ -94,7 +102,7 @@ public struct TransferPlanner {
             if tree.isSameItem(source.deletingLastPathComponent(), folder) {
                 guard mode == .copy else { continue }
                 let name = FileNaming.duplicate(
-                    source.lastPathComponent, isFolder: entry.isFolder, existing: names(in: folder, state))
+                    source.lastPathComponent, isFolder: entry.isFolder, existing: names(in: folder, &state))
                 let target = folder.appendingPathComponent(name)
                 state.add(.copy(source, to: target), units: units(source, entry), creating: target)
                 state.plan.results.append(target)
@@ -110,13 +118,18 @@ public struct TransferPlanner {
     private struct State {
         var plan = TransferPlan()
         var created: Set<URL> = []
+        /// Names already in each destination folder, listed once.
+        var listed: [String: Set<String>] = [:]
         let resolve: (TransferConflict) -> ConflictResolution
         let mode: TransferMode
 
         mutating func add(_ step: FileStep, units: Int64, creating url: URL? = nil) {
             plan.steps.append(step)
             plan.stepUnits.append(units)
-            if let url { created.insert(url) }
+            if let url {
+                created.insert(url)
+                listed[url.deletingLastPathComponent().path]?.insert(url.lastPathComponent)
+            }
         }
     }
 
@@ -159,7 +172,7 @@ public struct TransferPlanner {
     private func placeRenamed(_ source: URL, _ entry: FileTreeEntry, _ target: URL, _ state: inout State) -> URL {
         let folder = target.deletingLastPathComponent()
         let name = FileNaming.keepBoth(
-            target.lastPathComponent, isFolder: entry.isFolder, existing: names(in: folder, state))
+            target.lastPathComponent, isFolder: entry.isFolder, existing: names(in: folder, &state))
         let renamed = folder.appendingPathComponent(name)
         state.add(transfer(source, renamed, state.mode), units: units(source, entry), creating: renamed)
         return renamed
@@ -169,11 +182,16 @@ public struct TransferPlanner {
         mode == .copy ? .copy(source, to: target) : .move(source, to: target)
     }
 
-    private func names(in folder: URL, _ state: State) -> Set<String> {
+    /// What's in `folder` plus what the plan puts there so far. The folder is listed once and
+    /// then kept up to date as names are taken (it was listed again, and every planned item
+    /// scanned, for each renamed item).
+    private func names(in folder: URL, _ state: inout State) -> Set<String> {
+        if let names = state.listed[folder.path] { return names }
         var names = Set(tree.children(of: folder).map(\.lastPathComponent))
         for url in state.created where url.deletingLastPathComponent().path == folder.path {
             names.insert(url.lastPathComponent)
         }
+        state.listed[folder.path] = names
         return names
     }
 

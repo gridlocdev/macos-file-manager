@@ -164,9 +164,10 @@ final class FileOperations {
     ) async -> [URL] {
         guard !sources.isEmpty else { return [] }
         let conflicts: [TransferConflict]
+        let unasked: TransferPlan
         do {
-            conflicts = try await Task.detached {
-                try TransferPlanner(tree: DiskFileTree()).conflicts(sources, into: folder, mode: mode)
+            (unasked, conflicts) = try await Task.detached {
+                try TransferPlanner(tree: DiskFileTree()).planAsking(sources, into: folder, mode: mode)
             }.value
         } catch {
             showError(error, title: mode == .copy ? "Can't copy" : "Can't move", window: window)
@@ -179,7 +180,8 @@ final class FileOperations {
         guard let resolved = await ConflictQuestions.answers(for: conflicts, ask: ask) else { return [] }
         let plan: TransferPlan
         do {
-            plan = try await Task.detached {
+            // Without clashes the first plan stands; otherwise plan again with the answers.
+            plan = conflicts.isEmpty ? unasked : try await Task.detached {
                 try TransferPlanner(tree: DiskFileTree()).plan(sources, into: folder, mode: mode) {
                     // A conflict that wasn't there when asking (the folder changed meanwhile) is skipped.
                     resolved[$0] ?? .skip

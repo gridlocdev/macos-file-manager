@@ -149,6 +149,22 @@ struct FakeTree: FileTree {
         }
     }
 
+    @Test func keepBothNumbersOnThroughOneListing() throws {
+        let tree = FakeTree(["/a/x.txt": 1, "/c/x.txt": 1, "/d/x.txt": 1, "/b/x.txt": 1, "/b/x (2).txt": 1])
+        let plan = try TransferPlanner(tree: tree).plan(
+            [u("/a/x.txt"), u("/c/x.txt"), u("/d/x.txt")], into: u("/b"), mode: .copy) { _ in .keepBoth }
+        #expect(plan.results.map(\.lastPathComponent) == ["x (3).txt", "x (4).txt", "x (5).txt"])
+    }
+
+    @Test func withoutClashesTheFirstPlanIsFinal() throws {
+        let tree = FakeTree(["/a/x.txt": 4, "/a/Docs/y.txt": 2, "/b/": 0])
+        let planner = TransferPlanner(tree: tree)
+        let (unasked, conflicts) = try planner.planAsking([u("/a/x.txt"), u("/a/Docs")], into: u("/b"), mode: .copy)
+        #expect(conflicts.isEmpty)
+        let asked = try planner.plan([u("/a/x.txt"), u("/a/Docs")], into: u("/b"), mode: .copy) { _ in .skip }
+        #expect(unasked.steps == asked.steps && unasked.stepUnits == asked.stepUnits)
+    }
+
     @Test func sameNameFromTwoFoldersKeepsBoth() throws {
         let tree = FakeTree(["/a/x.txt": 1, "/c/x.txt": 1, "/b/": 0])
         let plan = try TransferPlanner(tree: tree).plan([u("/a/x.txt"), u("/c/x.txt")], into: u("/b"), mode: .copy) {
