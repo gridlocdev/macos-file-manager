@@ -7,7 +7,9 @@ import SwiftUI
 /// target; dropping between pinned folders pins.
 struct SidebarView: View {
     var model: BrowserModel
-    @State private var volumes: [Volume] = Volume.mounted()
+    /// Read when the sidebar appears, not as the initial value: that would be read again (disk
+    /// and network I/O) every time the window's body makes a new SidebarView.
+    @State private var volumes: [Volume] = []
     /// The folder tree's root: Home, or in snapshot runs the demo folder, so a test never lists
     /// folders outside it (which can bring up macOS's folder-access prompts for a new build).
     private var treeRoot: URL {
@@ -62,9 +64,11 @@ struct SidebarView: View {
                 tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url))
                 scroller.scrollTo(SidebarTag(section: .tree, path: model.url.path))
             }
+            .onChange(of: volumes) { tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url)) }
             .onChange(of: model.listingVersion) { tree.forget(model.url) }
             .onChange(of: model.showHiddenFiles) { tree.forgetAll() }
         }
+        .task { volumes = Volume.mounted() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in
             volumes = Volume.mounted()
         }
