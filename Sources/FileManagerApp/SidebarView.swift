@@ -199,11 +199,17 @@ private struct FolderNode: View {
 /// Which tree folders are open, and their subfolders (cached until the folder changes).
 /// `expanded` is only written when it really changes: any write to an observed set re-renders
 /// the tree, and DisclosureGroup writes its state back while rendering, so an unconditional
-/// write loops forever and starves the main thread.
+/// write loops forever and starves the main thread. Subfolders are read in the background (a
+/// network folder would stall drawing) and show up when read; `children` is written only when
+/// a folder's list really changes, for the same reason.
 @MainActor @Observable
 final class FolderTree {
     private(set) var expanded: Set<String> = []
-    @ObservationIgnored private var cache: [String: [URL]] = [:]
+    private var children: [String: [URL]] = [:]
+    @ObservationIgnored private var loading: Set<String> = []
+    @ObservationIgnored private var showHidden = false
+    /// Bumped by `forgetAll`, so a read started before it is dropped.
+    @ObservationIgnored private var generation = 0
 
     func binding(for url: URL) -> Binding<Bool> {
         Binding(
@@ -211,7 +217,8 @@ final class FolderTree {
             set: { open in
                 guard open != self.expanded.contains(url.path) else { return }
                 if open {
-                    self.cache[url.path] = nil
+                    // Read again on opening; the last list shows meanwhile.
+                    self.load(url)
                     self.expanded.insert(url.path)
                 } else {
                     self.expanded.remove(url.path)
@@ -221,16 +228,33 @@ final class FolderTree {
 
     func isExpanded(_ url: URL) -> Bool { expanded.contains(url.path) }
 
+    /// The subfolders read so far (none until the first read is in).
     func children(of url: URL, showHidden: Bool) -> [URL] {
-        if let cached = cache[url.path] { return cached }
-        let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey]
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: url, includingPropertiesForKeys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
-        let folders = urls.filter { SidebarView.isFolder($0) }
-            .map(\.normalized)
-            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
-        cache[url.path] = folders
-        return folders
+        // Reads use it; a change is dealt with by `forgetAll` (called when hidden files are toggled).
+        self.showHidden = showHidden
+        if let read = children[url.path] { return read }
+        // Drawing is in progress: start the read after it.
+        Task { self.load(url) }
+        return []
+    }
+
+    private func load(_ url: URL) {
+        let path = url.path
+        guard loading.insert(path).inserted else { return }
+        let showHidden = showHidden, generation = generation
+        Task {
+            let folders = await Task.detached(priority: .userInitiated) {
+                let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey]
+                let urls = (try? FileManager.default.contentsOfDirectory(
+                    at: url, includingPropertiesForKeys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
+                return urls.filter { SidebarView.isFolder($0) }
+                    .map(\.normalized)
+                    .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+            }.value
+            loading.remove(path)
+            guard generation == self.generation, children[path] != folders else { return }
+            children[path] = folders
+        }
     }
 
     /// Opens the tree down to `url` under the most specific root it's in.
@@ -250,8 +274,16 @@ final class FolderTree {
         if !expanded.isSuperset(of: open) { expanded.formUnion(open) }
     }
 
-    func forget(_ url: URL) { cache[url.path] = nil }
-    func forgetAll() { cache.removeAll() }
+    /// The folder changed: read it again if it has been read (its list stays up meanwhile).
+    func forget(_ url: URL) {
+        if children[url.path] != nil { load(url) }
+    }
+
+    func forgetAll() {
+        generation += 1
+        loading.removeAll()
+        if !children.isEmpty { children.removeAll() }
+    }
 }
 
 /// A mounted disk in Locations.
