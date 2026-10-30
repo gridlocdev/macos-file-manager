@@ -36,7 +36,7 @@ install: (bundle "release")
     open ~/Applications/"File Manager.app"
     @echo "Installed ~/Applications/File Manager.app"
 
-# Release build zipped for sharing: build/File-Manager-<version>.zip
+# Release build zipped for sharing: build/File-Manager-<version>.zip (what a release publishes)
 dist: (bundle "release")
     #!/usr/bin/env bash
     set -euo pipefail
@@ -62,7 +62,7 @@ snapshot keys="" out="build/snapshot.png": (bundle "debug")
     open -W -n --stdout "$PWD/build/snapshot.log" --stderr "$PWD/build/snapshot.log" --env FILEMANAGER_SNAPSHOT="$PWD/{{out}}" --env FILEMANAGER_SNAPSHOT_FOLDER="$PWD/build/snapshot-demo" --env FILEMANAGER_SNAPSHOT_KEYS="{{keys}}" "{{app}}"
     cat build/snapshot.log
 
-# Regenerate Resources/AppIcon.icns from assets/icon.svg (needs Inkscape)
+# Regenerate Resources/AppIcon.icns and assets/icon/icon.png from assets/icon.svg (needs Inkscape)
 icons:
     scripts/make-icons.sh
 

@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+jobs:
+  test:
+    name: Build and test
+    # macOS 27 with Xcode 27 (the app needs the macOS 27 SDK).
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: xcrun swift build
+
+      - name: Test
+        run: xcrun swift test

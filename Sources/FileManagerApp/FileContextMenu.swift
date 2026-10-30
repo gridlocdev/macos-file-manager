@@ -39,7 +39,7 @@ import FileManagerCore
         add(.open, to: menu)
         if model.canPerform(.openContainingFolder) { add(.openContainingFolder, to: menu) }
         if selected.contains(where: \.isFolder) { add(.openInNewTab, to: menu) }
-        menu.addItem(openWithItem(for: urls, first: first))
+        menu.addItem(openWithItem(for: first))
         add(.quickLook, to: menu)
         menu.addItem(.separator())
         add(.cut, to: menu)
@@ -180,7 +180,7 @@ import FileManagerCore
     }
 
     /// Open With: apps that can open the first item, the default first.
-    private func openWithItem(for urls: [URL], first: URL) -> NSMenuItem {
+    private func openWithItem(for first: URL) -> NSMenuItem {
         let item = NSMenuItem(title: "Open With", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         let defaultApp = NSWorkspace.shared.urlForApplication(toOpen: first)

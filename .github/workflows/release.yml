@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Package and publish
+    needs: test
+    runs-on: xcode-27
+    env:
+      APP_VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # All of history: the build number is the commit count.
+          fetch-depth: 0
+
+      - name: Strip the leading "v" from the tag
+        run: echo "APP_VERSION=${APP_VERSION#v}" >> "$GITHUB_ENV"
+
+      - name: Build the app (ad-hoc signed)
+        run: scripts/bundle.sh release
+
+      - name: Zip the .app
+        run: ditto -c -k --sequesterRsrc --keepParent "build/File Manager.app" "build/File-Manager-$APP_VERSION.zip"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          ## Download
+
+          **File-Manager-*.zip**: macOS 27 or later (Apple Silicon). Unzip it and move **File Manager.app** to Applications.
+
+          The app is not notarized, so macOS blocks the first launch. Open **System Settings → Privacy & Security**, click **Open Anyway** next to the message about File Manager, and confirm. Or run `xattr -dr com.apple.quarantine "File Manager.app"` in Terminal, then open it normally.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" build/File-Manager-*.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "File Manager $GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --generate-notes \
+            $([[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease)

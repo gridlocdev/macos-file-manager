@@ -15,8 +15,9 @@ instead, run `tccutil reset SystemPolicyDesktopFolder dev.gridloc.file-manager` 
 
 <a id="the-permission-prompts-came-back"></a>
 **The permission prompts came back.**
-If you build without an Apple developer certificate, the app is signed ad hoc, and macOS can
-treat each rebuild as a new app. Allow access again, or give it Full Disk Access once. If you
+Downloaded copies, and copies built without an Apple developer certificate, are signed ad
+hoc, and macOS can treat each new version as a new app. Allow access again, or give it Full
+Disk Access once. If you
 have an Apple Development certificate in your keychain, the build uses it and macOS remembers
 your answers across rebuilds.
 

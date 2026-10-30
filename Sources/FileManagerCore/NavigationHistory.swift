@@ -17,7 +17,6 @@ public struct NavigationHistory<Saved: Sendable>: Sendable {
     public init(start: URL) { current = start }
 
     public var back: [URL] { backPages.map(\.url) }
-    public var forward: [URL] { forwardPages.map(\.url) }
     public var canGoBack: Bool { !backPages.isEmpty }
     public var canGoForward: Bool { !forwardPages.isEmpty }
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Builds FileManagerApp with Xcode's toolchain and wraps it in build/File Manager.app.
 # Usage: scripts/bundle.sh [debug|release]
+# Apple Silicon only: macOS 27 doesn't run on Intel Macs.
+# APP_VERSION overrides the version in Resources/Info.plist (the release workflow sets it from
+# the git tag).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -17,6 +20,9 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 # The build number is the commit count, so each committed build is higher than the last.
 BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP/Contents/Info.plist"
+if [[ -n "${APP_VERSION:-}" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Contents/Info.plist"
+fi
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # Help > File Manager Help opens these.
 cp -R docs "$APP/Contents/Resources/docs"

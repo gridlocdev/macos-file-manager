@@ -49,21 +49,12 @@ rename.
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-## Requirements
+## Download
 
-macOS 27 or later.
-
-## Install
-
-There are no prebuilt downloads yet. Building it takes one command once Xcode and
-[just](https://github.com/casey/just) are installed:
-
-```bash
-just install
-```
-
-That puts **File Manager.app** in `~/Applications` and opens it. The
-[installing guide](docs/Installing.md) has the details.
+File Manager needs macOS 27 or later. Get the latest version from the
+[Releases](../../releases) page, unzip it and move **File Manager.app** to Applications. The
+first time you open it, macOS asks you to confirm; the [installing guide](docs/Installing.md)
+shows how, and how to build it yourself instead.
 
 ## Documentation
 
@@ -77,5 +68,9 @@ That puts **File Manager.app** in `~/Applications` and opens it. The
 
 ## For developers
 
-Building, testing, VS Code setup and the code layout are covered in the
+Building, testing, VS Code setup, the code layout and releases are covered in the
 [developer guide](docs/Developer-Guide.md).
+
+## License
+
+[MIT](LICENSE)

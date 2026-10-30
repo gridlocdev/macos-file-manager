@@ -117,6 +117,7 @@ Resources/AppIcon.icns         app icon, generated from assets/icon.svg
 assets/icon.svg                app icon source
 scripts/bundle.sh              builds and signs build/File Manager.app (docs/ copied in for Help)
 scripts/make-icons.sh          renders the icon (just icons)
+.github/workflows/             CI (build and test) and releases (on a v* tag)
 docs/                          these pages
 ```
 
@@ -388,11 +389,32 @@ gradient tile, on Apple's 1024 icon grid (an 824-unit tile at 100,100 with a tra
 margin). The gaps and handles use the tile's gradient so they read as cut out of the cabinet.
 
 After editing the SVG, run `just icons` (needs Inkscape: `brew install --cask inkscape`). It
-regenerates `assets/icon/` and `Resources/AppIcon.icns`, which are committed so builds don't
-need Inkscape.
+regenerates `Resources/AppIcon.icns` and `assets/icon/icon.png` (the README's icon), which
+are committed so builds don't need Inkscape.
 
 ## Signing
 
 `scripts/bundle.sh` signs with the first Apple Development or Developer ID identity in your
 keychain, or ad hoc (`-`) if there isn't one. Override with `SIGN_IDENTITY="…" just install`.
 With ad-hoc signing, macOS may treat each rebuild as a new app and ask for folder access again.
+
+## Continuous integration and releases
+
+`.github/workflows/ci.yml` builds and runs the tests on every push to `main` and every pull
+request, on GitHub's `xcode-27` runner (macOS 27 with Xcode 27; the app needs the macOS 27
+SDK).
+
+To release, bump `CFBundleShortVersionString` in `Resources/Info.plist`, commit, and push a tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+`.github/workflows/release.yml` runs the tests, builds the app with the tag as its version
+(`APP_VERSION`, without the `v`), zips it as `File-Manager-<version>.zip` and publishes a
+GitHub release with it and generated notes. A tag with a hyphen (`v1.1.0-beta.1`) makes a
+pre-release. The build is Apple Silicon only (macOS 27 doesn't run on Intel) and signed ad
+hoc, not notarized, so the first launch needs **Open Anyway** (see
+[Installing](Installing.md#the-first-time-you-open-it)). `just dist` makes the same zip
+locally.

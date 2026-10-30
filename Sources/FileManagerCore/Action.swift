@@ -1,5 +1,5 @@
-/// Every command the user can run. Menus, shortcuts and (later) the right-click menu all
-/// refer to these, so each command is defined once.
+/// Every command the user can run. Menus, shortcuts and the right-click menu all refer to
+/// these, so each command is defined once.
 public enum Action: String, CaseIterable, Sendable {
     case open
     case newWindow, newTab, openInNewTab, reopenClosedTab
