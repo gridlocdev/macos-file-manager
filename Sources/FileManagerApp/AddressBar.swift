@@ -50,7 +50,7 @@ private struct Breadcrumbs: View {
 
     var body: some View {
         let segments = FileManagerCore.Breadcrumbs.segments(
-            for: model.url, volumes: Self.volumeNames(), startupDiskName: Self.startupDiskName)
+            for: model.url, volumes: VolumeNames.shared.names, startupDiskName: VolumeNames.shared.startupDisk)
         HStack(spacing: 0) {
             // The longest tail of the path that fits; earlier folders go in a "…" menu.
             ViewThatFits(in: .horizontal) {
@@ -104,11 +104,27 @@ private struct Breadcrumbs: View {
         model.focusList()
     }
 
-    static var startupDiskName: String {
+}
+
+/// Disk names for the breadcrumbs, read once and again when a disk is mounted or unmounted
+/// (not on every redraw: listing volumes can stall on a network share).
+@MainActor final class VolumeNames {
+    static let shared = VolumeNames()
+
+    private(set) lazy var names: [String: String] = Self.read()
+    private(set) lazy var startupDisk: String =
         (try? URL(filePath: "/").resourceValues(forKeys: [.volumeLocalizedNameKey]).volumeLocalizedName) ?? "/"
+
+    private init() {
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification, NSWorkspace.didRenameVolumeNotification] {
+            center.addObserver(forName: name, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { VolumeNames.shared.names = Self.read() }
+            }
+        }
     }
 
-    static func volumeNames() -> [String: String] {
+    private static func read() -> [String: String] {
         let urls = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: [.volumeLocalizedNameKey], options: [.skipHiddenVolumes]) ?? []
         var names: [String: String] = [:]
@@ -121,6 +137,8 @@ private struct Breadcrumbs: View {
 }
 
 /// The › after a segment: a menu of the folders inside it, like Explorer's address bar arrows.
+/// The folder is only listed when the menu is opened: a SwiftUI Menu builds its items with the
+/// view, which listed every segment's folder (for every trail the bar tries) on each redraw.
 private struct SubfolderMenu: View {
     let folder: URL
     let showHidden: Bool
@@ -128,28 +146,12 @@ private struct SubfolderMenu: View {
     let go: (URL) -> Void
 
     var body: some View {
-        Menu {
-            let children = Self.subfolders(of: folder, showHidden: showHidden)
-            if children.isEmpty {
-                Text("No folders")
-            }
-            ForEach(children, id: \.self) { child in
-                Button {
-                    go(child)
-                } label: {
-                    // Mark the folder that's on the current path.
-                    if current.isSameFile(as: child) || current.isInside(child) {
-                        Label(child.lastPathComponent, systemImage: "checkmark")
-                    } else {
-                        Text(child.lastPathComponent)
-                    }
-                }
-            }
+        Button {
+            FolderPopUp.show(Self.subfolders(of: folder, showHidden: showHidden), current: current, go: go)
         } label: {
             Image(systemName: "chevron.compact.right")
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
+        .buttonStyle(.borderless)
         .fixedSize()
         .help("Folders in \(folder.lastPathComponent.isEmpty ? "/" : folder.lastPathComponent)")
     }
@@ -166,5 +168,37 @@ private struct SubfolderMenu: View {
         .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
         .prefix(300)
         .map { $0 }
+    }
+}
+
+/// The subfolder menu, made when it's clicked and shown under the mouse.
+@MainActor private final class FolderPopUp: NSObject {
+    private let go: (URL) -> Void
+    private init(go: @escaping (URL) -> Void) { self.go = go }
+
+    static func show(_ folders: [URL], current: URL, go: @escaping (URL) -> Void) {
+        let target = FolderPopUp(go: go)
+        let menu = NSMenu()
+        if folders.isEmpty {
+            let none = NSMenuItem(title: "No folders", action: nil, keyEquivalent: "")
+            none.isEnabled = false
+            menu.addItem(none)
+        }
+        for folder in folders {
+            let item = NSMenuItem(title: folder.lastPathComponent, action: #selector(pick(_:)), keyEquivalent: "")
+            item.target = target
+            item.representedObject = folder
+            // Mark the folder that's on the current path.
+            if current.isSameFile(as: folder) || current.isInside(folder) { item.state = .on }
+            menu.addItem(item)
+        }
+        // popUp runs until the menu closes, so `target` lives long enough.
+        withExtendedLifetime(target) {
+            _ = menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        }
+    }
+
+    @objc private func pick(_ item: NSMenuItem) {
+        if let folder = item.representedObject as? URL { go(folder) }
     }
 }
