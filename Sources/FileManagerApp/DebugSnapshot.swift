@@ -10,16 +10,30 @@ import FileManagerCore
 /// which stops keys from arriving), "group:kind" (Group By), "tag:Red" (toggles a tag on the selection), "other" (later steps act on the other split pane), "select:name", "mouse:x/y" (a click at x/y points from the
 /// window's top-left; the PNG is at 2x), "click:list" (makes the file list
 /// first responder through AppKit, as a click does, without SwiftUI knowing) and "batch:find>replace" (a batch rename of the selection, as the
-/// Rename button in the sheet would run it). For checking the UI
-/// and for docs screenshots without screen-recording permission. See `just snapshot`.
+/// Rename button in the sheet would run it). FILEMANAGER_SNAPSHOT_APPEARANCE (dark/light),
+/// FILEMANAGER_SNAPSHOT_SIZE (1100x640), FILEMANAGER_SNAPSHOT_HOME (a folder shown as Home) and
+/// FILEMANAGER_SNAPSHOT_STAY (don't capture or quit) are for the README picture. For checking the UI and for docs screenshots without
+/// screen-recording permission. See `just snapshot` and `just screenshot`.
 @MainActor enum DebugSnapshot {
     static func runIfRequested() {
         guard let path = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT"] else { return }
         // Unbuffered, so the log shows how far a run got if it never finishes.
         setvbuf(stdout, nil, _IONBF, 0)
-        let start = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_FOLDER"]
+        let environment = ProcessInfo.processInfo.environment
+        let start = environment["FILEMANAGER_SNAPSHOT_FOLDER"]
+        // FILEMANAGER_SNAPSHOT_APPEARANCE=dark|light: whatever the Mac is set to.
+        switch environment["FILEMANAGER_SNAPSHOT_APPEARANCE"] {
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        default: break
+        }
         Task {
             try? await Task.sleep(for: .seconds(1))
+            // FILEMANAGER_SNAPSHOT_SIZE=1100x640: the window's size in points.
+            let size = (environment["FILEMANAGER_SNAPSHOT_SIZE"] ?? "").split(separator: "x").compactMap { Double($0) }
+            if size.count == 2, let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
+                window.setContentSize(NSSize(width: size[0], height: size[1]))
+            }
             // FILEMANAGER_SNAPSHOT_FOLDER: open this folder first (BrowserWindow listens).
             if let start {
                 NotificationCenter.default.post(name: .debugNavigate, object: URL(fileURLWithPath: start))
@@ -74,6 +88,12 @@ import FileManagerCore
                     postKey(String(chord))
                 }
                 try? await Task.sleep(for: .seconds(1))
+            }
+            // FILEMANAGER_SNAPSHOT_STAY=1: leave the window up to be screenshotted by hand (drawing
+            // it here loses the sidebar's Liquid Glass vibrancy: rows come out dim or black).
+            if environment["FILEMANAGER_SNAPSHOT_STAY"] != nil {
+                print("snapshot: staying open")
+                return
             }
             capture(to: path)
             if let model = ActiveBrowser.shared.model {

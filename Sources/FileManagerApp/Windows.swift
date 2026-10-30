@@ -48,6 +48,9 @@ final class Windows {
     nonisolated static let isSnapshotRun = ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT"] != nil
     /// The demo folder a snapshot run works in.
     nonisolated static let snapshotFolder = isSnapshotRun ? ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_FOLDER"] : nil
+    /// A sample folder that stands in for Home (`just screenshot`), so the address bar and
+    /// sidebar show it rather than yours.
+    nonisolated static let snapshotHome = isSnapshotRun ? ProcessInfo.processInfo.environment["FILEMANAGER_SNAPSHOT_HOME"] : nil
 
     // MARK: Registration
 

@@ -74,7 +74,7 @@ final class BrowserModel {
     /// Tabs and windows opened from this pane belong to the window's main pane.
     var windowID: UUID { hostID ?? id }
 
-    let home = FileManager.default.homeDirectoryForCurrentUser
+    let home = Windows.snapshotHome.map { URL(filePath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser
     /// Selected once the next load shows them (new, pasted or renamed items).
     private var pendingSelection: Set<URL> = []
     private var pendingRename: URL?

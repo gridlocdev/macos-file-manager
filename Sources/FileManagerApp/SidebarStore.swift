@@ -17,6 +17,12 @@ final class SidebarStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        // Snapshot runs start from the standard sidebar, not yours.
+        guard !Windows.isSnapshotRun else {
+            pins = PinnedFolders(paths: Self.defaultPins())
+            recent = RecentFolders()
+            return
+        }
         pins = defaults.data(forKey: Self.pinsKey).flatMap { try? JSONDecoder().decode(PinnedFolders.self, from: $0) }
             ?? PinnedFolders(paths: Self.defaultPins())
         recent = defaults.data(forKey: Self.recentKey).flatMap { try? JSONDecoder().decode(RecentFolders.self, from: $0) }
@@ -25,10 +31,10 @@ final class SidebarStore {
 
     /// Home, Desktop, Documents, Downloads, Applications and iCloud Drive (if signed in).
     static func defaultPins() -> [String] {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let home = Windows.snapshotHome ?? FileManager.default.homeDirectoryForCurrentUser.path
         var paths = [home, home + "/Desktop", home + "/Documents", home + "/Downloads", "/Applications"]
         let iCloud = home + "/Library/Mobile Documents/com~apple~CloudDocs"
-        if FileManager.default.fileExists(atPath: iCloud) { paths.append(iCloud) }
+        if !Windows.isSnapshotRun, FileManager.default.fileExists(atPath: iCloud) { paths.append(iCloud) }
         return paths
     }
 

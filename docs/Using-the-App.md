@@ -3,7 +3,7 @@
 Each File Manager tab shows one folder. Open a new tab with **Cmd+T** and a new window with
 **Cmd+N**; see [Tabs and windows](Tabs-and-Windows.md).
 
-![File Manager window with hidden files shown](images/window.webp)
+![File Manager window in dark mode showing the Documents folder](images/window.webp)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐

@@ -353,7 +353,7 @@ background, so tests wait with `eventually { … }`.
 
 Debug builds have a hook (`DebugSnapshot.swift`) that draws the window into a PNG, prints the
 whole menu bar with shortcuts and enabled state, and quits. It works without screen-recording
-permission, so it's also how the docs screenshot is made. The output ends with which view has the keyboard focus:
+permission. The output ends with which view has the keyboard focus:
 
 ```bash
 just snapshot                                    # build/snapshot.png of a demo folder
@@ -381,6 +381,16 @@ folder (`build/snapshot-demo`) is recreated each run, and the hook refuses to pr
 once the window has left it, so a test can't touch real files. Undoing a copy or a new folder
 moves it to the real Trash. The app is launched with `open`, so it becomes the active app; Cmd shortcuts only
 reach the menu bar of the active app.
+
+### The README picture
+
+`just screenshot` makes a sample home folder (`build/screenshot/alex`, with Documents full of
+made-up files), opens it in dark mode at 1100×620 and leaves the window up. The sidebar and
+address bar show the sample folder as Home, so none of your own folders or names appear. Take
+the picture yourself (Shift+Cmd+4, Space, then Opt-click the window to leave out its shadow),
+quit the app, and run `just screenshot-save <file.png>` to write `docs/images/window.webp`. The
+snapshot hook can't draw it: the sidebar's Liquid Glass rows come out dim or black in an
+image drawn by the app.
 
 ## App icon
 

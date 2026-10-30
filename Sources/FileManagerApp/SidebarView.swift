@@ -48,11 +48,14 @@ struct SidebarView: View {
                         }
                     }
                 }
-                Section("Locations") {
-                    ForEach(volumes) { volume in
-                        FolderNode(
-                            url: volume.url, title: volume.name, symbol: volume.symbol, section: .tree,
-                            tree: tree, model: model, eject: volume.isEjectable ? { eject(volume) } : nil)
+                // Empty only in snapshot runs, which leave disks alone.
+                if !volumes.isEmpty {
+                    Section("Locations") {
+                        ForEach(volumes) { volume in
+                            FolderNode(
+                                url: volume.url, title: volume.name, symbol: volume.symbol, section: .tree,
+                                tree: tree, model: model, eject: volume.isEjectable ? { eject(volume) } : nil)
+                        }
                     }
                 }
                 Section("Folders") {
