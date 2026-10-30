@@ -62,7 +62,8 @@ struct SidebarView: View {
             .listStyle(.sidebar)
             .onChange(of: model.url, initial: true) {
                 tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url))
-                scroller.scrollTo(SidebarTag(section: .tree, path: model.url.path))
+                // To the highlighted row: a pinned folder's own row, not its place in the tree.
+                if let tag = selectionBinding.wrappedValue { scroller.scrollTo(tag) }
             }
             .onChange(of: volumes) { tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url)) }
             .onChange(of: model.listingVersion) { tree.forget(model.url) }
@@ -86,6 +87,7 @@ struct SidebarView: View {
             .modifier(SidebarHover())
             .background { if draggable { Color.clear.fadedDragImage(title: title, symbol: symbol) } }
             .tag(SidebarTag(section: section, path: url.path))
+            .id(SidebarTag(section: section, path: url.path))
             .folderDropTarget(url, model: model)
     }
 
