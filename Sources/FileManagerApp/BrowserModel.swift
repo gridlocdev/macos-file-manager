@@ -455,7 +455,8 @@ final class BrowserModel {
     /// Called by the list when editing ends. Returns false (and explains) if the name can't be used.
     func commitRename(_ item: URL, to newName: String) {
         let oldName = item.lastPathComponent
-        guard newName != oldName, newName != FileManager.default.displayName(atPath: item.path) else { return }
+        // The field edits the real name (with the extension), so only that counts as unchanged.
+        guard newName != oldName else { return }
         if let problem = FileNaming.problem(with: newName) {
             presenter.showProblem("Can't rename “\(oldName)”", detail: problem)
             return

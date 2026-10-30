@@ -143,6 +143,18 @@ import Testing
         #expect(sandbox.presenter.problems.isEmpty)
     }
 
+    @Test func renameCanDropAHiddenExtension() async throws {
+        var notes = sandbox.root.appending(path: "notes.txt")
+        var values = URLResourceValues()
+        values.hasHiddenExtension = true
+        try notes.setResourceValues(values)
+        #expect(FileManager.default.displayName(atPath: notes.path) == "notes")
+        let model = try await started()
+        model.commitRename(notes.normalized, to: "notes")
+        try await eventually { sandbox.exists("notes") }
+        #expect(!sandbox.exists("notes.txt"))
+    }
+
     @Test func findFiltersAndEndSearchRestores() async throws {
         let model = try await started()
         model.perform(.find)
