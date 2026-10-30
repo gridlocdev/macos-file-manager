@@ -31,10 +31,13 @@ public enum ConflictResolution: Sendable { case replace, skip, keepBoth }
 
 public enum TransferError: Error, Equatable, LocalizedError {
     case intoItself(String)
+    /// Replace would trash the folder the item being moved or copied is in.
+    case replacesItsOwnFolder(String)
 
     public var errorDescription: String? {
         switch self {
         case .intoItself(let name): "“\(name)” can't be moved or copied into itself."
+        case .replacesItsOwnFolder(let name): "“\(name)” can't be replaced by an item inside it."
         }
     }
 }
@@ -89,7 +92,7 @@ public struct TransferPlanner {
                 state.plan.results.append(target)
                 continue
             }
-            if let target = place(source, entry, at: folder.appendingPathComponent(source.lastPathComponent), &state) {
+            if let target = try place(source, entry, at: folder.appendingPathComponent(source.lastPathComponent), &state) {
                 state.plan.results.append(target)
             }
         }
@@ -110,7 +113,7 @@ public struct TransferPlanner {
     }
 
     /// Returns where the item ends up, or nil if skipped.
-    private func place(_ source: URL, _ entry: FileTreeEntry, at target: URL, _ state: inout State) -> URL? {
+    private func place(_ source: URL, _ entry: FileTreeEntry, at target: URL, _ state: inout State) throws -> URL? {
         if state.created.contains(target) {
             // Two pasted items with the same name (from different folders): keep both.
             return placeRenamed(source, entry, target, &state)
@@ -123,7 +126,7 @@ public struct TransferPlanner {
             // Merge, like Explorer and Linux (Finder would replace the folder).
             for child in tree.children(of: source) {
                 guard let childEntry = tree.entry(at: child) else { continue }
-                _ = place(child, childEntry, at: target.appendingPathComponent(child.lastPathComponent), &state)
+                _ = try place(child, childEntry, at: target.appendingPathComponent(child.lastPathComponent), &state)
             }
             if state.mode == .move { state.add(.removeEmptyFolder(source), units: 1) }
             return target
@@ -134,6 +137,9 @@ public struct TransferPlanner {
         case .skip:
             return nil
         case .replace:
+            if source.path.hasPrefix(target.path + "/") {
+                throw TransferError.replacesItsOwnFolder(target.lastPathComponent)
+            }
             state.add(.trash(target), units: 1)
             state.add(transfer(source, target, state.mode), units: units(source, entry), creating: target)
             return target

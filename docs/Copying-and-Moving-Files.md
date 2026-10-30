@@ -52,7 +52,9 @@ Linux: everything inside is added to the existing folder, and you're only asked 
 clash. Finder does it differently: it replaces the whole folder. After a merged move, the
 original folder is removed if it ended up empty.
 
-You can't copy or move a folder into itself or into one of its own subfolders.
+You can't copy or move a folder into itself or into one of its own subfolders. Nor can you
+Replace the folder an item is in with that item (pasting `Docs/Docs` next to `Docs`): choose
+Keep Both instead.
 
 ## New folders and files
 

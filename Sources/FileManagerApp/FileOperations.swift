@@ -145,11 +145,17 @@ final class FileOperations {
             await self.ask(conflict, mode: mode, remaining: remaining, window: window)
         }
         guard let resolved = await ConflictQuestions.answers(for: conflicts, ask: ask) else { return [] }
-        guard let plan = try? await Task.detached(operation: {
-            try TransferPlanner(tree: DiskFileTree()).plan(sources, into: folder, mode: mode) {
-                resolved[$0.destination] ?? .skip
-            }
-        }).value else { return [] }
+        let plan: TransferPlan
+        do {
+            plan = try await Task.detached {
+                try TransferPlanner(tree: DiskFileTree()).plan(sources, into: folder, mode: mode) {
+                    resolved[$0.destination] ?? .skip
+                }
+            }.value
+        } catch {
+            showError(error, title: mode == .copy ? "Can't copy" : "Can't move", window: window)
+            return []
+        }
 
         let verb = mode == .copy ? "Copying" : "Moving"
         let what = sources.count == 1 ? "“\(sources[0].lastPathComponent)”" : "\(sources.count) items"

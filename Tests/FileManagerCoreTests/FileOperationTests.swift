@@ -141,6 +141,14 @@ struct FakeTree: FileTree {
         }
     }
 
+    @Test func refusesToReplaceTheFolderTheSourceIsIn() {
+        // /a/Docs/Docs pasted into /a lands on the folder it's in; Replace would trash it first.
+        let tree = FakeTree(["/a/Docs/Docs": 1])
+        #expect(throws: TransferError.replacesItsOwnFolder("Docs")) {
+            try TransferPlanner(tree: tree).plan([u("/a/Docs/Docs")], into: u("/a"), mode: .move) { _ in .replace }
+        }
+    }
+
     @Test func sameNameFromTwoFoldersKeepsBoth() throws {
         let tree = FakeTree(["/a/x.txt": 1, "/c/x.txt": 1, "/b/": 0])
         let plan = try TransferPlanner(tree: tree).plan([u("/a/x.txt"), u("/c/x.txt")], into: u("/b"), mode: .copy) {
