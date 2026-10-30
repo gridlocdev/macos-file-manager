@@ -103,12 +103,20 @@ final class FolderSearch {
         let real = root.realPath
         var batch: [FileItem] = []
         var lastSend = Date()
-        let now = Date()
+        let matches = criteria.matcher()
+        let byName = !NamePattern(criteria.text).isEmpty
         while let url = enumerator.nextObject() as? URL {
             if Task.isCancelled { return }
+            // A file whose name can't match is skipped before its full details (display name,
+            // tags) are read. Folders can show a localized name, so they're always read.
+            if byName, !criteria.mightMatch(fileNamed: url.lastPathComponent),
+                (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory != true
+            {
+                continue
+            }
             let item = DirectoryLoader.item(
                 url, showAllExtensions: showAllExtensions, shownAs: url.replacingFolder(real, with: root))
-            if criteria.matches(item, now: now) { batch.append(item) }
+            if matches(item) { batch.append(item) }
             if !batch.isEmpty, batch.count >= 200 || Date().timeIntervalSince(lastSend) > 0.25 {
                 send(batch)
                 batch = []
@@ -154,10 +162,12 @@ final class FolderSearch {
         let root = root, criteria = criteria, showHidden = showHidden, showAllExtensions = showAllExtensions
         let found = paths
         tasks.append(Task {
-            let items = await Task.detached(priority: .userInitiated) {
+            let work = Task.detached(priority: .userInitiated) {
                 Self.spotlightItems(
                     found, root: root, criteria: criteria, showHidden: showHidden, showAllExtensions: showAllExtensions)
-            }.value
+            }
+            // Cancelling the search stops the detached work too.
+            let items = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
             if !Task.isCancelled { deliver(items) }
             finishedOne()
         })
@@ -172,9 +182,9 @@ final class FolderSearch {
         let real = root.realPath
         let rootPath = real.path == "/" ? "" : real.path
         var isPackage: [String: Bool] = [:]
-        let now = Date()
+        let matches = criteria.matcher()
         return paths.compactMap { path in
-            guard path.hasPrefix(rootPath + "/") else { return nil }
+            guard !Task.isCancelled, path.hasPrefix(rootPath + "/") else { return nil }
             let relative = path.dropFirst(rootPath.count + 1).split(separator: "/")
             if !showHidden, relative.contains(where: { $0.hasPrefix(".") }) { return nil }
             var folder = rootPath
@@ -191,7 +201,7 @@ final class FolderSearch {
             let item = DirectoryLoader.item(
                 url, showAllExtensions: showAllExtensions, shownAs: url.replacingFolder(real, with: root))
             if !showHidden, item.isHidden { return nil }
-            return criteria.matches(item, now: now) ? item : nil
+            return matches(item) ? item : nil
         }
     }
 

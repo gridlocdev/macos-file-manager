@@ -197,24 +197,35 @@ public struct SearchCriteria: Hashable, Sendable {
     }
 
     public func matches(_ item: FileItem, now: Date = Date(), calendar: Calendar = .current) -> Bool {
-        guard NamePattern(text).matches(item.name), kind.matches(item), size.matches(item), hasTag(item)
-        else { return false }
-        if let start = date.start(now: now, calendar: calendar) {
-            guard let modified = item.modified, modified >= start else { return false }
-        }
-        return true
+        matcher(now: now, calendar: calendar)(item)
     }
 
-    /// Filters a list (makes the name pattern once).
-    public func filter(_ items: [FileItem], now: Date = Date(), calendar: Calendar = .current) -> [FileItem] {
-        guard !isEmpty else { return items }
+    /// The test `matches` makes, with the name pattern and date worked out once, for checking
+    /// many items (a filter, a walk through a folder tree).
+    public func matcher(now: Date = Date(), calendar: Calendar = .current) -> @Sendable (FileItem) -> Bool {
         let pattern = NamePattern(text)
         let start = date.start(now: now, calendar: calendar)
-        return items.filter { item in
-            guard pattern.matches(item.name), kind.matches(item), size.matches(item), hasTag(item) else { return false }
+        let criteria = self
+        return { item in
+            guard pattern.matches(item.name), criteria.kind.matches(item), criteria.size.matches(item),
+                criteria.hasTag(item)
+            else { return false }
             if let start { return (item.modified ?? .distantPast) >= start }
             return true
         }
+    }
+
+    /// Whether a file (not a folder) with this name on disk could match, before reading anything
+    /// else about it: it's shown by its name, or without its extension when that's hidden.
+    public func mightMatch(fileNamed name: String) -> Bool {
+        let pattern = NamePattern(text)
+        return pattern.matches(name) || pattern.matches((name as NSString).deletingPathExtension)
+    }
+
+    /// Filters a list.
+    public func filter(_ items: [FileItem], now: Date = Date(), calendar: Calendar = .current) -> [FileItem] {
+        guard !isEmpty else { return items }
+        return items.filter(matcher(now: now, calendar: calendar))
     }
 }
 

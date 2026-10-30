@@ -212,3 +212,14 @@ import Testing
         #expect(BatchRename.moves(entries).map(\.to.lastPathComponent) == ["A.txt"])
     }
 }
+
+@Suite struct SearchPrefilterTests {
+    @Test func filesWhoseNameCantMatchAreSkippedEarly() {
+        let criteria = SearchCriteria(text: "report")
+        #expect(criteria.mightMatch(fileNamed: "Report 2024.pdf"))
+        #expect(!criteria.mightMatch(fileNamed: "notes.txt"))
+        // "*.pdf" also matches with the extension hidden ("Report" shown): the name on disk counts.
+        #expect(SearchCriteria(text: "*.pdf").mightMatch(fileNamed: "Report.pdf"))
+        #expect(SearchCriteria(text: "report").mightMatch(fileNamed: "report.txt"))
+    }
+}
