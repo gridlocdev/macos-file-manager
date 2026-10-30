@@ -92,7 +92,7 @@ final class FolderSearch {
         })
     }
 
-    private nonisolated static func walk(
+    nonisolated static func walk(
         _ root: URL, criteria: SearchCriteria, showHidden: Bool, showAllExtensions: Bool, send: ([FileItem]) -> Void
     ) {
         var options: FileManager.DirectoryEnumerationOptions = [.skipsPackageDescendants]
@@ -100,7 +100,7 @@ final class FolderSearch {
         guard let enumerator = FileManager.default.enumerator(
             at: root, includingPropertiesForKeys: DirectoryLoader.keys, options: options, errorHandler: { _, _ in true })
         else { return }
-        let real = root.resolvingSymlinksInPath()
+        let real = root.realPath
         var batch: [FileItem] = []
         var lastSend = Date()
         let now = Date()
@@ -169,7 +169,7 @@ final class FolderSearch {
         _ paths: [String], root: URL, criteria: SearchCriteria, showHidden: Bool, showAllExtensions: Bool
     ) -> [FileItem] {
         // Spotlight reports real paths; a root reached through a symlink is matched by its real one.
-        let real = root.resolvingSymlinksInPath()
+        let real = root.realPath
         let rootPath = real.path == "/" ? "" : real.path
         var isPackage: [String: Bool] = [:]
         let now = Date()

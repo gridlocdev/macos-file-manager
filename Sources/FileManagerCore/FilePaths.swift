@@ -34,6 +34,15 @@ extension URL {
         return new.appending(path: String(path.dropFirst(base.count + 1))).normalized
     }
 
+    /// The path with every symlink followed, as the file system reports it (/tmp is
+    /// /private/tmp). Unlike `resolvingSymlinksInPath()`, which turns /private/tmp back into
+    /// /tmp. Reads the disk; itself if the path doesn't exist.
+    public var realPath: URL {
+        guard let resolved = realpath(path, nil) else { return normalized }
+        defer { free(resolved) }
+        return URL(filePath: String(cString: resolved), directoryHint: .notDirectory)
+    }
+
     /// The top of the startup disk, "/".
     public var isFileSystemRoot: Bool { path == "/" }
 

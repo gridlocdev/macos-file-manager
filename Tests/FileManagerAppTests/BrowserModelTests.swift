@@ -176,6 +176,21 @@ import Testing
     }
 }
 
+@MainActor @Suite struct FolderSearchTests {
+    let sandbox: Sandbox
+    init() throws { sandbox = try Sandbox() }
+
+    @Test func walkListsItemsUnderTheFolderAsOpened() {
+        // The sandbox is in /var/folders, really /private/var/folders.
+        #expect(!sandbox.root.path.hasPrefix("/private/"))
+        var found: [URL] = []
+        FolderSearch.walk(sandbox.root, criteria: SearchCriteria(text: "plan"), showHidden: false, showAllExtensions: false) {
+            found += $0.map(\.url)
+        }
+        #expect(found == [sandbox.root.appending(path: "Projects/plan.txt")])
+    }
+}
+
 @MainActor @Suite struct FileOperationsTests {
     let sandbox: Sandbox
     init() throws { sandbox = try Sandbox() }

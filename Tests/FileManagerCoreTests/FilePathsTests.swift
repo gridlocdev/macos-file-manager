@@ -36,6 +36,13 @@ import Testing
         #expect(URL(filePath: "/private/tmpfile").replacingFolder(real, with: shown).path == "/private/tmpfile")
     }
 
+    @Test func realPath() {
+        #expect(URL(filePath: "/tmp").realPath.path == "/private/tmp")
+        #expect(URL(filePath: "/tmp/").realPath.path == "/private/tmp")
+        #expect(URL(filePath: "/Users").realPath.path == "/Users")
+        #expect(URL(filePath: "/no/such/place").realPath.path == "/no/such/place")
+    }
+
     @Test func root() {
         #expect(URL(filePath: "/").isFileSystemRoot)
         #expect(!URL(filePath: "/Users").isFileSystemRoot)
