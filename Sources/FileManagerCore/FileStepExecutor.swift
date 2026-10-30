@@ -131,7 +131,14 @@ public struct FileStepExecutor: Sendable {
         if from.path != to.path, from.path.lowercased() == to.path.lowercased() {
             let temp = from.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString)")
             try fm.moveItem(at: from, to: temp)
-            try fm.moveItem(at: temp, to: to)
+            do {
+                try fm.moveItem(at: temp, to: to)
+            } catch {
+                // On a case-sensitive disk the new name can be another item: put this one back
+                // rather than leave it under the hidden temporary name.
+                try? fm.moveItem(at: temp, to: from)
+                throw error
+            }
             return
         }
         let parent = to.deletingLastPathComponent()

@@ -457,8 +457,9 @@ final class BrowserModel {
             return
         }
         let target = item.deletingLastPathComponent().appendingPathComponent(newName)
-        let caseChangeOnly = newName.lowercased() == oldName.lowercased()
-        if !caseChangeOnly, FileManager.default.fileExists(atPath: target.path) {
+        // A change of case finds the item itself on a case-insensitive disk; on a case-sensitive
+        // one the new name can be another item.
+        if FileManager.default.fileExists(atPath: target.path), !target.isSameItem(as: item) {
             presenter.showProblem("Can't rename “\(oldName)”", detail: "There's already an item named “\(newName)” here.")
             return
         }
