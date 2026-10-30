@@ -166,6 +166,14 @@ import Testing
         #expect(!clipboard.isCut && clipboard.fileURLs.isEmpty)
     }
 
+    @Test func changesInTheFolderShowUpAgainAndAgain() async throws {
+        let model = try await started()
+        for name in ["new1.txt", "new2.txt"] {
+            try Data().write(to: sandbox.root.appending(path: name))
+            try await eventually { sandbox.names(model).contains(name) }
+        }
+    }
+
     @Test func findFiltersAndEndSearchRestores() async throws {
         let model = try await started()
         model.perform(.find)

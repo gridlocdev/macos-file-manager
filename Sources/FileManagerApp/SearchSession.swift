@@ -53,6 +53,8 @@ final class SearchSession {
 
     /// Starts the subfolder search again (the folder changed, or hidden files were toggled).
     func restart() {
+        // A typing pause still waiting would start the same walk a second time.
+        delay?.cancel()
         stop(keepingResults: true)
         resultsAreStale = true
         isSearching = true

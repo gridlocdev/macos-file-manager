@@ -540,7 +540,10 @@ final class BrowserModel {
 
     private func load(keepSelection: Bool = false) {
         guard !stopped else { return }
-        listing.load(url, showAllExtensions: services.preferences.showAllExtensions, changed: { [weak self] in self?.refresh() }) { [weak self] in
+        // A change in the folder reloads its listing. A subfolder search isn't started again: it
+        // would never finish while something keeps writing here, and the watcher only sees
+        // this folder anyway.
+        listing.load(url, showAllExtensions: services.preferences.showAllExtensions, changed: { [weak self] in self?.load(keepSelection: true) }) { [weak self] in
             self?.listed(keepSelection: keepSelection)
         }
     }

@@ -29,10 +29,17 @@ final class FolderListing {
             // Another folder: the last one's items mustn't stay up (or be acted on) meanwhile.
             items = []
             error = nil
+            watcher = nil
         }
         self.folder = folder
         isLoading = true
-        watcher = DirectoryWatcher(url: folder, onChange: changed)
+        // A refresh keeps watching with the watcher it has (opening one can stall on a network
+        // share). A change reported late, after moving on or stopping, is dropped.
+        if watcher == nil {
+            watcher = DirectoryWatcher(url: folder) { [weak self] in
+                if let self, self.folder == folder, watcher != nil { changed() }
+            }
+        }
         loadTask = Task {
             let result = await DirectoryLoader.list(folder, showAllExtensions: showAllExtensions)
             guard !Task.isCancelled else { return }
