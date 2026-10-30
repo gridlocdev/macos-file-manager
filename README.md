@@ -49,8 +49,6 @@ rename.
 - **Open Terminal Here** in Terminal, iTerm, Ghostty or any app you choose.
 - **A full menu bar** with every action and its shortcut, so nothing is hidden.
 
-Everything in [PLAN.md](PLAN.md) is built, apart from dropping files onto a tab.
-
 ## Requirements
 
 macOS 27 or later.

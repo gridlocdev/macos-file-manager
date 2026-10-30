@@ -1,7 +1,7 @@
 # macos-file-manager
 
 macOS file manager with Explorer/Linux keybindings (SwiftPM, no Xcode project). App name in the
-menu bar: "File Manager". Users: README.md and docs/. Roadmap: PLAN.md. Technical overview:
+menu bar: "File Manager". Users: README.md and docs/. Technical overview:
 docs/Developer-Guide.md.
 
 - Build with `xcrun swift build` / `just …`, never bare `swift` (swiftly toolchain breaks on the current SDK).

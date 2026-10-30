@@ -2,7 +2,7 @@
 
 File Manager is Swift 6 and SwiftUI, built with Swift Package Manager. There's no Xcode project:
 you can work in VS Code, or any editor, and build from the command line. The rules in
-`CLAUDE.md` at the repository root apply to everyone working on it. `PLAN.md` has the roadmap.
+`CLAUDE.md` at the repository root apply to everyone working on it.
 
 ## Getting set up
 
