@@ -61,8 +61,20 @@ import Testing
             return conflict.destination.lastPathComponent == "a" ? (.skip, false) : (.replace, true)
         }
         #expect(asked == 2)
-        #expect(answers?[URL(filePath: "/dst/a")] == .skip)
-        #expect(answers?[URL(filePath: "/dst/c")] == .replace)
+        #expect(answers?[conflicts[0]] == .skip)
+        #expect(answers?[conflicts[2]] == .replace)
+    }
+
+    @Test func twoItemsLandingOnOneNameGetTheirOwnAnswers() throws {
+        // x.txt from /a and from /c both clash with /b/x.txt: skip the first, keep both for the second.
+        let tree = FakeTree(["/a/x.txt": 1, "/c/x.txt": 1, "/b/x.txt": 1])
+        let planner = TransferPlanner(tree: tree)
+        let sources = [URL(filePath: "/a/x.txt"), URL(filePath: "/c/x.txt")]
+        let conflicts = try planner.conflicts(sources, into: URL(filePath: "/b"), mode: .copy)
+        #expect(conflicts.count == 2)
+        let answers: [TransferConflict: ConflictResolution] = [conflicts[0]: .skip, conflicts[1]: .keepBoth]
+        let plan = try planner.plan(sources, into: URL(filePath: "/b"), mode: .copy) { answers[$0] ?? .skip }
+        #expect(plan.steps == [.copy(URL(filePath: "/c/x.txt"), to: URL(filePath: "/b/x (2).txt"))])
     }
 
     @Test func stopReturnsNil() async {

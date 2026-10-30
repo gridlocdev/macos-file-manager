@@ -213,21 +213,22 @@ public enum ConflictQuestions {
     public typealias Answer = (resolution: ConflictResolution, applyToRest: Bool)?
 
     /// Asks `ask` about each conflict (with how many come after it) until one is answered for
-    /// the rest. Nil if the user stopped.
+    /// the rest. Nil if the user stopped. Answers are per conflict, not per destination: two
+    /// pasted items with the same name each get their own.
     public static func answers(
         for conflicts: [TransferConflict],
         isolation: isolated (any Actor)? = #isolation,
         ask: (TransferConflict, _ remaining: Int) async -> Answer
-    ) async -> [URL: ConflictResolution]? {
-        var answers: [URL: ConflictResolution] = [:]
+    ) async -> [TransferConflict: ConflictResolution]? {
+        var answers: [TransferConflict: ConflictResolution] = [:]
         var forAll: ConflictResolution?
         for (index, conflict) in conflicts.enumerated() {
             if let forAll {
-                answers[conflict.destination] = forAll
+                answers[conflict] = forAll
                 continue
             }
             guard let answer = await ask(conflict, conflicts.count - index - 1) else { return nil }
-            answers[conflict.destination] = answer.resolution
+            answers[conflict] = answer.resolution
             if answer.applyToRest { forAll = answer.resolution }
         }
         return answers

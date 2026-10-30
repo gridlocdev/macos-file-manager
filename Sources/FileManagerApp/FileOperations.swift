@@ -181,7 +181,8 @@ final class FileOperations {
         do {
             plan = try await Task.detached {
                 try TransferPlanner(tree: DiskFileTree()).plan(sources, into: folder, mode: mode) {
-                    resolved[$0.destination] ?? .skip
+                    // A conflict that wasn't there when asking (the folder changed meanwhile) is skipped.
+                    resolved[$0] ?? .skip
                 }
             }.value
         } catch {
