@@ -11,20 +11,27 @@ enum DirectoryLoader {
         .ubiquitousItemIsUploadingKey,
     ]
 
-    /// `showAllExtensions`: the Settings choice (see `name`).
+    /// `showAllExtensions`: the Settings choice (see `name`). Cancelling the calling task stops
+    /// the read between items (a folder replaced by another, or read again, mid-way).
     static func list(_ folder: URL, showAllExtensions: Bool) async -> Result<[FileItem], Error> {
-        await Task.detached(priority: .userInitiated) {
+        let read = Task.detached(priority: .userInitiated) { () -> Result<[FileItem], Error> in
             do {
                 let urls = try FileManager.default.contentsOfDirectory(
                     at: folder, includingPropertiesForKeys: keys, options: [])
-                // Under the folder's path as opened, not the real one if it's through a symlink.
-                return .success(urls.map {
-                    item($0, showAllExtensions: showAllExtensions, shownAs: folder.appending(path: $0.lastPathComponent))
-                })
+                var items: [FileItem] = []
+                items.reserveCapacity(urls.count)
+                for url in urls {
+                    if Task.isCancelled { return .failure(CancellationError()) }
+                    // Under the folder's path as opened, not the real one if it's through a symlink.
+                    items.append(
+                        item(url, showAllExtensions: showAllExtensions, shownAs: folder.appending(path: url.lastPathComponent)))
+                }
+                return .success(items)
             } catch {
                 return .failure(error)
             }
-        }.value
+        }
+        return await withTaskCancellationHandler { await read.value } onCancel: { read.cancel() }
     }
 
     /// `shownAs`: the URL the item is listed under, if not `url` (see `URL.replacingFolder`).
@@ -71,11 +78,11 @@ enum DirectoryLoader {
 
     /// With "Show all file extensions" on (the default), the real name ("notes.txt"); apps
     /// still drop ".app", as everywhere on a Mac. Off, Finder's choice for each file.
+    /// Finder's display name is a LaunchServices lookup, so it's only asked for when needed.
     private static func name(_ url: URL, isFolder: Bool, showAllExtensions: Bool) -> String {
-        let display = FileManager.default.displayName(atPath: url.path)
         guard showAllExtensions, !isFolder,
             url.pathExtension.lowercased() != "app", !url.pathExtension.isEmpty
-        else { return display }
+        else { return FileManager.default.displayName(atPath: url.path) }
         return url.lastPathComponent
     }
 }
