@@ -69,7 +69,7 @@ private struct ItemInfo: View {
         .formStyle(.grouped)
         .navigationTitle("\(url.lastPathComponent) Info")
         .task(id: url) {
-            guard info.isFolder else { return }
+            guard info.isDirectory else { return }
             size = nil
             let url = url
             let measured = await inBackground { FolderSize.measure(url) { Task.isCancelled } }
@@ -78,7 +78,7 @@ private struct ItemInfo: View {
     }
 
     private func sizeText(_ info: Details) -> String {
-        if !info.isFolder {
+        if !info.isDirectory {
             let bytes = info.size ?? 0
             return "\(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) (\(bytes.formatted()) bytes)"
         }
@@ -133,14 +133,19 @@ private struct SelectionInfo: View {
                 var sum = FolderSize()
                 for url in urls {
                     if Task.isCancelled { break }
-                    if Details(url).isFolder {
+                    let details = Details(url)
+                    if details.isDirectory {
                         let size = FolderSize.measure(url) { Task.isCancelled }
                         sum.bytes += size.bytes
                         sum.allocatedBytes += size.allocatedBytes
-                        sum.files += size.files
-                        sum.folders += size.folders + 1
+                        if details.isFolder {
+                            sum.files += size.files
+                            sum.folders += size.folders + 1
+                        } else {
+                            sum.files += 1  // An app or other package counts as one item.
+                        }
                     } else {
-                        sum.bytes += Details(url).size ?? 0
+                        sum.bytes += details.size ?? 0
                         sum.files += 1
                     }
                 }
@@ -162,6 +167,8 @@ private func inBackground<T: Sendable>(_ work: @escaping @Sendable () -> T) asyn
 private struct Details: Sendable {
     var kind = ""
     var isFolder = false
+    /// A folder or a package (an .app is a folder on disk, so its size has to be added up).
+    var isDirectory = false
     var isHidden = false
     var size: Int64?
     var created: Date?
@@ -179,7 +186,8 @@ private struct Details: Sendable {
         ]
         let values = try? url.resourceValues(forKeys: keys)
         kind = values?.localizedTypeDescription ?? ""
-        isFolder = values?.isDirectory == true && values?.isPackage != true
+        isDirectory = values?.isDirectory == true
+        isFolder = isDirectory && values?.isPackage != true
         isHidden = values?.isHidden ?? false
         size = values?.fileSize.map(Int64.init)
         created = values?.creationDate
