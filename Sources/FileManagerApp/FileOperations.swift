@@ -251,7 +251,7 @@ final class FileOperations {
                 let names = Set((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
                 target = folder.appendingPathComponent(FileNaming.keepBoth(original.lastPathComponent, existing: names))
             }
-            steps.append(.move(item, to: target))
+            steps.append(.restore(item, to: target))
         }
         if !unknown.isEmpty {
             let alert = NSAlert()
@@ -327,7 +327,8 @@ final class TrashLog {
             case .trashed(let original, let trashURL):
                 originals[trashURL.standardizedFileURL.path] = original.standardizedFileURL.path
                 changed = true
-            case .moved(let from, _) where originals[from.standardizedFileURL.path] != nil:
+            case .moved(let from, _) where originals[from.standardizedFileURL.path] != nil,
+                .restored(let from, _) where originals[from.standardizedFileURL.path] != nil:
                 originals[from.standardizedFileURL.path] = nil
                 changed = true
             default:

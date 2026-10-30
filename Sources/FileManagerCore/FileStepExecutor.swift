@@ -68,6 +68,9 @@ public struct FileStepExecutor: Sendable {
                 case .move(let from, let to):
                     try move(from, to)
                     outcome.executed.append(.moved(from, to: to))
+                case .restore(let from, let to):
+                    try move(from, to)
+                    outcome.executed.append(.restored(from, to: to))
                 case .createFolder(let url):
                     try fm.createDirectory(at: url, withIntermediateDirectories: false)
                     outcome.executed.append(.createdFolder(url))

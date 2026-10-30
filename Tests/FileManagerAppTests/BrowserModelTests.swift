@@ -236,6 +236,20 @@ import Testing
         #expect(sandbox.exists("Receipts/notes.txt"))
     }
 
+    @Test func redoOfATrashTrashesAgain() async throws {
+        let ops = sandbox.services.operations
+        let notes = sandbox.root.appending(path: "notes.txt")
+        let trash = sandbox.root.appending(path: "Trash")
+        await ops.run("Move to Trash", steps: [.trash(notes)], window: nil)
+        _ = await ops.undo(window: nil)
+        #expect(sandbox.exists("notes.txt"))
+        _ = await ops.redo(window: nil)
+        let trashed = try FileManager.default.contentsOfDirectory(at: trash, includingPropertiesForKeys: nil)
+        #expect(trashed.count == 1)
+        // Put Back still knows where it came from.
+        #expect(trashed.first.flatMap { ops.trashLog.original(of: $0) }?.path == notes.path)
+    }
+
     @Test func anUndoThatStopsKeepsTheRest() async throws {
         let ops = sandbox.services.operations
         let fm = FileManager.default

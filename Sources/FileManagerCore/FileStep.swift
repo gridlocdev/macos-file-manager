@@ -8,6 +8,9 @@ public enum FileStep: Hashable, Sendable {
     case createFolder(URL)
     case createFile(URL)
     case trash(URL)
+    /// Moves an item out of the Trash (Put Back, or undoing a trash). Undone by trashing it
+    /// again, so it gets a fresh place in the Trash and Put Back still works.
+    case restore(URL, to: URL)
     /// Removes a folder only if it's empty (the source of a merged move). Not an error otherwise.
     case removeEmptyFolder(URL)
     /// Permanent. Can't be undone.
@@ -25,7 +28,7 @@ extension FileStep {
     /// The item being worked on, for progress text.
     public var subject: URL {
         switch self {
-        case .copy(let url, _), .move(let url, _), .createFolder(let url), .createFile(let url), .trash(let url),
+        case .copy(let url, _), .move(let url, _), .restore(let url, _), .createFolder(let url), .createFile(let url), .trash(let url),
             .removeEmptyFolder(let url), .delete(let url), .compress(_, let url), .extract(let url, _), .setTags(let url, _):
             url
         }
@@ -39,6 +42,7 @@ public enum ExecutedStep: Hashable, Sendable {
     case createdFolder(URL)
     case createdFile(URL)
     case trashed(URL, trashURL: URL)
+    case restored(URL, to: URL)
     case removedFolder(URL)
     case deleted(URL)
     case compressed(to: URL)
@@ -48,7 +52,7 @@ public enum ExecutedStep: Hashable, Sendable {
     /// The item this step created or put somewhere, if any.
     public var resultURL: URL? {
         switch self {
-        case .copied(_, let to), .moved(_, let to), .compressed(let to), .extracted(_, let to): to
+        case .copied(_, let to), .moved(_, let to), .restored(_, let to), .compressed(let to), .extracted(_, let to): to
         case .createdFolder(let url), .createdFile(let url), .tagged(let url, _, _): url
         case .trashed, .removedFolder, .deleted: nil
         }
@@ -67,7 +71,8 @@ public enum FileUndo {
             case .createdFolder(let url), .createdFile(let url), .compressed(let url), .extracted(_, let url):
                 steps.append(.trash(url))
             case .tagged(let url, let from, _): steps.append(.setTags(url, from))
-            case .trashed(let original, let trashURL): steps.append(.move(trashURL, to: original))
+            case .trashed(let original, let trashURL): steps.append(.restore(trashURL, to: original))
+            case .restored(_, let to): steps.append(.trash(to))
             case .removedFolder(let url): steps.append(.createFolder(url))
             case .deleted: return nil
             }

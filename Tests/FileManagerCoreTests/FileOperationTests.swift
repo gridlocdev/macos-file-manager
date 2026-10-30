@@ -175,8 +175,15 @@ struct FakeTree: FileTree {
                 .trash(u("/b/New Folder")),
                 .move(u("/b/y"), to: u("/a/y")),
                 .trash(u("/b/x")),
-                .move(u("/T/x"), to: u("/b/x")),
+                .restore(u("/T/x"), to: u("/b/x")),
             ])
+    }
+
+    @Test func undoingARestoreTrashesAgain() {
+        // Redo of a trash (undo of its undo) goes through the Trash, not to the old Trash path.
+        let restore = FileUndo.inverse(of: [.trashed(u("/b/x"), trashURL: u("/T/x"))])!
+        #expect(restore == [.restore(u("/T/x"), to: u("/b/x"))])
+        #expect(FileUndo.inverse(of: [.restored(u("/T/x"), to: u("/b/x"))]) == [.trash(u("/b/x"))])
     }
 
     @Test func permanentDeleteCantBeUndone() {
