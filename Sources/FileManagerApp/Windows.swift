@@ -186,7 +186,11 @@ final class Windows {
         var groupOrder: [ObjectIdentifier] = []
         var paths: [ObjectIdentifier: String] = [:]
         for id in order {
-            guard let model = entries[id]?.model, let window = model.window, window.isVisible else { continue }
+            // Minimized windows, and every window while the app is hidden, aren't visible but
+            // are still open.
+            guard let model = entries[id]?.model, let window = model.window,
+                window.isVisible || window.isMiniaturized || NSApp.isHidden
+            else { continue }
             paths[ObjectIdentifier(window)] = model.url.path
             let group = window.tabGroup
             let key = group.map { ObjectIdentifier($0) } ?? ObjectIdentifier(window)
