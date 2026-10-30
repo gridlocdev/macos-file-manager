@@ -72,9 +72,8 @@ private struct ItemInfo: View {
             guard info.isFolder else { return }
             size = nil
             let url = url
-            size = await Task.detached(priority: .utility) {
-                FolderSize.measure(url) { Task.isCancelled }
-            }.value
+            let measured = await inBackground { FolderSize.measure(url) { Task.isCancelled } }
+            if !Task.isCancelled { size = measured }
         }
     }
 
@@ -130,7 +129,7 @@ private struct SelectionInfo: View {
         .navigationTitle("\(urls.count) Items Info")
         .task(id: urls) {
             let urls = urls
-            total = await Task.detached(priority: .utility) {
+            let sum = await inBackground {
                 var sum = FolderSize()
                 for url in urls {
                     if Task.isCancelled { break }
@@ -146,9 +145,17 @@ private struct SelectionInfo: View {
                     }
                 }
                 return sum
-            }.value
+            }
+            if !Task.isCancelled { total = sum }
         }
     }
+}
+
+/// Runs `work` off the main actor, cancelled along with the calling task (a detached task on its
+/// own isn't), so sizing stops when the window closes.
+private func inBackground<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+    let task = Task.detached(priority: .utility, operation: work)
+    return await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
 }
 
 /// What Get Info shows about one item, read once.
