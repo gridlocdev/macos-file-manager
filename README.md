@@ -1,8 +1,14 @@
 # File Manager
 
-A file manager for Mac that works like Windows Explorer and Linux file managers: Backspace goes
-up a folder, F5 refreshes, you can type a path into the address bar, and Cut and Paste moves
-files. It uses Cmd where Windows and Linux use Ctrl, and keeps the Mac habits worth keeping.
+Manage your files on a Mac the way you would on Windows or Linux.
+
+Finder has its own patterns for moving around and working with files, and they take some
+getting used to. If you also use Windows Explorer or a Linux file manager like Nautilus or
+Dolphin, switching between the two means changing your muscle memory every time, which is a
+real challenge. File Manager brings those familiar patterns to the Mac, with the same keys and
+the same behaviour. It uses Cmd where Windows and Linux use Ctrl, and keeps the Mac conventions
+worth keeping. [Coming from Windows and Linux](docs/Coming-from-Windows-and-Linux.md) lists
+what carries over and what's different.
 
 ![File Manager in dark mode: a sidebar with pinned folders and a folder tree, back, forward and up buttons, an address bar reading ~ › Documents, and a details list of folders and files with their dates and kinds](docs/images/window.webp)
 
