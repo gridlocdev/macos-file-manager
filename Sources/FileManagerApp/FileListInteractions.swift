@@ -102,7 +102,7 @@ extension FileListView.Coordinator {
         table.quickLook.urls = { [unowned self] in model.selectedURLs }
         table.quickLook.frameOnScreen = { [unowned self, unowned table] url in
             guard let window = table.window, let row = row(of: url) else { return nil }
-            var rect = table.frameOfCell(atColumn: 0, row: row)
+            var rect = table.frameOfCell(atColumn: nameColumn(table), row: row)
             rect.size.width = rect.height
             return window.convertToScreen(table.convert(rect, to: nil))
         }
@@ -159,6 +159,11 @@ extension FileListView.Coordinator {
         return true
     }
 
+    /// Where the Name column is now: columns can be dragged into another order.
+    func nameColumn(_ table: NSTableView) -> Int {
+        max(table.column(withIdentifier: .init(FileSort.Column.name.rawValue)), 0)
+    }
+
     // MARK: Right-click menu
 
     /// Shift+F10: the menu for the selection, under the first selected row.
@@ -167,7 +172,7 @@ extension FileListView.Coordinator {
         let row = table.selectedRowIndexes.first ?? -1
         let point =
             row >= 0
-            ? NSPoint(x: table.frameOfCell(atColumn: 0, row: row).minX + 40, y: table.rect(ofRow: row).maxY)
+            ? NSPoint(x: table.frameOfCell(atColumn: nameColumn(table), row: row).minX + 40, y: table.rect(ofRow: row).maxY)
             : NSPoint(x: 40, y: table.visibleRect.minY + 30)
         contextMenu.fromKeyboard = true
         contextMenu.menu.popUp(positioning: nil, at: point, in: table)
