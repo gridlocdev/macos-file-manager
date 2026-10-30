@@ -54,4 +54,38 @@ import Testing
         #expect(URL(filePath: "/Volumes/Disk/.Trashes/501").isTrashFolder(home: home))
         #expect(!URL(filePath: "/Users/me/Trash").isTrashFolder(home: home))
     }
+
+    @Test func guardedFolders() {
+        let home = URL(filePath: "/Users/me")
+        #expect(URL(filePath: "/Users/me/Downloads").isGuardedFolder(home: home))
+        #expect(URL(filePath: "/Users/me/Desktop/").isGuardedFolder(home: home))
+        #expect(!URL(filePath: "/Users/me/Downloads/x").isGuardedFolder(home: home))
+        #expect(!URL(filePath: "/Users/me/src").isGuardedFolder(home: home))
+    }
+}
+
+@Suite struct FolderAccessTests {
+    let home = URL(filePath: "/Users/me")
+
+    @Test func guardedFoldersPointToTheirToggle() {
+        let help = FolderAccessHelp.help(
+            for: URL(filePath: "/Users/me/Downloads/old"), home: home, volume: .startup, isTrash: false)
+        #expect(help.pane == .filesAndFolders)
+        #expect(help.message.contains("“Downloads Folder”"))
+    }
+
+    @Test func drives() {
+        let help = FolderAccessHelp.help(for: URL(filePath: "/Volumes/share"), home: home, volume: .network, isTrash: false)
+        #expect(help.message.contains("“Network Volumes”"))
+    }
+
+    @Test func everythingElseNeedsFullDiskAccess() {
+        let trash = FolderAccessHelp.help(for: URL(filePath: "/Users/me/.Trash"), home: home, volume: .startup, isTrash: true)
+        #expect(trash.pane == .fullDiskAccess)
+        #expect(trash.message.contains("the Trash"))
+        let library = FolderAccessHelp.help(
+            for: URL(filePath: "/Users/me/Library/Mail"), home: home, volume: .startup, isTrash: false)
+        #expect(library.pane == .fullDiskAccess)
+        #expect(library.pane.settingsURL.absoluteString.hasSuffix("?Privacy_AllFiles"))
+    }
 }

@@ -78,7 +78,11 @@ struct SidebarView: View {
     }
 
     private func row(_ url: URL, section: SidebarTag.Section, symbol: String) -> some View {
-        Label(FileManager.default.displayName(atPath: url.path), systemImage: symbol)
+        // Desktop, Documents and Downloads by their own names: asking for the localized one
+        // can bring up macOS's folder-access prompt before they're opened.
+        Label(
+            url.isGuardedFolder(home: model.home) ? url.lastPathComponent : FileManager.default.displayName(atPath: url.path),
+            systemImage: symbol)
             .modifier(SidebarHover())
             .tag(SidebarTag(section: section, path: url.path))
             .folderDropTarget(url, model: model)

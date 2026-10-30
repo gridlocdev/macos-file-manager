@@ -59,8 +59,9 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   ServerAddress.swift          Connect to Server addresses (smb, \\server\share, nfs, WebDAV); recents
   Archive.swift                zip names; compress/extract with ditto (run by FileStepExecutor)
   ViewSettings.swift           FolderView (mode, sort, groups, zoom), FolderViewMemory, Grouping, ListRow
-  FilePaths.swift              URL identity: normalized, canonical, isSameFile, isInside, isTrashFolder;
-                               realPath and isSameItem (read the disk: symlinks, case)
+  FilePaths.swift              URL identity: normalized, canonical, isSameFile, isInside, isTrashFolder,
+                               isGuardedFolder; realPath and isSameItem (read the disk: symlinks, case)
+  FolderAccess.swift           FolderAccessHelp: which System Settings switch unblocks a folder (EPERM)
   FocusCycle.swift             F6 / Shift+F6 order: list → (right list) → address bar → sidebar
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
@@ -306,9 +307,12 @@ only sees entries added, removed or renamed, not edits inside files, and is kept
 folder changes.
 
 Icons: `IconCache.shared` holds per-type icons and up to 5000 per-item ones (folders, apps),
-read in the background with a generic icon meanwhile. Desktop, Documents, Downloads and the
-other TCC-guarded home folders never go to `icon(forFile:)`, which looks inside the folder and
-would raise the access prompt just for listing Home; their icons come from CoreTypes.bundle.
+read in the background with a generic icon meanwhile. Desktop, Documents and Downloads
+(`isGuardedFolder`) are asked nothing in Home beyond stat-level values. Reading their Finder tags
+(an extended attribute on the folder itself) is what raised the access prompt just for listing
+Home, found with a freshly signed probe app timing each lookup. Their kind, localized name, iCloud
+state and icon (from CoreTypes.bundle) are skipped too, to be safe: after the first prompt is
+answered, later lookups no longer prompt, so the probe couldn't clear them.
 iCloud items opened, downloaded or evicted are polled by `BrowserModel.watchDownloads` (the
 folder's watcher sees nothing) until they settle. The icon view's `ThumbnailCache` is an
 `NSCache` limited by pixel bytes, and cancels a thumbnail when its item scrolls out of view. The

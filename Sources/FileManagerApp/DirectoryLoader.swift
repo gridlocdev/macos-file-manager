@@ -3,21 +3,25 @@ import FileManagerCore
 
 /// Reads a folder off the main thread.
 enum DirectoryLoader {
-    static let keys: [URLResourceKey] = [
+    /// What's asked of Desktop, Documents and Downloads in Home (see `isGuardedFolder`).
+    static let basicKeys: [URLResourceKey] = [
         .isDirectoryKey, .isPackageKey, .isHiddenKey, .isSymbolicLinkKey,
-        .fileSizeKey, .contentModificationDateKey, .localizedTypeDescriptionKey,
-        .creationDateKey, .addedToDirectoryDateKey, .fileSecurityKey,
-        .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsDownloadingKey,
-        .ubiquitousItemIsUploadingKey,
+        .fileSizeKey, .contentModificationDateKey, .creationDateKey, .addedToDirectoryDateKey, .fileSecurityKey,
     ]
+    static let keys: [URLResourceKey] = basicKeys + [
+        .localizedTypeDescriptionKey, .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey,
+        .ubiquitousItemIsDownloadingKey, .ubiquitousItemIsUploadingKey,
+    ]
+    private static let home = FileManager.default.homeDirectoryForCurrentUser
 
     /// `showAllExtensions`: the Settings choice (see `name`). Cancelling the calling task stops
     /// the read between items (a folder replaced by another, or read again, mid-way).
     static func list(_ folder: URL, showAllExtensions: Bool) async -> Result<[FileItem], Error> {
         let read = Task.detached(priority: .userInitiated) { () -> Result<[FileItem], Error> in
             do {
+                // Home's prefetch would ask the guarded folders everything; the rest is read per item.
                 let urls = try FileManager.default.contentsOfDirectory(
-                    at: folder, includingPropertiesForKeys: keys, options: [])
+                    at: folder, includingPropertiesForKeys: folder.isSameFile(as: home) ? basicKeys : keys, options: [])
                 var items: [FileItem] = []
                 items.reserveCapacity(urls.count)
                 for url in urls {
@@ -36,7 +40,8 @@ enum DirectoryLoader {
 
     /// `shownAs`: the URL the item is listed under, if not `url` (see `URL.replacingFolder`).
     static func item(_ url: URL, showAllExtensions: Bool, shownAs: URL? = nil) -> FileItem {
-        let values = try? url.resourceValues(forKeys: Set(keys))
+        let guarded = url.isGuardedFolder(home: home)
+        let values = try? url.resourceValues(forKeys: Set(guarded ? basicKeys : keys))
         var isFolder = (values?.isDirectory ?? false) && !(values?.isPackage ?? false)
         // A symlink to a folder opens like a folder.
         if values?.isSymbolicLink == true {
@@ -51,21 +56,25 @@ enum DirectoryLoader {
         }
         var item = FileItem(
             url: (shownAs ?? url).normalized,
-            name: name(url, isFolder: isFolder, showAllExtensions: showAllExtensions),
+            name: guarded ? url.lastPathComponent : name(url, isFolder: isFolder, showAllExtensions: showAllExtensions),
             isFolder: isFolder,
             isHidden: values?.isHidden ?? url.lastPathComponent.hasPrefix("."),
             size: isFolder ? nil : values?.fileSize.map(Int64.init),
             modified: values?.contentModificationDate,
-            kind: values?.localizedTypeDescription ?? "",
+            kind: guarded ? "Folder" : values?.localizedTypeDescription ?? "",
             created: values?.creationDate,
             added: values?.addedToDirectoryDate,
             permissions: permissions
         )
         // Tags come from an extended attribute that the listing's prefetch can hand back stale
         // just after they change (a tag set a moment ago would vanish), so read them afresh.
-        var tagURL = url
-        tagURL.removeCachedResourceValue(forKey: .tagNamesKey)
-        item.tags = (try? tagURL.resourceValues(forKeys: [.tagNamesKey]))?.tagNames ?? []
+        // Not for Desktop, Documents and Downloads: reading their tags is what brings up the
+        // folder-access prompt (checked with a fresh app), just for listing Home.
+        if !guarded {
+            var tagURL = url
+            tagURL.removeCachedResourceValue(forKey: .tagNamesKey)
+            item.tags = (try? tagURL.resourceValues(forKeys: [.tagNamesKey]))?.tagNames ?? []
+        }
         item.cloud = values.flatMap(cloudStatus)
         return item
     }

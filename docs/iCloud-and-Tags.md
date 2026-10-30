@@ -28,7 +28,8 @@ Tags are Finder's coloured labels. File Manager shows and sets the same tags, so
 step with Finder, Spotlight and other apps.
 
 **Seeing tags.** Tagged items show up to three coloured dots after the name (on the icon in the
-icon view). Hover over the dots for the tag names. Right-click the column headings to add a
+icon view). Your Desktop, Documents and Downloads folders show none in your home folder: macOS
+asks for access to a folder before an app reads its tags, and listing Home shouldn't ask. Hover over the dots for the tag names. Right-click the column headings to add a
 **Tags** column, and click its heading to sort by tag.
 
 **Tagging.** Select items, right-click, and choose a tag from **Tags**. A tick means every

@@ -73,6 +73,14 @@ extension URL {
     /// The top of the startup disk, "/".
     public var isFileSystemRoot: Bool { path == "/" }
 
+    /// Desktop, Documents and Downloads: macOS asks before an app looks inside them, and some
+    /// lookups about the folder itself (its iCloud state, kind, localized name, icon) go through
+    /// system helpers that count as looking inside. Listing Home asks nothing of them beyond
+    /// the basics, so the prompt only comes when you open one.
+    public func isGuardedFolder(home: URL) -> Bool {
+        ["Desktop", "Documents", "Downloads"].contains { isSameFile(as: home.appending(path: $0)) }
+    }
+
     /// The user's Trash, or a Trash folder on another disk (`/Volumes/X/.Trashes/501`).
     public func isTrashFolder(home: URL) -> Bool {
         isSameFile(as: home.appending(path: ".Trash")) || path.contains("/.Trashes/")

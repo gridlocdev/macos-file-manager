@@ -3,10 +3,15 @@
 ## Common questions
 
 **A folder shows "Can't Open Folder".**
-macOS is blocking access. For Desktop, Documents, Downloads and removable or network drives,
-allow File Manager in System Settings → Privacy & Security → **Files & Folders**. Some folders
-(other apps' data in `~/Library`, for example) need **Full Disk Access**. A few system folders
-can't be opened by any app. See [Installing](Installing.md#permission-prompts).
+macOS is blocking access, usually because **Don't Allow** was clicked on its prompt (it doesn't
+ask again). The message says which switch to turn on, and its button opens that page of System
+Settings; turn the switch on, then click **Try Again** (or press F5). For Desktop, Documents,
+Downloads and removable or network drives that's Privacy & Security → **Files & Folders** →
+File Manager. Other folders the system guards (other apps' data in `~/Library`, the Trash) need
+**Full Disk Access**. A few system folders can't be opened by any app. To have macOS ask again
+instead, run `tccutil reset SystemPolicyDesktopFolder dev.gridloc.file-manager` in Terminal
+(or `SystemPolicyDocumentsFolder`, `SystemPolicyDownloadsFolder`). See
+[Installing](Installing.md#permission-prompts).
 
 <a id="the-permission-prompts-came-back"></a>
 **The permission prompts came back.**

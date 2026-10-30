@@ -47,9 +47,15 @@ private struct HoverTracker: NSViewRepresentable {
         view.changed = changed
     }
 
+    /// Only a real mouse-entered turns hover on. A sidebar row redrawn or reused under the mouse
+    /// can lose its exited event and stay lit, so any hover change re-checks every view that's
+    /// lit and turns off those the mouse isn't over (the check never turns one on: just after
+    /// layout a view's frame can be stale, and every breadcrumb lit up).
     final class TrackingView: NSView {
         var pointer = true
         var changed: ((Bool) -> Void)?
+        private var inside = false
+        private static var hovered: [ObjectIdentifier: () -> Void] = [:]
 
         override func updateTrackingAreas() {
             super.updateTrackingAreas()
@@ -57,16 +63,49 @@ private struct HoverTracker: NSViewRepresentable {
             addTrackingArea(NSTrackingArea(
                 rect: .zero, options: [.mouseEnteredAndExited, .cursorUpdate, .activeAlways, .inVisibleRect],
                 owner: self))
+            recheck()
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            recheck()
         }
 
         override func mouseEntered(with event: NSEvent) {
             if pointer { NSCursor.pointingHand.set() }
-            changed?(true)
+            Self.recheckAll()
+            set(true)
         }
 
         override func mouseExited(with event: NSEvent) {
             if pointer { NSCursor.arrow.set() }
-            changed?(false)
+            set(false)
+            Self.recheckAll()
+        }
+
+        private func recheck() {
+            guard inside else { return }
+            guard let window, !isHiddenOrHasHiddenAncestor,
+                visibleRect.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil))
+            else { return set(false) }
+        }
+
+        private static func recheckAll() {
+            for recheck in Array(hovered.values) { recheck() }
+        }
+
+        private func set(_ now: Bool) {
+            if now { Self.hovered[ObjectIdentifier(self)] = { [weak self] in self?.recheck() } }
+            else { Self.hovered[ObjectIdentifier(self)] = nil }
+            guard now != inside else { return }
+            inside = now
+            changed?(now)
+        }
+
+        deinit {
+            // The view goes on the main thread; drop its entry so the table doesn't grow.
+            let id = ObjectIdentifier(self)
+            MainActor.assumeIsolated { Self.hovered[id] = nil }
         }
 
         override func cursorUpdate(with event: NSEvent) {

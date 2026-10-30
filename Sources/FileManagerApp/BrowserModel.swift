@@ -572,11 +572,24 @@ final class BrowserModel {
     var isLoading: Bool { listing.isLoading }
     var freeSpace: Int64? { listing.freeSpace }
     var errorMessage: String? {
-        listing.error.map { error in
-            isTrashFolder
-                ? "File Manager needs Full Disk Access to show the Trash. Turn it on in System Settings → Privacy & Security → Full Disk Access."
-                : error.localizedDescription
-        }
+        listing.error.map { accessHelp?.message ?? $0.localizedDescription }
+    }
+
+    /// macOS's privacy settings kept the folder from being read: how to allow it. (EPERM; a
+    /// folder's own permissions give EACCES, which System Settings can't change.)
+    var accessHelp: FolderAccessHelp? {
+        guard let error = listing.error as NSError? else { return nil }
+        let posix = [error, error.userInfo[NSUnderlyingErrorKey] as? NSError].compactMap { $0 }
+            .first { $0.domain == NSPOSIXErrorDomain }
+        guard isTrashFolder || posix?.code == Int(EPERM) else { return nil }
+        return FolderAccessHelp.help(for: url, home: home, volume: volumeKind, isTrash: isTrashFolder)
+    }
+
+    private var volumeKind: FolderAccessHelp.Volume {
+        guard url.path.hasPrefix("/Volumes/"),
+            let values = try? url.resourceValues(forKeys: [.volumeIsLocalKey, .volumeIsInternalKey])
+        else { return .startup }
+        return values.volumeIsLocal == false ? .network : values.volumeIsInternal == true ? .startup : .removable
     }
 
     /// The listing (or search results) sorted, kept until either or the sort changes, so a Find

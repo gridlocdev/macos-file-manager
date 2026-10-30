@@ -230,7 +230,18 @@ private struct EmptyOrError: View {
 
     var body: some View {
         if let message = model.errorMessage {
-            ContentUnavailableView("Can't Open Folder", systemImage: "lock", description: Text(message))
+            ContentUnavailableView {
+                Label("Can't Open Folder", systemImage: "lock")
+            } description: {
+                Text(message)
+            } actions: {
+                if let help = model.accessHelp {
+                    Button("Open \(help.pane.title) Settings") { NSWorkspace.shared.open(help.pane.settingsURL) }
+                        .pointerCursor()
+                }
+                Button("Try Again") { model.perform(.refresh) }
+                    .pointerCursor()
+            }
         } else if model.items.isEmpty && !model.isLoading && !model.isSearching {
             Text(model.isFiltering ? "No items match" : "This folder is empty").foregroundStyle(.secondary)
         }
