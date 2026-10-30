@@ -12,7 +12,8 @@ with files, as Finder does by default.
 **Show all file extensions** (on by default) shows every name in full, `notes.txt` rather than
 `notes`, as most Explorer and Linux users set it. Apps still show without `.app`. Turn it off to
 follow Finder's choice (Finder → Settings → Advanced) and each file's own *Hide extension*
-setting.
+setting. Renaming always edits the full name, extension included, so you can add or remove an
+extension even while it's hidden.
 
 **Open items with a single click** (off by default) opens files and folders with one click, like
 Explorer's single-click option or KDE's default. Shift-click and Cmd-click still select. With it

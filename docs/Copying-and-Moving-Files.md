@@ -16,7 +16,8 @@ Copy, cut and paste work the way they do in Explorer and the Linux file managers
 - Items you've cut are **dimmed** until you paste them. Copying something else cancels the cut,
   and the items stay where they were.
 - After a cut is pasted, the clipboard is emptied, so pasting again doesn't try to move the
-  same items twice.
+  same items twice. Items that didn't move (you chose Skip or Stop, or there was an error) stay
+  cut, so you can paste them again.
 - Pasted items are selected afterwards, so you can see what arrived.
 - Duplicates are named like Explorer's: `notes - Copy.txt`, then `notes - Copy (2).txt`.
 - Paths are copied one per line, without quotes.

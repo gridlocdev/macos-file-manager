@@ -53,7 +53,13 @@ folders are only searched while hidden files are shown (Cmd+H). A search stops a
 the status bar says so when it does. Type more of the name to narrow it down.
 
 You can work on results as in a folder: open, rename, copy, trash, Get Info. Opening a folder in
-the results goes to that folder and closes the find bar.
+the results goes to that folder and closes the find bar. **Duplicate** puts each copy next to its
+original. **Compress** puts the archive next to the items when they're all in one folder; when
+they're from several folders it goes in the folder you searched from, and two with the same name
+are kept as `notes.txt` and `notes (2).txt` inside it.
+
+Changes in the folder you searched from don't start the search again, so a search keeps going
+while files are being written there. Press **F5** to search again.
 
 ## Filters
 

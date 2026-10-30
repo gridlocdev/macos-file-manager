@@ -13,7 +13,8 @@ and the ways to get folders into File Manager instead.
 | The Dock | drag a folder onto File Manager's Dock icon |
 | Terminal | `open -a "File Manager" .` (or any path) |
 
-Each folder opens in a new window. A file opens its folder, with the file selected.
+Each folder opens in a new window, even if you've closed every File Manager window. A file
+opens its folder, with the file selected.
 
 If **Open in File Manager** isn't in the Services menu, turn it on in System Settings →
 Keyboard → Keyboard Shortcuts → Services → Files and Folders. You can give it a shortcut there

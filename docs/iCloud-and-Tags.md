@@ -44,7 +44,8 @@ in this folder or in its subfolders. See [Searching and selecting](Searching-and
 ## Zip archives
 
 **File → Compress** (or right-click → **Compress**) zips the selection next to it: one item
-gives `name.zip` (`notes.txt.zip` for a file), several give `Archive.zip`. **File → Extract**
+gives `name.zip` (`notes.txt.zip` for a file), several give `Archive.zip`. Items from several
+folders (subfolder search results) go in an archive in the folder you searched from. **File → Extract**
 opens a selected `.zip` next to itself: a single item inside comes out under its own name, and
 anything else goes in a folder named after the archive. Neither replaces anything: names that are
 taken get ` (2)`. Both show in the progress window for big archives, and Cmd+Z moves what was

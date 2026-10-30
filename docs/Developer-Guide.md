@@ -59,7 +59,8 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   ServerAddress.swift          Connect to Server addresses (smb, \\server\share, nfs, WebDAV); recents
   Archive.swift                zip names; compress/extract with ditto (run by FileStepExecutor)
   ViewSettings.swift           FolderView (mode, sort, groups, zoom), FolderViewMemory, Grouping, ListRow
-  FilePaths.swift              URL identity: normalized, canonical, isSameFile, isInside, isTrashFolder
+  FilePaths.swift              URL identity: normalized, canonical, isSameFile, isInside, isTrashFolder;
+                               realPath and isSameItem (read the disk: symlinks, case)
   FocusCycle.swift             F6 / Shift+F6 order: list → (right list) → address bar → sidebar
 Sources/FileManagerApp/        the app
   App.swift                    scenes: browser windows, Settings
@@ -79,7 +80,7 @@ Sources/FileManagerApp/        the app
                                drop and the right-click menu for the list
   InfoWindow.swift             Get Info windows (one per selection)
   Windows.swift                WindowSpec; every window/tab, tab joining, closed tabs, session
-  AddressBar.swift             address bar: path segments with › menus, or a text field
+  AddressBar.swift             address bar: path segments with › menus, or a text field; VolumeNames
   SidebarView.swift            pinned, recent, locations (eject), folder tree; drop targets
   SidebarStore.swift           pinned and recent folders in UserDefaults
   DirectoryLoader.swift        background folder reads; DirectoryWatcher (live updates)
@@ -88,12 +89,12 @@ Sources/FileManagerApp/        the app
   BatchRenameView.swift        the batch rename sheet with its live preview
   FileListView.swift           the details list (NSTableView): columns, group rows, zoom, column chooser
   FileIconView.swift           the icon view (NSCollectionView), thumbnails, Cmd+scroll zoom, type-ahead
-  FileViewSupport.swift        shared by both views: InlineRename, IconCache, FileDrop, FileFormat
+  FileViewSupport.swift        shared by both views: InlineRename, IconCache (one, app-wide), FileDrop, FileFormat
   FileContextMenu.swift        the right-click menu for both views
   QuickLook.swift              FileBrowsingView (either view has focus) and the Quick Look panel source
   PreviewPane.swift            the docked preview (Opt+P)
   FolderViewStore.swift        each folder's view, saved in Application Support
-  KeymapStore.swift            the keymap in use: standard + Shortcuts.json overrides
+  KeymapStore.swift            the keymap in use: standard + Shortcuts.json overrides; menuKeymap
   ConnectToServer.swift        the Connect to Server sheet; NetFS mounting
   KeyMonitor.swift             runs keymap shortcuts for a window; NSEvent → KeyChord;
                                ActiveBrowser (the key window's model, for the menu bar)
@@ -101,7 +102,7 @@ Sources/FileManagerApp/        the app
   Settings.swift               settings keys, Preferences (typed reads for non-view code),
                                Settings window, Open Terminal Here
 Tests/FileManagerCoreTests/    Swift Testing tests, including the docs check below
-Tests/FileManagerAppTests/     BrowserModel and FileOperations in a Sandbox (scratch folder and stores)
+Tests/FileManagerAppTests/     BrowserModel, FileOperations, Windows, FolderSearch in a Sandbox (scratch folder and stores)
 Resources/Info.plist           bundle info; also embedded in the executable
 Resources/AppIcon.icns         app icon, generated from assets/icon.svg
 assets/icon.svg                app icon source
@@ -126,7 +127,14 @@ by exactly one of two things:
    and 5 to Back and Forward.
 
 The monitor must leave menu chords alone: SwiftUI runs a menu item's shortcut even when a
-monitor has swallowed the event, so handling it in both places runs the action twice.
+monitor has swallowed the event, so handling it in both places runs the action twice. Menus
+don't pick up Reload in Settings, so `KeymapStore` keeps `menuKeymap`, the keymap at launch: the
+menu bar is built from it, the monitor leaves exactly its menu chords alone, and every other
+chord comes from the reloaded `keymap`. `Keymap.overrides(fromJSON:)` reads Shortcuts.json entry
+by entry, so one bad entry is reported without dropping the rest.
+
+`KeyChord(event)` reads a character key with Cmd applied when it's held (never Shift), so
+layouts with a Command layer (AZERTY's digits, Dvorak-QWERTY⌘) match as macOS menus do.
 
 `Action.isAvailable(in:)` (Core) decides when an action is available, from an `ActionState`
 that `BrowserModel` provides; `BrowserModel.canPerform(_:)` asks it, and `perform` beeps when it
@@ -164,6 +172,14 @@ Every change to files is a list of `FileStep`s (copy, move, create, trash, delet
    to the Trash rather than being deleted). Permanent deletes have no inverse.
 3. Running an undo produces executed steps too, and their inverse is the redo.
 
+Moves out of the Trash (undoing a trash, Put Back) are `.restore` steps, whose inverse trashes
+the item again, so a redo of Move to Trash goes through the Trash and the `TrashLog`. A copy is
+recorded only if its destination exists (finished, cut short by Cancel, or failed partway).
+`Outcome.stepsRun` says how far a run got: an undo or redo that stops partway puts the steps it
+didn't reach back on its stack (`UndoHistory.putBack`). Undo and redo wait until no job is
+running, and a job leaves the list only once its undo is recorded, so they run one at a time
+and Cmd+Z during a copy undoes that copy.
+
 `FileOperations` (app target) wraps this: each run is a `FileJob` on a detached task with
 progress (an `AsyncStream`, so it arrives in order) and Cancel (checked between steps, and
 between the items of a folder being copied; a single large file still copies to the end), pushed onto one app-wide `UndoHistory` (like Explorer). Tags it sets are
@@ -172,15 +188,20 @@ posted as a `TagsChanged` message, which every `BrowserModel` observes. It also 
 to original paths for Put Back; macOS doesn't share Finder's own record.
 
 Paste and duplicate go through `TransferPlanner`, which is pure (it reads through the `FileTree`
-protocol): first `conflicts(…)` lists the clashes, the app asks about each (Replace / Keep Both /
-Skip / Stop, with "do this for the rest"), then `plan(…)` produces the steps. `ConflictQuestions.answers` does the asking; `transfer`
-takes an `ask` closure in place of the alerts. Folders with the
+protocol): first `planAsking(…)` lists the clashes, with the plan made meanwhile (final when
+there are none, so a paste without clashes walks its sources once); the app asks about each
+(Replace / Keep Both / Skip / Stop, with "do this for the rest"), then `plan(…)` produces the
+steps. `ConflictQuestions.answers` does the asking, keyed by the whole conflict (two items can
+land on one name); `transfer` takes an `ask` closure in place of the alerts. "Into itself" and
+"already in this folder" compare with `FileTree.isSameItem` up the folder's `realPath`, so a
+symlink or other case doesn't get past them; `DropRules` takes the same check. Folders with the
 same name merge; Replace trashes the existing item first; copying into the same folder
 duplicates. The planner tests use an in-memory `FakeTree`; the executor tests run in a temp
 folder with a fake Trash.
 
 Text editing wins over file actions: `AppCommands.run` sends Cut/Copy/Paste/Undo/Redo/Select All
-(and Cmd+Backspace as "delete to line start") to the text field when one is being edited, and
+(and Cmd+Backspace as "delete to line start") to the text field when one is being edited, sends
+an arrow chord such as Cmd+Up (Go Up) as its cursor movement (`KeyChord.textSelector`), and
 ignores other file actions. `KeyMonitor` only lets Return, F2 and forward Delete act on files
 when the list (`FileTableView`) has focus.
 
@@ -204,10 +225,12 @@ back reloads while the field is open, since a reload would throw the edit away.
   pops the same menu under the first selected row. Services come from `FileTableView` being an
   `NSServicesMenuRequestor` for file URLs.
 - **Quick Look**: `FileTableView` takes control of `QLPreviewPanel` and is its data source;
-  selection changes reload the panel, and key presses in the panel are forwarded to the table.
+  selection changes reload the panel (including ones the model makes, applied in
+  `applySelection`), and key presses in the panel are forwarded to the table.
 - **Get Info**: `BrowserModel.perform(.getInfo)` sends `.getInfo(urls)`; `BrowserWindow`
-  opens a `WindowGroup(for: [URL].self)` window. Folder sizes come from `FolderSize.measure`
-  in a detached task that stops when the window closes.
+  opens a `WindowGroup(for: [URL].self)` window. Folder and package sizes come from
+  `FolderSize.measure` in a detached task, cancelled with the window's task (`inBackground`), so
+  it stops when the window closes.
 
 Synthetic events can't drive drags or menus, so `just snapshot` doesn't cover these; check them
 by hand.
@@ -235,11 +258,14 @@ exists, in either order, then calls `addTabbedWindow` on the parent's last tab. 
 restoring, tabs can appear before their parent; they wait in `waiting` until it does.
 
 `BrowserModel` can't call `openWindow`, so it sends `.open(spec)` (`requestOpen`) and
-`BrowserWindow` opens them. When a window or split pane closes, `BrowserModel.stop()` ends its
+`BrowserWindow` opens them. With no window open, folders sent from other apps are opened
+through `Windows.openWindow`, which the menu bar (`AppCommands`, alive without windows) sets
+from SwiftUI's `openWindow`. When a window or split pane closes, `BrowserModel.stop()` ends its
 loading, watching and searching; file operations it started carry on. `BrowserModel.init` does no work, because SwiftUI may create throwaway copies when
 it re-creates `BrowserWindow`; loading starts in `start()` from `onAppear`.
 
-Session restore: `Windows.save()` groups windows by `tabGroup` and stores a `SessionState` in
+Session restore: `Windows.save()` groups windows by `tabGroup` (minimized ones, and all of them
+while the app is hidden, count as open) and stores a `SessionState` in
 UserDefaults (debounced on every change, and in `applicationShouldTerminate` while windows
 are still open). At launch the WindowGroup's `defaultValue` is the first saved tab; the first
 window then opens the rest. SwiftUI's own restoration is off (`.restorationBehavior(.disabled)`).
@@ -254,20 +280,34 @@ switched twice and looked like nothing happened).
 The sidebar's folder tree uses `DisclosureGroup`s that only build their children while open:
 `DisclosureGroup` builds its content even when closed, and every closed child listing its own
 children walked the whole disk and starved the main thread. `FolderTree.expanded` is only
-written when it actually changes, since any write to an observed property re-renders.
+written when it actually changes, since any write to an observed property re-renders. A
+folder's subfolders are read in the background and appear when they're in (`children` is
+written only when a list changes). The disks in Locations are read when the sidebar appears and
+on mount and unmount, not as `@State`'s initial value, which runs on every redraw.
 
 ## The file list
 
 `FileListView` wraps an `NSTableView`, because SwiftUI's `Table` takes Return and Backspace for
 itself, has weak type-ahead, and gets slow on large folders. `BrowserModel` bumps
-`listingVersion` whenever `items` changes; the table reloads only then. Selection syncs both
+`listingVersion` whenever the rows really change; the views reload only then, and scroll to
+the top only when the listing is of a new folder. The model keeps the listing sorted
+(`sortedSource`) until it or the sort changes, so Find only filters it. Selection syncs both
 ways (`isUpdating` stops the loop). Column widths and order are saved by AppKit under the
 autosave name `FileList`.
 
 `DirectoryLoader` reads a folder with `contentsOfDirectory(at:includingPropertiesForKeys:)` in a
-detached task, prefetching the values the columns need. `DirectoryWatcher` watches the folder's
-file descriptor for writes, renames and deletes and refreshes after 150 ms of quiet. It only
-sees entries added, removed or renamed, not edits inside files.
+detached task, prefetching the values the columns need; it stops between items when its load is
+cancelled, and asks for Finder's display name only when it's shown. Navigating clears the last
+folder's items at once. `DirectoryWatcher` watches the folder's file descriptor for writes,
+renames and deletes and reloads the listing after 150 ms of quiet (not a subfolder search). It
+only sees entries added, removed or renamed, not edits inside files, and is kept until the
+folder changes.
+
+Icons: `IconCache.shared` holds per-type icons and up to 5000 per-item ones (folders, apps),
+read in the background with a generic icon meanwhile. The icon view's `ThumbnailCache` is an
+`NSCache` limited by pixel bytes, and cancels a thumbnail when its item scrolls out of view. The
+address bar's › menus list their folder only when clicked (an `NSMenu`; a SwiftUI `Menu` builds
+its items with the view), and disk names come from `VolumeNames`, re-read on mount.
 
 ## Tests
 
@@ -281,7 +321,8 @@ It also runs `FileManagerAppTests`, which test the app's models (`BrowserModel`,
 scratch folder in the temporary directory, a `BrowserServices` whose stores, session and
 settings use their own UserDefaults suite and files in that folder, a private pasteboard, a
 Trash inside the folder, and a `FakePresenter` that answers confirmations and counts beeps.
-Nothing touches your folders, Trash or settings. Folder reads and file operations finish in the
+`FileOperations` reports errors to the sandbox instead of a modal alert, which would hang the
+run. Nothing touches your folders, Trash or settings. Folder reads and file operations finish in the
 background, so tests wait with `eventually { … }`.
 
 ### Snapshots

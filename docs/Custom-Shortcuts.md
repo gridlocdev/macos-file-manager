@@ -29,8 +29,9 @@ An empty list, `"refresh": []`, takes all of a command's shortcuts away. Command
 keep their standard shortcuts.
 
 If you give a command a shortcut another command has, the other one loses it. Settings lists
-each shortcut that moved, and anything in the file that couldn't be used: a misspelt command, or
-a shortcut it can't read. Names starting with `_` are ignored, which is how the starter file's
+each shortcut that moved, and anything in the file that couldn't be used: a misspelt command, a
+shortcut it can't read, or an entry that isn't a list (`"rename": "F2"` rather than
+`"rename": ["F2"]`). The rest of the file still works. Names starting with `_` are ignored, which is how the starter file's
 examples stay switched off until you remove the `_`.
 
 ## Writing shortcuts

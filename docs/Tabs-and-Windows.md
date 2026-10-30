@@ -21,7 +21,9 @@ The tab bar appears as soon as there are two tabs. To always show it, choose
 ## Switching and closing
 
 - **Ctrl+Tab** and **Ctrl+Shift+Tab** go to the next and previous tab.
-- **Cmd+1** to **Cmd+8** go to that tab, **Cmd+9** to the last one.
+- **Cmd+1** to **Cmd+8** go to that tab, **Cmd+9** to the last one. On layouts whose number
+  row needs Shift for digits (French AZERTY), press Cmd and the key without Shift, as for any
+  Mac app.
 - **Cmd+W** closes the tab (or the window, if it's the last tab).
 - **Shift+Cmd+T** reopens the most recently closed tab, in the folder it was showing. It
   remembers the last 20.
@@ -72,8 +74,9 @@ Split panes aren't reopened after quitting; each tab comes back as one pane.
 ## Reopening where you left off
 
 When you quit and open File Manager again, your windows and tabs come back, each in the folder
-it was showing, with the same tab selected. Folders that no longer exist are skipped. Back and
-Forward history and the selection aren't kept.
+it was showing, with the same tab selected. Minimized windows come back too, and so do your
+windows if you quit while File Manager is hidden. Folders that no longer exist are skipped. Back
+and Forward history and the selection aren't kept.
 
 Turn this off in [Settings](Settings.md) → **Reopen windows and tabs from last time**; then
 File Manager starts with one window on your home folder.

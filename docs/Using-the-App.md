@@ -125,8 +125,8 @@ arrow keys move through the list and the preview follows.
 **Cmd+I** or **Opt+Return** (Alt+Enter in Windows) opens an Info window for the selection,
 like Explorer's Properties. With nothing selected, it shows the folder you're in.
 
-- **One item**: size (folders are added up in the background, with how many items and how
-  much space they take on disk), where it is, when it was created, modified and last opened,
+- **One item**: size (folders, and apps and other packages, are added up in the background,
+  with how many items and how much space they take on disk), where it is, when it was created, modified and last opened,
   which app opens it, and its permissions for you, the group and everyone (with the Unix mode
   as `drwxr-xr-x` / `755`).
 - **Several items**: how many, and their total size.
