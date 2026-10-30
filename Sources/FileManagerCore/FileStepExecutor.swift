@@ -57,9 +57,16 @@ public struct FileStepExecutor: Sendable {
             do {
                 switch step {
                 case .copy(let from, let to):
-                    try copier.copyItem(at: from, to: to)
-                    // Recorded even if cancelled partway, so undo removes the partial copy.
-                    outcome.executed.append(.copied(from, to: to))
+                    do {
+                        try copier.copyItem(at: from, to: to)
+                    } catch {
+                        // Failed partway (a full disk): what was made is recorded, so undo removes it.
+                        if exists(to) { outcome.executed.append(.copied(from, to: to)) }
+                        throw error
+                    }
+                    // Recorded even if cancelled partway, so undo removes the partial copy; but not
+                    // if Cancel came before anything was made.
+                    if exists(to) { outcome.executed.append(.copied(from, to: to)) }
                     if isCancelled() {
                         outcome.cancelled = true
                         outcome.stepsRun = index + 1
@@ -110,6 +117,11 @@ public struct FileStepExecutor: Sendable {
             }
         }
         return outcome
+    }
+
+    /// There, even as a broken symlink (`fileExists` follows links).
+    private func exists(_ url: URL) -> Bool {
+        (try? FileManager.default.attributesOfItem(atPath: url.path)) != nil
     }
 
     /// Like `moveItem`, but a change of case only ("notes" → "Notes") works on a

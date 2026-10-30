@@ -299,6 +299,23 @@ struct FakeTree: FileTree {
         #expect(!exists(target))
     }
 
+    @Test func cancelBeforeACopyStartsRecordsNoCopy() throws {
+        for n in 1...2 { _ = try file("big/\(n).txt") }
+        let target = root.appendingPathComponent("copy")
+        var calls = 0
+        // Not cancelled for the step check; cancelled when the copy asks about the folder itself.
+        let done = executor.run(
+            [.copy(root.appendingPathComponent("big"), to: target)],
+            isCancelled: {
+                calls += 1
+                return calls > 1
+            })
+        #expect(done.cancelled)
+        #expect(!exists(target))
+        // Nothing to undo, so undo can't fail on a copy that was never made.
+        #expect(done.executed.isEmpty)
+    }
+
     @Test func movePutsBackIntoMissingFolder() throws {
         let item = try file("t/x.txt")
         let original = root.appendingPathComponent("gone/deeper/x.txt")
