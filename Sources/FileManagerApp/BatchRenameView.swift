@@ -24,26 +24,28 @@ struct BatchRenameView: View {
                 TextField("Find", text: $options.find)
                 TextField("Replace with", text: $options.replace)
                 HStack {
-                    Toggle("Match case", isOn: $options.matchCase)
-                    Toggle("Regular expression", isOn: $options.useRegex)
+                    Toggle("Match case", isOn: $options.matchCase).pointerCursor()
+                    Toggle("Regular expression", isOn: $options.useRegex).pointerCursor()
                         .help("Find is a regular expression; use $1, $2… in Replace for its groups")
                 }
                 Picker("Case", selection: $options.caseChange) {
                     ForEach(BatchRenameOptions.CaseChange.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
+                .pointerCursor()
                 Picker("Numbers", selection: $options.numbering) {
                     ForEach(BatchRenameOptions.Numbering.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
+                .pointerCursor()
                 if options.numbering != .none {
                     HStack {
                         TextField("Start at", value: $options.startNumber, format: .number)
                             .frame(width: 110)
-                        Stepper("Digits: \(options.digits)", value: $options.digits, in: 1...6)
+                        Stepper("Digits: \(options.digits)", value: $options.digits, in: 1...6).pointerCursor()
                         TextField("Separator", text: $options.separator)
                             .frame(width: 120)
                     }
                 }
-                Toggle("Change extensions too", isOn: $options.includeExtension)
+                Toggle("Change extensions too", isOn: $options.includeExtension).pointerCursor()
             }
             if let error = preview.patternError {
                 Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red)
@@ -68,6 +70,7 @@ struct BatchRenameView: View {
                 Text(changed == 1 ? "1 name changes" : "\(changed) names change").foregroundStyle(.secondary)
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
+                    .pointerCursor()
                     .keyboardShortcut(.cancelAction)
                 Button("Rename") {
                     model.commitBatchRename(preview.entries)
@@ -75,6 +78,7 @@ struct BatchRenameView: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(!preview.canRename)
+                .pointerCursor()
             }
         }
         .padding(20)

@@ -146,23 +146,24 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Files") {
-                Toggle("Show folders before files", isOn: $foldersFirst)
-                Toggle("Show all file extensions", isOn: $showAllExtensions)
-                Toggle("Open items with a single click", isOn: $singleClickOpen)
-                Toggle("Ask before moving items to the Trash", isOn: $confirmTrash)
+                Toggle("Show folders before files", isOn: $foldersFirst).pointerCursor()
+                Toggle("Show all file extensions", isOn: $showAllExtensions).pointerCursor()
+                Toggle("Open items with a single click", isOn: $singleClickOpen).pointerCursor()
+                Toggle("Ask before moving items to the Trash", isOn: $confirmTrash).pointerCursor()
             }
             Section("Windows") {
-                Toggle("Reopen windows and tabs from last time", isOn: $reopenSession)
+                Toggle("Reopen windows and tabs from last time", isOn: $reopenSession).pointerCursor()
                 Picker("New windows open", selection: $startFolder) {
                     ForEach(StartFolder.allCases) { Text($0.title).tag($0) }
                 }
+                .pointerCursor()
                 if startFolder == .custom {
                     LabeledContent("Folder") {
                         HStack {
                             Text(customStartPath.isEmpty
                                 ? "None" : FileManager.default.displayName(atPath: customStartPath))
                                 .foregroundStyle(.secondary)
-                            Button("Choose…", action: chooseStartFolder)
+                            Button("Choose…", action: chooseStartFolder).pointerCursor()
                         }
                     }
                 }
@@ -170,8 +171,8 @@ struct SettingsView: View {
             Section("Keyboard") {
                 LabeledContent("Shortcuts") {
                     HStack {
-                        Button("Edit Shortcuts File…") { KeymapStore.shared.edit() }
-                        Button("Reload") { KeymapStore.shared.reload() }
+                        Button("Edit Shortcuts File…") { KeymapStore.shared.edit() }.pointerCursor()
+                        Button("Reload") { KeymapStore.shared.reload() }.pointerCursor()
                     }
                 }
                 Text("Menu shortcuts change after File Manager is quit and opened again.")
@@ -189,13 +190,14 @@ struct SettingsView: View {
                         Text(installedLabel(choice)).tag(choice)
                     }
                 }
+                .pointerCursor()
                 if terminal == .custom {
                     LabeledContent("App") {
                         HStack {
                             Text(customTerminalPath.isEmpty
                                 ? "None" : FileManager.default.displayName(atPath: customTerminalPath))
                                 .foregroundStyle(.secondary)
-                            Button("Choose…", action: chooseApp)
+                            Button("Choose…", action: chooseApp).pointerCursor()
                         }
                     }
                 }

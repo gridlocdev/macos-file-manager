@@ -59,9 +59,11 @@ struct ConnectToServerView: View {
                     dismiss()
                 }
                     .keyboardShortcut(.cancelAction)
+                    .pointerCursor()
                 Button("Connect", action: connect)
                     .keyboardShortcut(.defaultAction)
                     .disabled(connecting || address.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .pointerCursor()
             }
         }
         .padding(20)

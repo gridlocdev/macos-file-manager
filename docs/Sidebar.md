@@ -9,7 +9,8 @@ Locations       your Mac's disk, drives and network shares (with Eject)
 Folders         a tree of your home folder
 ```
 
-Click anything to open it. Right-click for **Open in New Tab** and more.
+Click anything to open it. Right-click for **Open in New Tab** and more. The folder you're in
+has the bright highlight; the row under the mouse gets a fainter one.
 
 ## Pinned
 

@@ -83,6 +83,7 @@ private struct Breadcrumbs: View {
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()
+                .pointerCursor()
                 .help("Folders further up")
             }
             ForEach(visible, id: \.url) { segment in
@@ -122,7 +123,7 @@ private struct CrumbButtonStyle: ButtonStyle {
                     RoundedRectangle(cornerRadius: 5)
                         .fill(.primary.opacity(configuration.isPressed ? 0.16 : hovering ? 0.08 : 0)))
                 .contentShape(Rectangle())
-                .onHover { hovering = $0 }
+                .onMouseOver { hovering = $0 }
         }
     }
 }
@@ -174,6 +175,7 @@ private struct SubfolderMenu: View {
         }
         .buttonStyle(.borderless)
         .fixedSize()
+        .pointerCursor()
         .help("Folders in \(folder.lastPathComponent.isEmpty ? "/" : folder.lastPathComponent)")
     }
 

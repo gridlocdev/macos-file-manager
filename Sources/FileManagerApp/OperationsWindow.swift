@@ -43,6 +43,7 @@ private struct JobRow: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
                 .help("Stop. What's already done stays done, and Undo reverses it.")
+                .pointerCursor()
         }
     }
 }

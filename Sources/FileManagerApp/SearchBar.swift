@@ -28,12 +28,14 @@ struct SearchBar: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
+            .pointerCursor()
             .help("Search only this folder, or every folder inside it too")
             filters
             Button("Close", systemImage: "xmark.circle.fill") { model.endSearch() }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
+                .pointerCursor()
                 .help("Close Find (Esc)")
         }
         .padding(.horizontal, 10)
@@ -83,6 +85,7 @@ struct SearchBar: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
+        .pointerCursor()
         .help("Only show items of a kind, date or size")
     }
 }

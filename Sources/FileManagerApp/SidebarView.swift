@@ -79,6 +79,7 @@ struct SidebarView: View {
 
     private func row(_ url: URL, section: SidebarTag.Section, symbol: String) -> some View {
         Label(FileManager.default.displayName(atPath: url.path), systemImage: symbol)
+            .modifier(SidebarHover())
             .tag(SidebarTag(section: section, path: url.path))
             .folderDropTarget(url, model: model)
     }
@@ -184,6 +185,7 @@ private struct FolderNode: View {
                         .help("Eject “\(title)”")
                 }
             }
+            .modifier(SidebarHover())
             .tag(SidebarTag(section: section, path: url.path))
             .id(SidebarTag(section: section, path: url.path))
             .folderDropTarget(url, model: model)

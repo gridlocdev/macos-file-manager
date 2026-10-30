@@ -46,12 +46,15 @@ struct BrowserWindow: View {
                 Button("Back", systemImage: "chevron.left") { active.perform(.goBack) }
                     .disabled(!active.canPerform(.goBack))
                     .help("Back (Opt+Left)")
+                    .pointerCursor()
                 Button("Forward", systemImage: "chevron.right") { active.perform(.goForward) }
                     .disabled(!active.canPerform(.goForward))
                     .help("Forward (Opt+Right)")
+                    .pointerCursor()
                 Button("Up", systemImage: "arrow.up") { active.perform(.goUp) }
                     .disabled(!active.canPerform(.goUp))
                     .help("Enclosing folder (Backspace)")
+                    .pointerCursor()
             }
             // One item, so the address bar and the view buttons share the width rather than the
             // toolbar pushing the address bar into its overflow menu.
@@ -159,10 +162,12 @@ struct BrowserWindow: View {
                 .labelStyle(.iconOnly)
                 .foregroundStyle(split != nil ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 .help("Split view (F3)")
+                .pointerCursor()
             Toggle("Preview", systemImage: "sidebar.right", isOn: $showPreview)
                 .toggleStyle(.button)
                 .labelStyle(.iconOnly)
                 .help("Preview pane (Opt+P)")
+                .pointerCursor()
         }
     }
 
@@ -172,6 +177,7 @@ struct BrowserWindow: View {
             .labelStyle(.iconOnly)
             .foregroundStyle(active.view.mode == mode ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
             .help("\(mode.title) (\(keys))")
+            .pointerCursor()
     }
 }
 
@@ -213,6 +219,7 @@ private struct PaneHeader: View {
         .background(isActive ? AnyShapeStyle(.tint.opacity(0.15)) : AnyShapeStyle(.bar))
         .contentShape(Rectangle())
         .onTapGesture { model.focusList() }
+        .pointerCursor()
         .help(model.url.path)
         .accessibilityLabel(isActive ? "\(model.title), active pane" : model.title)
     }
