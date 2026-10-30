@@ -106,6 +106,26 @@ import Testing
     }
 }
 
+@Suite struct ArchiveSameNameTests {
+    @Test func compressesTwoItemsWithTheSameName() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("fm-archive-\(UUID().uuidString)")
+        for folder in ["a", "b"] {
+            try fm.createDirectory(at: root.appendingPathComponent(folder), withIntermediateDirectories: true)
+            try Data(folder.utf8).write(to: root.appendingPathComponent("\(folder)/notes.txt"))
+        }
+        defer { try? fm.removeItem(at: root) }
+        let archive = root.appendingPathComponent("Archive.zip")
+        let executor = FileStepExecutor()
+        var done = executor.run([.compress(
+            [root.appendingPathComponent("a/notes.txt"), root.appendingPathComponent("b/notes.txt")], to: archive)])
+        #expect(done.error == nil)
+        done = executor.run([.extract(archive, suggested: root.appendingPathComponent("Archive"))])
+        let folder = try #require(done.executed.first?.resultURL)
+        #expect(Set(try fm.contentsOfDirectory(atPath: folder.path)) == ["notes.txt", "notes (2).txt"])
+    }
+}
+
 /// The planner on the real disk: the same folder spelled another way is still the same folder.
 @Suite struct SameItemTests {
     @Test func intoItselfThroughOtherCaseOrASymlink() throws {

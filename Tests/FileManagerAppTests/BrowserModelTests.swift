@@ -125,6 +125,24 @@ import Testing
         try await eventually { sandbox.names(model) == ["plan.txt"] }
     }
 
+    @Test func duplicateAndCompressSearchResultsWhereTheyAre() async throws {
+        try Data("y".utf8).write(to: sandbox.root.appending(path: "Receipts/plan.txt"))
+        let model = try await started()
+        model.perform(.find)
+        model.searchScope = .subfolders
+        model.criteria.text = "plan"
+        try await eventually { model.items.count == 2 && !model.isSearching }
+        model.perform(.selectAll)
+        model.perform(.duplicate)
+        try await eventually { sandbox.exists("Projects/plan - Copy.txt") && sandbox.exists("Receipts/plan - Copy.txt") }
+        #expect(!sandbox.exists("plan - Copy.txt"))
+        model.selection = [sandbox.root.appending(path: "Projects/plan.txt").normalized,
+            sandbox.root.appending(path: "Receipts/plan.txt").normalized]
+        model.perform(.compress)
+        try await eventually { sandbox.exists("Archive.zip") }
+        #expect(sandbox.presenter.problems.isEmpty)
+    }
+
     @Test func findFiltersAndEndSearchRestores() async throws {
         let model = try await started()
         model.perform(.find)

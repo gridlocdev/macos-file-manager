@@ -421,11 +421,15 @@ final class BrowserModel {
         }
     }
 
+    /// Each copy goes next to its original, which in subfolder search results can be anywhere.
     private func duplicate() {
-        let sources = selectedURLs
+        let byFolder = Dictionary(grouping: selectedURLs) { $0.deletingLastPathComponent().normalized }
         let folder = url
         Task {
-            let results = await ops.transfer(sources, into: folder, mode: .copy, window: window)
+            var results: [URL] = []
+            for (parent, sources) in byFolder.sorted(by: { $0.key.path < $1.key.path }) {
+                results += await ops.transfer(sources, into: parent, mode: .copy, window: window)
+            }
             if folder.isSameFile(as: url) { refresh(selecting: results) }
         }
     }
@@ -650,10 +654,12 @@ final class BrowserModel {
 
     // MARK: Archives, tags, iCloud
 
-    /// Compress: one item gives "name.zip", several give "Archive.zip", next to them.
+    /// Compress: one item gives "name.zip", several give "Archive.zip", next to them (in this
+    /// folder when they're search results from several folders).
     private func compress() {
         let sources = selectedURLs
-        guard let folder = sources.first?.deletingLastPathComponent() else { return }
+        let parents = Set(sources.map { $0.deletingLastPathComponent().normalized })
+        guard let folder = parents.count == 1 ? parents.first : url else { return }
         let existing = Set((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
         let archive = folder.appendingPathComponent(
             Archive.archiveName(for: sources.map(\.lastPathComponent), existing: existing))

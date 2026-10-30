@@ -39,8 +39,14 @@ public enum Archive {
         let staging = archive.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString)")
         try fm.createDirectory(at: staging, withIntermediateDirectories: false)
         defer { try? fm.removeItem(at: staging) }
+        // Items from different folders (search results) can share a name: keep both.
+        var names: Set<String> = []
         for source in sources {
-            try fm.copyItem(at: source, to: staging.appendingPathComponent(source.lastPathComponent))
+            var isFolder: ObjCBool = false
+            fm.fileExists(atPath: source.path, isDirectory: &isFolder)
+            let name = FileNaming.keepBoth(source.lastPathComponent, isFolder: isFolder.boolValue, existing: names)
+            names.insert(name)
+            try fm.copyItem(at: source, to: staging.appendingPathComponent(name))
         }
         try ditto(["-c", "-k", "--sequesterRsrc", staging.path, archive.path])
     }
