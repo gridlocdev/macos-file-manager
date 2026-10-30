@@ -56,10 +56,15 @@ final class Clipboard {
     }
 
     /// After a cut is pasted the items have moved; empty the clipboard so pasting again
-    /// doesn't try to move them a second time (Explorer does the same).
-    func finishCut() {
-        cutURLs = []
-        pasteboard.clearContents()
+    /// doesn't try to move them a second time (Explorer does the same). Items that didn't move
+    /// (an error, Stop, Skip) stay cut, to paste again.
+    func finishCut(leaving remaining: [URL] = []) {
+        if remaining.isEmpty {
+            cutURLs = []
+            pasteboard.clearContents()
+        } else {
+            cut(remaining)
+        }
     }
 
     func forgetStaleCut() {

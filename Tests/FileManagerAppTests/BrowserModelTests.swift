@@ -155,6 +155,17 @@ import Testing
         #expect(!sandbox.exists("notes.txt"))
     }
 
+    @Test func whatAPasteDidntMoveStaysCut() {
+        let clipboard = sandbox.services.clipboard
+        let a = sandbox.root.appending(path: "notes.txt"), b = sandbox.root.appending(path: "file2.txt")
+        clipboard.cut([a, b])
+        clipboard.finishCut(leaving: [b])
+        #expect(clipboard.isCut)
+        #expect(clipboard.fileURLs.map(\.lastPathComponent) == ["file2.txt"])
+        clipboard.finishCut()
+        #expect(!clipboard.isCut && clipboard.fileURLs.isEmpty)
+    }
+
     @Test func findFiltersAndEndSearchRestores() async throws {
         let model = try await started()
         model.perform(.find)

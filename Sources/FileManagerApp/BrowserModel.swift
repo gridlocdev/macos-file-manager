@@ -416,7 +416,10 @@ final class BrowserModel {
         let wasCut = move && services.clipboard.isCut
         Task {
             let results = await ops.transfer(sources, into: folder, mode: move ? .move : .copy, window: window)
-            if wasCut, !results.isEmpty { services.clipboard.finishCut() }
+            if wasCut, !results.isEmpty {
+                let left = sources.filter { FileManager.default.fileExists(atPath: $0.path) }
+                services.clipboard.finishCut(leaving: left)
+            }
             if folder.isSameFile(as: url) { refresh(selecting: results) }
         }
     }
