@@ -14,6 +14,7 @@ enum SettingsKey {
     static let customStartPath = "customStartPath"
     static let recentServers = "recentServers"
     static let shortenHomePath = "shortenHomePath"
+    static let dragScrollSpeed = "dragScrollSpeed"
 
     /// Defaults for settings that start on.
     static func registerDefaults() {
@@ -48,6 +49,33 @@ struct Preferences {
         TerminalChoice(rawValue: defaults.string(forKey: SettingsKey.terminal) ?? "") ?? .terminal
     }
     var customTerminalPath: String? { defaults.string(forKey: SettingsKey.customTerminalPath) }
+
+    var dragScrollSpeed: DragScrollSpeed {
+        DragScrollSpeed(rawValue: defaults.string(forKey: SettingsKey.dragScrollSpeed) ?? "") ?? .slow
+    }
+}
+
+/// How fast the list scrolls while a drag is held near its top or bottom edge.
+enum DragScrollSpeed: String, CaseIterable, Identifiable {
+    case slow, medium, fast
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .slow: "Slow"
+        case .medium: "Medium"
+        case .fast: "Fast"
+        }
+    }
+
+    var pointsPerSecond: CGFloat {
+        switch self {
+        case .slow: 100
+        case .medium: 250
+        case .fast: 600
+        }
+    }
 }
 
 /// Where new windows open when there's nothing else to go on (first launch, or reopening
@@ -146,6 +174,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.startFolder) private var startFolder = StartFolder.home
     @AppStorage(SettingsKey.customStartPath) private var customStartPath = ""
     @AppStorage(SettingsKey.shortenHomePath) private var shortenHomePath = true
+    @AppStorage(SettingsKey.dragScrollSpeed) private var dragScrollSpeed = DragScrollSpeed.slow
 
     var body: some View {
         Form {
@@ -154,6 +183,13 @@ struct SettingsView: View {
                 Toggle("Show all file extensions", isOn: $showAllExtensions).pointerCursor()
                 Toggle("Open items with a single click", isOn: $singleClickOpen).pointerCursor()
                 Toggle("Ask before moving items to the Trash", isOn: $confirmTrash).pointerCursor()
+                Picker("Scroll while dragging", selection: $dragScrollSpeed) {
+                    ForEach(DragScrollSpeed.allCases) { Text($0.title).tag($0) }
+                }
+                .pointerCursor()
+                Text("Hold a dragged item near the top or bottom of the list to scroll it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Windows") {
                 Toggle("Reopen windows and tabs from last time", isOn: $reopenSession).pointerCursor()

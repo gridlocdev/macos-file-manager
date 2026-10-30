@@ -5,6 +5,7 @@ import QuickLookUI
 /// The file list's table. Besides the usual table behaviour it:
 /// - tells `KeyMonitor` the list has focus (Return renames and Delete trashes only then),
 /// - opens folders you hover over while dragging (spring-loaded folders),
+/// - scrolls while a drag is held near its top or bottom,
 /// - drives the Quick Look panel,
 /// - hands the selection to Services.
 final class FileTableView: NSTableView, NSSpringLoadingDestination, FileBrowsingView {
@@ -49,6 +50,30 @@ final class FileTableView: NSTableView, NSSpringLoadingDestination, FileBrowsing
     }
 
     func springLoadingHighlightChanged(_ draggingInfo: any NSDraggingInfo) {}
+
+    // MARK: Scrolling while dragging
+
+    let autoscroll = DragAutoscroll()
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        autoscroll.update(sender, in: self)
+        return super.draggingUpdated(sender)
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        autoscroll.stop()
+        super.draggingExited(sender)
+    }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) {
+        autoscroll.stop()
+        super.draggingEnded(sender)
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        autoscroll.stop()
+        return super.performDragOperation(sender)
+    }
 
     // MARK: Quick Look
 

@@ -43,6 +43,12 @@ The toolbar works the same way, so you can move a file anywhere without letting 
   more step each second. You can't drop on these buttons: the pointer shows that a drop there
   does nothing.
 
+### Scrolling while you drag
+
+Hold a dragged item near the top or bottom edge of the list (or the icon view) for a second and
+a half and it starts scrolling that way, slowly, until you move away from the edge or let go.
+Set the speed in [Settings](Settings.md#files) → *Scroll while dragging*.
+
 ## Names that clash and undo
 
 Dropping works exactly like pasting: when names clash you're asked to **Replace**,

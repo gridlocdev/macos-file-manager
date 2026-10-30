@@ -356,7 +356,8 @@ struct FileIconView: NSViewRepresentable {
 }
 
 /// The icon grid. Adds double-click (or single-click) to open, middle-click for a new tab,
-/// Cmd+scroll to zoom, type-ahead and Quick Look to the collection view.
+/// Cmd+scroll to zoom, type-ahead, Quick Look and scrolling while a drag is held near the top
+/// or bottom to the collection view.
 final class FileCollectionView: NSCollectionView, FileBrowsingView {
     let quickLook = QuickLookSource()
     var itemAt: (IndexPath) -> FileItem? = { _ in nil }
@@ -377,6 +378,30 @@ final class FileCollectionView: NSCollectionView, FileBrowsingView {
         let accepted = super.becomeFirstResponder()
         if accepted { onFocus() }
         return accepted
+    }
+
+    // MARK: Scrolling while dragging
+
+    let autoscroll = DragAutoscroll()
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        autoscroll.update(sender, in: self)
+        return super.draggingUpdated(sender)
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        autoscroll.stop()
+        super.draggingExited(sender)
+    }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) {
+        autoscroll.stop()
+        super.draggingEnded(sender)
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        autoscroll.stop()
+        return super.performDragOperation(sender)
     }
 
     private func indexPath(at event: NSEvent) -> IndexPath? {

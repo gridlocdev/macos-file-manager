@@ -251,3 +251,42 @@ enum CloudBadge {
         return NSImage(systemSymbolName: symbol, accessibilityDescription: status?.title)
     }
 }
+
+/// Scrolls a file view while a drag is held near its top or bottom edge: after a second and a
+/// half there, at the speed chosen in Settings, until the drag moves away, ends or is dropped.
+@MainActor final class DragAutoscroll {
+    /// -1 near the top, 1 near the bottom, 0 elsewhere.
+    private var edge = 0
+    private var task: Task<Void, Never>?
+
+    /// From the view's `draggingUpdated`.
+    func update(_ info: any NSDraggingInfo, in view: NSView) {
+        guard let scroll = view.enclosingScrollView else { return stop() }
+        let clip = scroll.contentView
+        let point = clip.convert(info.draggingLocation, from: nil)
+        // What's showing, less the column headings drawn over the top.
+        var visible = clip.bounds
+        visible.origin.y += clip.contentInsets.top
+        visible.size.height -= clip.contentInsets.top + clip.contentInsets.bottom
+        let zone = min(40, visible.height / 4)
+        let near = point.y < visible.minY + zone ? -1 : point.y > visible.maxY - zone ? 1 : 0
+        guard near != edge else { return }
+        stop()
+        edge = near
+        guard near != 0 else { return }
+        task = Task { [weak scroll] in
+            try? await Task.sleep(for: .seconds(1.5))
+            while !Task.isCancelled, let scroll {
+                let step = Preferences.standard.dragScrollSpeed.pointsPerSecond / 60
+                scroll.restore(scroll.contentView.bounds.origin.y + step * CGFloat(near))
+                try? await Task.sleep(for: .seconds(1.0 / 60))
+            }
+        }
+    }
+
+    func stop() {
+        task?.cancel()
+        task = nil
+        edge = 0
+    }
+}

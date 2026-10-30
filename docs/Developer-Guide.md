@@ -232,6 +232,9 @@ back reloads while the field is open, since a reload would throw the edit away.
   (Back/Forward repeat it) and drops into a folder, or refuses the drop when given none. It
   reads the files from the drag pasteboard (`FileDrop.draggedFiles`), since SwiftUI hands a
   delegate item providers rather than the dragging info.
+- **Scrolling while dragging**: `FileTableView` and `FileCollectionView` pass `draggingUpdated`
+  to a `DragAutoscroll` (FileViewSupport.swift), which scrolls the enclosing scroll view after
+  1.5 s within 40 pt of the top (below the header inset) or bottom, at the Settings speed.
 - **Right-click menu**: `table.menu` with the coordinator as `NSMenuDelegate`;
   `menuNeedsUpdate` builds an item menu or a folder menu from `Action`s, plus Open With
   (`NSWorkspace.urlsForApplications(toOpen:)`) and Share (`standardShareMenuItem`). Shift+F10

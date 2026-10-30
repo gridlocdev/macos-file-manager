@@ -22,6 +22,10 @@ on, double-click isn't needed.
 **Ask before moving items to the Trash** (off by default) asks before Delete or Cmd+Backspace
 trashes anything. Off, trashing happens straight away; Cmd+Z puts it back.
 
+**Scroll while dragging** (Slow by default; Medium, Fast) sets how fast the list scrolls when
+you hold a dragged item near its top or bottom edge for a second and a half. See
+[Drag and drop](Drag-and-Drop.md#scrolling-while-you-drag).
+
 ## Windows
 
 **Reopen windows and tabs from last time** (on by default) brings back your windows and tabs,
