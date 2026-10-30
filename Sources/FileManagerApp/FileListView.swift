@@ -93,7 +93,8 @@ struct FileListView: NSViewRepresentable {
         }
         // While a name is being edited a reload would throw the edit away; it catches up after.
         if version != coordinator.version || cut != coordinator.cut || sizeChanged, !coordinator.rename.isActive {
-            coordinator.reload(scrollToTop: reveal == nil && version != coordinator.version)
+            // Only a new folder starts at the top; a refresh of this one keeps the scroll position.
+            coordinator.reload(scrollToTop: reveal == nil && model.url != coordinator.listedFolder)
         }
         coordinator.applySelection(selection)
         if let reveal, let row = coordinator.row(of: reveal) {
@@ -127,6 +128,8 @@ struct FileListView: NSViewRepresentable {
         /// Group headings and items, as shown.
         var rows: [ListRow] = []
         var version = -1
+        /// The folder whose listing is shown.
+        var listedFolder: URL?
         var cut: Set<URL> = []
         var iconSize: CGFloat = 16
         var root = URL(filePath: "/")
@@ -150,6 +153,7 @@ struct FileListView: NSViewRepresentable {
         func reload(scrollToTop: Bool) {
             guard let table else { return }
             version = model.listingVersion
+            listedFolder = model.url
             cut = Clipboard.shared.cutURLs
             rows = model.rows
             isUpdating = true

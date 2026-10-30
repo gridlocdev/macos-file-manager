@@ -62,7 +62,8 @@ struct FileIconView: NSViewRepresentable {
             if layout.headerReferenceSize != header { layout.headerReferenceSize = header }
         }
         if version != coordinator.version || cut != coordinator.cut || sizeChanged, !coordinator.rename.isActive {
-            coordinator.reload(scrollToTop: reveal == nil && version != coordinator.version)
+            // Only a new folder starts at the top; a refresh of this one keeps the scroll position.
+            coordinator.reload(scrollToTop: reveal == nil && model.url != coordinator.listedFolder)
         }
         coordinator.applySelection(selection)
         if let reveal, let path = coordinator.indexPath(of: reveal) {
@@ -95,6 +96,8 @@ struct FileIconView: NSViewRepresentable {
         /// One section per group (one section when not grouping).
         var sections: [(title: String, items: [FileItem])] = []
         var version = -1
+        /// The folder whose listing is shown.
+        var listedFolder: URL?
         var cut: Set<URL> = []
         var iconSize: CGFloat = 0
         var isUpdating = false
@@ -126,6 +129,7 @@ struct FileIconView: NSViewRepresentable {
         func reload(scrollToTop: Bool) {
             guard let grid else { return }
             version = model.listingVersion
+            listedFolder = model.url
             cut = Clipboard.shared.cutURLs
             var built: [(title: String, items: [FileItem])] = []
             for row in model.rows {
