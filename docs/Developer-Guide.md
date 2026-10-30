@@ -92,7 +92,10 @@ Sources/FileManagerApp/        the app
   FileIconView.swift           the icon view (NSCollectionView), thumbnails, Cmd+scroll zoom, type-ahead
   FileViewSupport.swift        shared by both views: InlineRename, IconCache (one, app-wide), FileDrop, FileFormat
   Hover.swift                  onMouseOver (an AppKit tracking area: .onHover never fires in the toolbar),
-                               pointerCursor() for every clickable SwiftUI control, SidebarHover
+                               pointerCursor() for every clickable SwiftUI control, SidebarHover,
+                               fadedDragImage() (a pinned row's drag shows the row, faded: it patches
+                               the SwiftUI list class's draggingSession(_:willBeginAt:) and draws the
+                               row with ImageRenderer, since a snapshot loses the vibrant colours)
   FileContextMenu.swift        the right-click menu for both views
   QuickLook.swift              FileBrowsingView (either view has focus) and the Quick Look panel source
   PreviewPane.swift            the docked preview (Opt+P)

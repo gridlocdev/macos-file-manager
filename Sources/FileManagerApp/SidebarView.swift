@@ -23,7 +23,7 @@ struct SidebarView: View {
             List(selection: selectionBinding) {
                 Section("Pinned") {
                     ForEach(store.pins.paths, id: \.self) { path in
-                        row(URL(filePath: path), section: .pinned, symbol: Self.symbol(for: path))
+                        row(URL(filePath: path), section: .pinned, symbol: Self.symbol(for: path), draggable: true)
                             .contextMenu {
                                 openInNewTab(path)
                                 Button("Remove from Sidebar") { store.unpin(path) }
@@ -77,13 +77,14 @@ struct SidebarView: View {
         }
     }
 
-    private func row(_ url: URL, section: SidebarTag.Section, symbol: String) -> some View {
+    private func row(_ url: URL, section: SidebarTag.Section, symbol: String, draggable: Bool = false) -> some View {
         // Desktop, Documents and Downloads by their own names: asking for the localized one
         // can bring up macOS's folder-access prompt before they're opened.
-        Label(
-            url.isGuardedFolder(home: model.home) ? url.lastPathComponent : FileManager.default.displayName(atPath: url.path),
-            systemImage: symbol)
+        let title =
+            url.isGuardedFolder(home: model.home) ? url.lastPathComponent : FileManager.default.displayName(atPath: url.path)
+        return Label(title, systemImage: symbol)
             .modifier(SidebarHover())
+            .background { if draggable { Color.clear.fadedDragImage(title: title, symbol: symbol) } }
             .tag(SidebarTag(section: section, path: url.path))
             .folderDropTarget(url, model: model)
     }

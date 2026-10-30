@@ -21,7 +21,7 @@ Applications and iCloud Drive (if you use it). Pins are shared by every window.
   folders (a line shows where it goes). Or select it and choose **File → Add to Sidebar**
   (Ctrl+Cmd+T), or right-click → **Add to Sidebar**. With nothing selected, Add to Sidebar pins
   the folder you're in.
-- **Reorder**: drag pinned folders up and down.
+- **Reorder**: drag pinned folders up and down. The row you drag stays as it looks, faded, as in Finder.
 - **Unpin**: right-click → **Remove from Sidebar**. You can remove the starting ones too.
 
 Dropping files **on** a pinned folder (rather than between two) moves or copies them into it,
