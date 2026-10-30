@@ -9,6 +9,9 @@ struct AppCommands: Commands {
     private var keymap: Keymap { KeymapStore.shared.menuKeymap }
 
     var body: some Commands {
+        // The menu bar outlives every window, so it opens one for folders sent from other apps.
+        let _ = registerOpener()
+
         // Cmd+H shows hidden files (Linux habit), so Hide loses its shortcut.
         CommandGroup(replacing: .appVisibility) {
             Button("Hide File Manager") { NSApp.hide(nil) }
@@ -152,6 +155,11 @@ struct AppCommands: Commands {
         } else {
             NSSound.beep()
         }
+    }
+
+    private func registerOpener() {
+        let openWindow = openWindow
+        Windows.shared.openWindow = { openWindow(value: $0) }
     }
 
     /// The docs ship inside the .app; when running from the build folder, use the repo's.

@@ -32,6 +32,9 @@ final class Windows {
     private var waiting: [UUID: [NSWindow]] = [:]
     private var closedTabs: [String] = []
     private var restoreQueue: [WindowSpec] = []
+    /// Opens a window when none is open to ask (folders sent from other apps). Set by the menu
+    /// bar, which has SwiftUI's openWindow while no window is open.
+    var openWindow: ((WindowSpec) -> Void)?
     private var launchSpecTaken = false
     private var terminating = false
     private var saveTask: Task<Void, Never>?
@@ -127,13 +130,15 @@ final class Windows {
             }
         }
         guard let first = specs.first else { return WindowSpec() }
-        restoreQueue = Array(specs.dropFirst())
+        // Folders sent from other apps before this may already be waiting.
+        restoreQueue = Array(specs.dropFirst()) + restoreQueue
         return first
     }
 
     /// Folders sent from other apps (Open With, the Dock icon, the Service, `open -a`): each opens
-    /// in a new window; a file opens its folder with the file selected. Before any window is up
-    /// (the app was launched to open them) they wait for the first window.
+    /// in a new window; a file opens its folder with the file selected. Before the first window
+    /// is up (the app was launched to open them) they wait for it; with every window closed they
+    /// open straight away.
     func openFromElsewhere(_ urls: [URL]) {
         let specs = urls.map { url -> WindowSpec in
             var isFolder: ObjCBool = false
@@ -144,6 +149,9 @@ final class Windows {
         }
         if let model = ActiveBrowser.shared.model ?? firstModel {
             for spec in specs { model.requestOpen(spec) }
+            NSApp.activate()
+        } else if launchSpecTaken, let openWindow {
+            for spec in specs { openWindow(spec) }
             NSApp.activate()
         } else {
             restoreQueue += specs

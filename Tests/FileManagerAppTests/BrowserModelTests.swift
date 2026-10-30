@@ -185,6 +185,23 @@ import Testing
     }
 }
 
+@MainActor @Suite struct WindowsTests {
+    let sandbox: Sandbox
+    init() throws { sandbox = try Sandbox() }
+
+    @Test func foldersOpenedBeforeTheFirstWindowSurviveTheSessionRestore() throws {
+        let defaults = UserDefaults(suiteName: "WindowsTests-\(UUID().uuidString)")!
+        let session = SessionState(windows: [.init(tabs: [sandbox.root.path, sandbox.root.appending(path: "Projects").path])])
+        defaults.set(try JSONEncoder().encode(session), forKey: "session")
+        let windows = Windows(defaults: defaults)
+        // Open With arrives before SwiftUI asks for the first window.
+        windows.openFromElsewhere([sandbox.root.appending(path: "Receipts")])
+        #expect(windows.launchSpec().path == sandbox.root.path)
+        let queued = windows.takeRestoreQueue().compactMap(\.path)
+        #expect(queued == [sandbox.root.appending(path: "Projects").path, sandbox.root.appending(path: "Receipts").path])
+    }
+}
+
 @MainActor @Suite struct FolderSearchTests {
     let sandbox: Sandbox
     init() throws { sandbox = try Sandbox() }
