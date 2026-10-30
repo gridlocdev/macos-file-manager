@@ -16,7 +16,6 @@ struct AddressBar: View {
                     .textFieldStyle(.plain)
                     .padding(.horizontal, 10)
                     .focused($focused)
-                    .onAppear { focused = true }
                     .onSubmit { model.submitAddress() }
                     .onExitCommand { model.cancelAddressEdit() }
                     .onKeyPress(.tab) {
@@ -26,7 +25,12 @@ struct AddressBar: View {
                     .help("Type a path and press Return. Tab completes folder names. Esc cancels.")
                     .accessibilityLabel("Address")
             } else {
-                Breadcrumbs(model: model) { editing = true }
+                // Focus set along with editing, as for Cmd+L: set from the field's onAppear it
+                // never took, so leaving the field never turned it back into breadcrumbs.
+                Breadcrumbs(model: model) {
+                    editing = true
+                    focused = true
+                }
             }
         }
         .frame(minWidth: 160, idealWidth: 300, maxWidth: .infinity)

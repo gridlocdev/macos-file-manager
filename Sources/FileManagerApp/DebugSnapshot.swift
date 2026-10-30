@@ -7,7 +7,9 @@ import FileManagerCore
 /// FILEMANAGER_SNAPSHOT_KEYS: key chords ("Cmd+C"), "menu:Title", "type:text", "scope:subfolders"
 /// (Find's This Folder/Subfolders switch, which has no key) and "action:find" (runs an `Action` on
 /// the window's model directly; works even when another app keeps this one from becoming active,
-/// which stops keys from arriving), "group:kind" (Group By), "tag:Red" (toggles a tag on the selection), "other" (later steps act on the other split pane), "select:name" and "batch:find>replace" (a batch rename of the selection, as the
+/// which stops keys from arriving), "group:kind" (Group By), "tag:Red" (toggles a tag on the selection), "other" (later steps act on the other split pane), "select:name", "mouse:x/y" (a click at x/y points from the
+/// window's top-left; the PNG is at 2x), "click:list" (makes the file list
+/// first responder through AppKit, as a click does, without SwiftUI knowing) and "batch:find>replace" (a batch rename of the selection, as the
 /// Rename button in the sheet would run it). For checking the UI
 /// and for docs screenshots without screen-recording permission. See `just snapshot`.
 @MainActor enum DebugSnapshot {
@@ -55,6 +57,10 @@ import FileManagerCore
                 } else if chord.hasPrefix("select:"), let model = ActiveBrowser.shared.model {
                     let name = String(chord.dropFirst(7))
                     model.selection = Set(model.items.filter { $0.name == name }.map(\.url))
+                } else if chord.hasPrefix("mouse:") {
+                    click(String(chord.dropFirst(6)))
+                } else if chord == "click:list" {
+                    clickList()
                 } else if chord == "other" {
                     // Split view: later steps act on the other pane.
                     if let other = ActiveBrowser.shared.model?.otherPane { ActiveBrowser.shared.model = other }
@@ -93,6 +99,32 @@ import FileManagerCore
     private static var targetWindow: NSWindow? {
         let browser = ActiveBrowser.shared.model?.window
         return NSApp.keyWindow ?? browser?.attachedSheet ?? browser
+    }
+
+    private static func click(_ spec: String) {
+        let xy = spec.split(separator: "/").compactMap { Double($0) }
+        guard xy.count == 2, let window = ActiveBrowser.shared.model?.window else { return }
+        let point = NSPoint(x: xy[0], y: window.frame.height - xy[1])
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            guard let event = NSEvent.mouseEvent(
+                with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)
+            else { return }
+            NSApp.postEvent(event, atStart: false)
+        }
+        print("snapshot: clicked \(spec)")
+    }
+
+    private static func clickList() {
+        func find(_ view: NSView) -> FileTableView? {
+            if let table = view as? FileTableView { return table }
+            for sub in view.subviews { if let found = find(sub) { return found } }
+            return nil
+        }
+        guard let window = ActiveBrowser.shared.model?.window, let content = window.contentView,
+            let table = find(content)
+        else { return print("snapshot: no file list") }
+        print("snapshot: clicked list: \(window.makeFirstResponder(table))")
     }
 
     private static func batchRename(_ spec: String, model: BrowserModel) {

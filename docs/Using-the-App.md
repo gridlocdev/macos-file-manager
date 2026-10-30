@@ -44,7 +44,8 @@ Like Explorer's, the address bar shows the path as a row of folders:
 ## Typing a path
 
 Press **Cmd+L** (or Opt+D, as on Windows), or click the empty part of the address bar, to type a
-path, then press **Return**. `~` means your home folder. You can type:
+path, then press **Return**. `~` means your home folder. Esc, or clicking anywhere else, puts the
+breadcrumbs back. You can type:
 
 | You type | Goes to |
 |---|---|

@@ -351,8 +351,10 @@ just snapshot "menu:New Folder,type:Reports,Return,Cmd+Z" out.png
 ```
 
 Steps are key chords, `menu:<item title>`, `type:<text>`, `action:<Action raw value>` (runs it
-on the window's model directly), `scope:subfolders` (Find's switch) and `batch:<find>><replace>`
-(a batch rename of the selection, as the sheet's Rename button runs it). When you're using
+on the window's model directly), `scope:subfolders` (Find's switch), `batch:<find>><replace>`
+(a batch rename of the selection, as the sheet's Rename button runs it), `mouse:<x>/<y>` (a
+click at window points from the top-left; the PNG is at 2x) and `click:list` (makes the file
+list first responder through AppKit, as a click does, behind SwiftUI's back). When you're using
 another app, macOS may not let File Manager become active; then nothing is key, Cmd shortcuts
 don't reach the menu bar, and the hook falls back to the first window, so use `action:` steps.
 The output lists the items shown and selected at the end.
