@@ -39,8 +39,10 @@ struct KeyMonitor: NSViewRepresentable {
                 if active !== oldValue, window?.isKeyWindow == true { ActiveBrowser.shared.model = active }
             }
         }
-        /// Read on every key, so Reload in Settings takes effect at once.
+        /// Read on every key, so Reload in Settings takes effect at once (for chords the menus
+        /// don't show).
         private var keymap: Keymap { KeymapStore.shared.keymap }
+        private var menuKeymap: Keymap { KeymapStore.shared.menuKeymap }
         private var monitor: Any?
 
         override func viewDidMoveToWindow() {
@@ -87,10 +89,14 @@ struct KeyMonitor: NSViewRepresentable {
                 return nil
             }
             if window.firstResponder is NSText { return event }
-            guard let chord = KeyChord(event), let action = keymap.action(for: chord) else { return event }
+            guard let chord = KeyChord(event) else { return event }
             // The chord a menu item shows is left to the menu: SwiftUI runs menu shortcuts even
             // when a monitor swallows the event, so handling it here too would run it twice.
-            if action.menu != nil, keymap.menuChord(for: action) == chord { return event }
+            // The menus keep the shortcuts they were built with until relaunch, so check those.
+            if let shown = menuKeymap.action(for: chord), shown.menu != nil, menuKeymap.menuChord(for: shown) == chord {
+                return event
+            }
+            guard let action = keymap.action(for: chord) else { return event }
             if action.isHandledByMacOS { return event }
             // Return renames and Delete trashes only in the file list, not the sidebar.
             if action.needsFileListFocus, !(window.firstResponder is any FileBrowsingView) { return event }

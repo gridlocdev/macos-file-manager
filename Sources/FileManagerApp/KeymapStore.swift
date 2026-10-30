@@ -9,6 +9,9 @@ final class KeymapStore {
     static let shared = KeymapStore()
 
     private(set) var keymap = Keymap.standard
+    /// The keymap the menu bar was built from. Menus don't pick up a Reload, so the key monitor
+    /// leaves exactly these menu chords to them, and runs every other chord from `keymap`.
+    @ObservationIgnored private(set) var menuKeymap = Keymap.standard
     /// What couldn't be used from the file (and shortcuts that moved), for Settings.
     private(set) var problems: [String] = []
     let file: URL
@@ -17,6 +20,7 @@ final class KeymapStore {
         file = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("File Manager/Shortcuts.json")
         reload()
+        menuKeymap = keymap
     }
 
     func reload() {

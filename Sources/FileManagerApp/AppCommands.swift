@@ -6,7 +6,7 @@ import SwiftUI
 struct AppCommands: Commands {
     private var browser: BrowserModel? { ActiveBrowser.shared.model }
     @Environment(\.openWindow) private var openWindow
-    private var keymap: Keymap { KeymapStore.shared.keymap }
+    private var keymap: Keymap { KeymapStore.shared.menuKeymap }
 
     var body: some Commands {
         // Cmd+H shows hidden files (Linux habit), so Hide loses its shortcut.

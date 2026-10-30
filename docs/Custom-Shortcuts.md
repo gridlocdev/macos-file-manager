@@ -20,7 +20,8 @@ shortcuts.
    ```
 
 3. Save the file and click **Reload** in Settings. Keys in the file list change straight away;
-   the shortcuts shown in the menu bar change the next time you open File Manager.
+   the shortcuts shown in the menu bar change the next time you open File Manager. Until then,
+   a shortcut the menu bar still shows keeps doing what the menu says.
 
 Each command you list gets exactly the shortcuts you give it, and loses the rest: the example
 above makes F2 the only rename key (Return stops renaming) and stops Backspace going up a folder.
