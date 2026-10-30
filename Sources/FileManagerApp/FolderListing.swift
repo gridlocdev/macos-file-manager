@@ -25,6 +25,11 @@ final class FolderListing {
         loaded: @escaping @MainActor () -> Void
     ) {
         loadTask?.cancel()
+        if folder != self.folder {
+            // Another folder: the last one's items mustn't stay up (or be acted on) meanwhile.
+            items = []
+            error = nil
+        }
         self.folder = folder
         isLoading = true
         watcher = DirectoryWatcher(url: folder, onChange: changed)

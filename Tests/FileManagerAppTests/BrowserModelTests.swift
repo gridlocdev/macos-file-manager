@@ -116,6 +116,15 @@ import Testing
         #expect(model.canPerform(.goBack))
     }
 
+    @Test func theFolderLeftIsntActedOnWhileTheNextLoads() async throws {
+        let model = try await started()
+        model.navigate(to: sandbox.root.appending(path: "Projects"))
+        #expect(model.items.isEmpty)
+        model.perform(.selectAll)
+        #expect(model.selection.isEmpty)
+        try await eventually { sandbox.names(model) == ["plan.txt"] }
+    }
+
     @Test func findFiltersAndEndSearchRestores() async throws {
         let model = try await started()
         model.perform(.find)

@@ -183,6 +183,9 @@ final class BrowserModel {
         services.sidebar.visited(target.path)
         services.windows.scheduleSave()
         load()
+        // The new folder's listing is empty until read: Select All and Delete can't reach the
+        // folder just left.
+        applyFilterAndSort()
     }
 
     /// Opens folders here and everything else with its default app.
