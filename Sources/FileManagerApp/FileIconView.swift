@@ -553,7 +553,12 @@ final class FileGroupHeader: NSView, NSCollectionViewElement {
 /// Thumbnails for the icon view (pictures, movies, PDFs…), made in the background by Quick Look.
 /// Until one is ready, or for files without one, the file's icon shows.
 @MainActor final class ThumbnailCache {
-    private var images: [String: NSImage] = [:]
+    /// Bounded by memory (a 256 pt thumbnail at 2x is about 1 MB); the oldest are let go.
+    private let images: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.totalCostLimit = 200 << 20
+        return cache
+    }()
     private var pending: Set<String> = []
     private let icons = IconCache()
 
@@ -563,7 +568,7 @@ final class FileGroupHeader: NSView, NSCollectionViewElement {
         // Thumbnails are made at the next size up, so zooming between sizes rarely waits.
         let bucket = FolderView.iconSizes.first { CGFloat($0) >= size } ?? Int(size)
         let key = "\(item.url.path)|\(bucket)|\(item.modified?.timeIntervalSince1970 ?? 0)"
-        if let cached = images[key] { return cached }
+        if let cached = images.object(forKey: key as NSString) { return cached }
         if !pending.contains(key) {
             pending.insert(key)
             // Pictures, movies and PDFs show their content; other documents (a text file's
@@ -579,7 +584,8 @@ final class FileGroupHeader: NSView, NSCollectionViewElement {
                 Task { @MainActor in
                     self.pending.remove(key)
                     guard let image else { return }
-                    self.images[key] = image
+                    let pixels = image.representations.first.map { $0.pixelsWide * $0.pixelsHigh }
+                    self.images.setObject(image, forKey: key as NSString, cost: (pixels ?? bucket * bucket) * 4)
                     ready(image)
                 }
             }
