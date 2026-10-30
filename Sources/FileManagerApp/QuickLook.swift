@@ -48,7 +48,9 @@ extension QuickLookSource: @preconcurrency QLPreviewPanelDataSource, @preconcurr
     func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int { urls().count }
 
     func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
-        urls()[index] as NSURL
+        // The selection can shrink while the panel is open (a refresh, Trash).
+        let urls = urls()
+        return urls.indices.contains(index) ? urls[index] as NSURL : nil
     }
 
     /// Arrow keys in the panel move through the view, as in Finder; Space closes it. Everything

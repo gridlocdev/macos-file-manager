@@ -159,6 +159,8 @@ struct FileIconView: NSViewRepresentable {
             isUpdating = true
             grid.selectionIndexPaths = paths
             isUpdating = false
+            // Select All, a refresh, after Trash: an open Quick Look panel follows.
+            grid.quickLook.selectionChanged()
         }
 
         private func selectionChanged() {

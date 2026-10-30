@@ -169,6 +169,8 @@ struct FileListView: NSViewRepresentable {
             isUpdating = true
             table.selectRowIndexes(indexes, byExtendingSelection: false)
             isUpdating = false
+            // Select All, a refresh, after Trash: an open Quick Look panel follows.
+            table.quickLook.selectionChanged()
         }
 
         func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
