@@ -139,6 +139,14 @@ extension KeyChord {
         case 109: key = .function(10)
         case 103: key = .function(11)
         case 111: key = .function(12)
+        case 105: key = .function(13)
+        case 107: key = .function(14)
+        case 113: key = .function(15)
+        case 106: key = .function(16)
+        case 64: key = .function(17)
+        case 79: key = .function(18)
+        case 80: key = .function(19)
+        case 90: key = .function(20)
         default:
             // The key as typed without modifiers, so Cmd+Shift+. is "." not ">".
             guard let chars = event.characters(byApplyingModifiers: []), !chars.isEmpty else { return nil }

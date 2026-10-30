@@ -203,6 +203,19 @@ import Testing
     }
 }
 
+@MainActor @Suite struct KeyChordEventTests {
+    func event(_ keyCode: UInt16, _ characters: String, _ flags: NSEvent.ModifierFlags = []) -> NSEvent {
+        NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: 0, context: nil,
+            characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)!
+    }
+
+    @Test func functionKeysUpToF20() {
+        #expect(KeyChord(event(105, "")) == KeyChord(.function(13)))
+        #expect(KeyChord(event(90, "")) == KeyChord(.function(20)))
+    }
+}
+
 @MainActor @Suite struct WindowsTests {
     let sandbox: Sandbox
     init() throws { sandbox = try Sandbox() }
