@@ -8,7 +8,7 @@ public enum Action: String, CaseIterable, Sendable {
     case addToSidebar
     case newFolder, newTextFile
     case rename, duplicate
-    case getInfo, quickLook, showInFinder, showContextMenu
+    case getInfo, quickLook, showInFinder, openContainingFolder, showContextMenu
     case compress, extract, downloadNow, removeDownload
     case toggleSplitView, copyToOtherPane, moveToOtherPane, connectToServer
     case moveToTrash, deleteImmediately, putBack
@@ -47,6 +47,7 @@ public enum Action: String, CaseIterable, Sendable {
         case .getInfo: "Get Info"
         case .quickLook: "Quick Look"
         case .showInFinder: "Show in Finder"
+        case .openContainingFolder: "Open Containing Folder"
         case .showContextMenu: "Show Context Menu"
         case .compress: "Compress"
         case .extract: "Extract"
@@ -99,7 +100,7 @@ public enum Action: String, CaseIterable, Sendable {
     public var menu: Menu? {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
-            .getInfo, .quickLook, .showInFinder, .newWindow, .newTab, .openInNewTab, .reopenClosedTab, .addToSidebar,
+            .getInfo, .quickLook, .showInFinder, .openContainingFolder, .newWindow, .newTab, .openInNewTab, .reopenClosedTab, .addToSidebar,
             .compress, .extract, .downloadNow, .removeDownload:
             .file
         case .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
@@ -121,7 +122,7 @@ public enum Action: String, CaseIterable, Sendable {
         switch self {
         case .open, .newFolder, .newTextFile, .rename, .duplicate, .moveToTrash, .deleteImmediately, .putBack,
             .undo, .redo, .cut, .copy, .paste, .pasteMove, .copyPath, .selectAll, .invertSelection, .selectByPattern,
-            .getInfo, .quickLook, .showInFinder, .showContextMenu, .openInNewTab, .addToSidebar,
+            .getInfo, .quickLook, .showInFinder, .openContainingFolder, .showContextMenu, .openInNewTab, .addToSidebar,
             .compress, .extract, .downloadNow, .removeDownload, .copyToOtherPane, .moveToOtherPane:
             true
         default:

@@ -36,6 +36,7 @@ struct AppCommands: Commands {
             button(.quickLook)
             button(.getInfo)
             button(.showInFinder)
+            button(.openContainingFolder)
             button(.addToSidebar)
             Divider()
             button(.rename)

@@ -59,6 +59,7 @@ struct FileListView: NSViewRepresentable {
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         context.coordinator.table = table
+        model.scrollPosition = { [weak scroll] in scroll?.contentView.bounds.origin.y }
         return scroll
     }
 
@@ -69,6 +70,7 @@ struct FileListView: NSViewRepresentable {
         let version = model.listingVersion
         let selection = model.selection
         let reveal = model.revealAfterLoad
+        let restoreScroll = model.restoreScroll
         let view = model.view
         let commands = model.takeFileViewCommands()
         let cut = Clipboard.shared.cutURLs
@@ -100,6 +102,10 @@ struct FileListView: NSViewRepresentable {
         if let reveal, let row = coordinator.row(of: reveal) {
             table.scrollRowToVisible(row)
             Task { model.didReveal() }
+        }
+        if let restoreScroll {
+            scroll.restore(restoreScroll)
+            Task { model.didRestoreScroll() }
         }
         // Focus, the menu and rename wait until this update is done.
         var later: [PaneCommand] = []
@@ -394,4 +400,16 @@ final class FileCell: NSTableCellView {
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
+}
+
+extension NSScrollView {
+    /// Scrolls to a position saved from `contentView.bounds.origin.y` (Back to a search).
+    func restore(_ y: CGFloat) {
+        documentView?.layoutSubtreeIfNeeded()
+        // Kept within what can be scrolled to (the header's inset at the top, the end of the
+        // list at the bottom: a shorter list than when it was saved).
+        let wanted = NSRect(origin: NSPoint(x: contentView.bounds.origin.x, y: y), size: contentView.bounds.size)
+        contentView.scroll(to: contentView.constrainBoundsRect(wanted).origin)
+        reflectScrolledClipView(contentView)
+    }
 }

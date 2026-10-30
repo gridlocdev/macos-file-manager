@@ -143,6 +143,29 @@ import Testing
         #expect(sandbox.presenter.problems.isEmpty)
     }
 
+    @Test func backReturnsToTheSearchAsItWas() async throws {
+        let model = try await started()
+        model.perform(.find)
+        model.searchScope = .subfolders
+        model.criteria.text = "plan"
+        try await eventually { model.items.map(\.name) == ["plan.txt"] && !model.isSearching }
+        let plan = model.items[0].url
+        model.selection = [plan]
+        model.perform(.openContainingFolder)
+        try await eventually { model.url.lastPathComponent == "Projects" && model.selection == [plan] }
+        #expect(!model.search.isOpen)
+        model.perform(.goBack)
+        try await eventually { !model.isLoading && model.selection == [plan] }
+        #expect(model.url.isSameFile(as: sandbox.root))
+        #expect(model.search.isOpen && model.searchScope == .subfolders && model.criteria.text == "plan")
+        #expect(model.items.map(\.name) == ["plan.txt"])
+        // Forward and Back again: the search is kept each way.
+        model.perform(.goForward)
+        try await eventually { model.url.lastPathComponent == "Projects" && !model.search.isOpen }
+        model.perform(.goBack)
+        try await eventually { model.search.isOpen && model.items.map(\.name) == ["plan.txt"] }
+    }
+
     @Test func renameCanDropAHiddenExtension() async throws {
         var notes = sandbox.root.appending(path: "notes.txt")
         var values = URLResourceValues()

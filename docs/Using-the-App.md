@@ -25,7 +25,9 @@ Each File Manager tab shows one folder. Open a new tab with **Cmd+T** and a new 
 ## The toolbar
 
 - **‹ ›** go back and forward through the folders you've visited in this window
-  (Opt+Left / Opt+Right, Cmd+[ / Cmd+], or the back and forward buttons on your mouse).
+  (Opt+Left / Opt+Right, Cmd+[ / Cmd+], or the back and forward buttons on your mouse). Going
+  back to a search brings it back as you left it: the same text, filters and results, with the
+  same items selected and the list scrolled to the same place.
 - **↑** goes to the enclosing folder (Backspace, Opt+Up or Cmd+Up). The folder you came from is
   selected, so you can go straight back down with Cmd+Down.
 - **The address bar** shows where you are, as clickable folders.
@@ -104,6 +106,7 @@ it. If it isn't already selected, it's selected first.
 | On an item | |
 |---|---|
 | **Open**, **Open With** | Open With lists every app that can open the item, the default first, and **Other…** for any app. |
+| **Open Containing Folder** | On results from searching subfolders: opens the folder the item is in, with the item selected. |
 | **Quick Look** | A preview, as with Space. |
 | **Cut**, **Copy**, **Duplicate**, **Rename** | As in the Edit and File menus. |
 | **Copy Path**, **Get Info** | |

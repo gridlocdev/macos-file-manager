@@ -18,6 +18,7 @@ import Testing
         var canRedo = false
         var canGoBack = false
         var canGoForward = false
+        var isSearchingSubfolders = false
         var hasSelection: Bool { !selectedItems.isEmpty }
     }
 
@@ -32,6 +33,12 @@ import Testing
             #expect(!action.isAvailable(in: none))
             #expect(action.isAvailable(in: some))
         }
+    }
+
+    @Test func openContainingFolderOnlyForSubfolderResults() {
+        #expect(!Action.openContainingFolder.isAvailable(in: State(selectedItems: [file])))
+        #expect(!Action.openContainingFolder.isAvailable(in: State(isSearchingSubfolders: true)))
+        #expect(Action.openContainingFolder.isAvailable(in: State(selectedItems: [file], isSearchingSubfolders: true)))
     }
 
     @Test func trashAndPutBackDependOnTheFolder() {

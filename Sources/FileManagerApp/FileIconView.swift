@@ -38,6 +38,7 @@ struct FileIconView: NSViewRepresentable {
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         context.coordinator.grid = grid
+        model.scrollPosition = { [weak scroll] in scroll?.contentView.bounds.origin.y }
         return scroll
     }
 
@@ -47,6 +48,7 @@ struct FileIconView: NSViewRepresentable {
         let version = model.listingVersion
         let selection = model.selection
         let reveal = model.revealAfterLoad
+        let restoreScroll = model.restoreScroll
         let iconSize = CGFloat(model.view.iconSize)
         let grouped = model.view.groupBy != .none
         let commands = model.takeFileViewCommands()
@@ -69,6 +71,12 @@ struct FileIconView: NSViewRepresentable {
         if let reveal, let path = coordinator.indexPath(of: reveal) {
             grid.scrollToItems(at: [path], scrollPosition: .nearestHorizontalEdge)
             Task { model.didReveal() }
+        }
+        if let restoreScroll {
+            // The grid lays out its items after a reload; scroll once it has.
+            grid.layoutSubtreeIfNeeded()
+            scroll.restore(restoreScroll)
+            Task { model.didRestoreScroll() }
         }
         // Focus, the menu and rename wait until this update is done.
         var later: [PaneCommand] = []

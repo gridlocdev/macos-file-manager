@@ -9,8 +9,8 @@ final class SearchSession {
     enum Scope: Hashable { case folder, subfolders }
 
     private(set) var isOpen = false
-    var criteria = SearchCriteria() { didSet { if criteria != oldValue { changed() } } }
-    var scope = Scope.folder { didSet { if scope != oldValue { changed() } } }
+    var criteria = SearchCriteria() { didSet { if criteria != oldValue, !restoring { changed() } } }
+    var scope = Scope.folder { didSet { if scope != oldValue, !restoring { changed() } } }
     /// A subfolder search is still finding things.
     private(set) var isSearching = false
     private(set) var hitLimit = false
@@ -33,6 +33,36 @@ final class SearchSession {
     @ObservationIgnored private var resultsAreStale = false
     @ObservationIgnored private var folderSearch: FolderSearch?
     @ObservationIgnored private var delay: Task<Void, Never>?
+    @ObservationIgnored private var restoring = false
+
+    /// An open search as it was, for Back and Forward.
+    struct Snapshot: Sendable {
+        var criteria: SearchCriteria
+        var scope: Scope
+        var results: [FileItem]
+        var hitLimit: Bool
+        var wasSearching: Bool
+    }
+
+    var snapshot: Snapshot? {
+        guard isOpen else { return nil }
+        return Snapshot(
+            criteria: criteria, scope: scope, results: results, hitLimit: hitLimit, wasSearching: isSearching)
+    }
+
+    /// Opens the search as it was, with the results it had (not searched again, so the list
+    /// and its scroll position come back as they were); one that hadn't finished starts again.
+    func restore(_ snapshot: Snapshot) {
+        stop()
+        restoring = true
+        isOpen = true
+        scope = snapshot.scope
+        criteria = snapshot.criteria
+        restoring = false
+        results = snapshot.results
+        hitLimit = snapshot.hitLimit
+        if snapshot.wasSearching, isSearchingSubfolders { restart() }
+    }
 
     /// Results come from the whole tree under the folder rather than its listing.
     var isSearchingSubfolders: Bool { isOpen && scope == .subfolders && !criteria.isEmpty }

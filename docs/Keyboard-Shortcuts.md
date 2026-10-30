@@ -90,6 +90,7 @@ Settings → Keyboard.
 | Get Info | Cmd+I, Opt+Return | Alt+Enter |
 | Show Context Menu | Shift+F10, right-click | Shift+F10, Menu key |
 | Show in Finder | File menu | |
+| Open Containing Folder | File menu, on search results | Open file location |
 
 ## In the file list
 

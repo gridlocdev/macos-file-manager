@@ -19,6 +19,8 @@ public protocol ActionState {
     var canRedo: Bool { get }
     var canGoBack: Bool { get }
     var canGoForward: Bool { get }
+    /// Find is showing results from subfolders (not just this folder's items).
+    var isSearchingSubfolders: Bool { get }
 }
 
 extension Action {
@@ -36,6 +38,7 @@ extension Action {
         case .downloadNow: state.selectedItems.contains { $0.cloud == .notDownloaded }
         case .removeDownload: state.selectedItems.contains { $0.cloud == .current }
         case .openInNewTab: state.selectedItems.contains(where: \.isFolder)
+        case .openContainingFolder: state.hasSelection && state.isSearchingSubfolders
         case .reopenClosedTab: state.hasClosedTabs
         case .nextTab, .previousTab, .showTab9: state.tabCount > 1
         case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8:

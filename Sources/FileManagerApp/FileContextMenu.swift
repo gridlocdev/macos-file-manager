@@ -37,6 +37,7 @@ import FileManagerCore
         guard let first = urls.first else { return }
         let selected = model.items.filter { model.selection.contains($0.url) }
         add(.open, to: menu)
+        if model.canPerform(.openContainingFolder) { add(.openContainingFolder, to: menu) }
         if selected.contains(where: \.isFolder) { add(.openInNewTab, to: menu) }
         menu.addItem(openWithItem(for: urls, first: first))
         add(.quickLook, to: menu)

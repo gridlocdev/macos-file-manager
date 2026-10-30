@@ -59,6 +59,7 @@ public struct Keymap: Sendable {
         .getInfo: [.char("i", .command), KeyChord(.returnKey, .option)],
         .quickLook: [KeyChord(.space)],
         .showInFinder: [],
+        .openContainingFolder: [],
         .compress: [],
         .extract: [],
         .downloadNow: [],

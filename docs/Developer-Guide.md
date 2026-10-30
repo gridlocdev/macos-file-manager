@@ -42,7 +42,9 @@ Sources/FileManagerCore/       pure Swift, no AppKit: unit-testable
   ActionAvailability.swift     when each Action is available (ActionState: selection, tabs, clipboard…)
   KeyChord.swift               a key + modifiers, and its docs spelling ("Shift+Cmd+N")
   Keymap.swift                 Action → shortcuts; the standard keymap
-  NavigationHistory.swift      back/forward stacks
+  NavigationHistory.swift      back/forward stacks; each page can carry what was showing when it
+                               was left (BrowserModel.SavedPage: an open search's snapshot, the
+                               selection, the scroll position), handed back by Back/Forward
   PathInput.swift              address bar: resolve typed paths, Tab completion, ~ display
   FileItem.swift               a listing row, and FileSort (folders first, natural names)
   FileNaming.swift             Keep Both / Duplicate / New Folder names, name checks

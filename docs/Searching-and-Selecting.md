@@ -39,7 +39,10 @@ separated with `;`.
 Click **Subfolders** in the find bar to look in every folder inside the current one as well.
 Results come in as they're found, with a spinner and *Searching… 120 found* in the status bar.
 A **Folder** column shows where each result is, relative to the folder you searched from; hover
-over it for the full path.
+over it for the full path. Right-click a result and choose **Open Containing Folder** (also in
+the File menu) to go to its folder with it selected, like Explorer's *Open file location*.
+**Back** (Cmd+[) returns to the search as you left it, results, selection and scroll position
+included; it isn't searched again (press F5 for fresh results).
 
 Two searches run together and their results are merged:
 

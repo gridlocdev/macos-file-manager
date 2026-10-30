@@ -87,6 +87,7 @@ Some things to know:
 | `getInfo` | Get Info | Cmd+I, Opt+Return |
 | `quickLook` | Quick Look | Space |
 | `showInFinder` | Show in Finder | (none) |
+| `openContainingFolder` | Open Containing Folder | (none) |
 | `showContextMenu` | Show Context Menu | Shift+F10 |
 | `compress` | Compress | (none) |
 | `extract` | Extract | (none) |

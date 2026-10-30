@@ -11,7 +11,7 @@ final class BrowserModel {
     private(set) var items: [FileItem] = []
     /// Bumped whenever `items` is replaced, so the table knows to reload.
     private(set) var listingVersion = 0
-    private(set) var history: NavigationHistory
+    private(set) var history: NavigationHistory<SavedPage>
 
     var selection: Set<URL> = []
     /// How this folder is shown (icons or details, sort, groups, zoom); remembered per folder.
@@ -48,6 +48,11 @@ final class BrowserModel {
     var addressText = ""
     /// Scrolled to after the next load (the folder you came up from, a pasted item).
     private(set) var revealAfterLoad: URL?
+    /// The list's scroll position to put back (Back to a search), once the list shows it.
+    private(set) var restoreScroll: CGFloat?
+    @ObservationIgnored private var pendingScroll: CGFloat?
+    /// The list or icon view's scroll position now; set by whichever is showing.
+    @ObservationIgnored var scrollPosition: () -> CGFloat? = { nil }
     /// Requests to this pane's views and window (focus, rename, Quick Look, new windows…).
     private(set) var commands = CommandLog<PaneCommand>()
 
@@ -141,12 +146,30 @@ final class BrowserModel {
     func navigate(to target: URL) {
         let target = target.canonical
         guard target != url else { return }
-        history.visit(target)
+        history.visit(target, leaving: savedPage)
         show(target)
     }
 
-    func goBack() { if let target = history.goBack() { show(target) } }
-    func goForward() { if let target = history.goForward() { show(target) } }
+    func goBack() {
+        if let target = history.goBack(leaving: savedPage) { show(target, restoring: history.saved) }
+    }
+
+    func goForward() {
+        if let target = history.goForward(leaving: savedPage) { show(target, restoring: history.saved) }
+    }
+
+    /// What Back and Forward bring back to a page: an open search, as it was, with its
+    /// selection and scroll position. Nothing for a plain folder (going back to it selects the
+    /// folder you came from instead).
+    struct SavedPage: Sendable {
+        var search: SearchSession.Snapshot
+        var selection: Set<URL>
+        var scroll: CGFloat?
+    }
+
+    private var savedPage: SavedPage? {
+        search.snapshot.map { SavedPage(search: $0, selection: selection, scroll: scrollPosition()) }
+    }
 
     func goUp() {
         guard !url.isFileSystemRoot else { return }
@@ -168,7 +191,7 @@ final class BrowserModel {
         load()
     }
 
-    private func show(_ target: URL) {
+    private func show(_ target: URL, restoring saved: SavedPage? = nil) {
         let previous = url
         url = target
         addressText = PathInput.display(target, home: home)
@@ -180,6 +203,14 @@ final class BrowserModel {
         revealAfterLoad = cameFromChild ? previous.normalized : nil
         pendingSelection = cameFromChild ? [previous.normalized] : []
         pendingRename = nil
+        pendingScroll = nil
+        if let saved {
+            search.restore(saved.search)
+            revealAfterLoad = nil
+            pendingSelection = saved.selection
+            pendingScroll = saved.scroll
+            focusList()
+        }
         services.sidebar.visited(target.path)
         services.windows.scheduleSave()
         load()
@@ -348,7 +379,28 @@ final class BrowserModel {
         case .showContextMenu: send(.contextMenu)
         case .showInFinder:
             NSWorkspace.shared.activateFileViewerSelecting(selection.isEmpty ? [url] : selectedURLs)
+        case .openContainingFolder: openContainingFolder()
         }
+    }
+
+    /// A search result's folder, with the result (and any others selected from that folder)
+    /// selected, like Explorer's Open file location.
+    private func openContainingFolder() {
+        guard let first = selectedURLs.first else { return }
+        let folder = first.deletingLastPathComponent().canonical
+        let wanted = selectedURLs.filter { $0.deletingLastPathComponent().canonical == folder }
+        if folder == url {
+            // Found in the folder searched from: back to its whole listing (Back returns to
+            // the search).
+            history.visit(url, leaving: savedPage)
+            endSearch()
+            refresh(selecting: wanted)
+        } else {
+            navigate(to: folder)
+            revealAfterLoad = first.normalized
+            pendingSelection = Set(wanted.map(\.normalized))
+        }
+        focusList()
     }
 
     /// Files dropped on the list, a folder in it, or the sidebar.
@@ -567,7 +619,15 @@ final class BrowserModel {
             pendingRename = nil
             startRename(rename)
         }
+        // Now the rows are there to scroll through.
+        if let scroll = pendingScroll {
+            pendingScroll = nil
+            restoreScroll = scroll
+        }
     }
+
+    /// Clears the one-shot scroll once the list has scrolled.
+    func didRestoreScroll() { restoreScroll = nil }
 
     var isLoading: Bool { listing.isLoading }
     var freeSpace: Int64? { listing.freeSpace }

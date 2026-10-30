@@ -28,7 +28,7 @@ import Testing
 
     /// Menu-only, as in Finder (you can give them shortcuts in your shortcuts file).
     static let menuOnly: [Action] = [
-        .putBack, .goTrash, .showInFinder, .compress, .extract, .downloadNow, .removeDownload,
+        .putBack, .goTrash, .showInFinder, .openContainingFolder, .compress, .extract, .downloadNow, .removeDownload,
         .copyToOtherPane, .moveToOtherPane,
     ]
 

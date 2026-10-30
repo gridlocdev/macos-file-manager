@@ -7,7 +7,7 @@ import Testing
     let a = URL(fileURLWithPath: "/a"), b = URL(fileURLWithPath: "/b"), c = URL(fileURLWithPath: "/c")
 
     @Test func backAndForward() {
-        var h = NavigationHistory(start: a)
+        var h = NavigationHistory<Int>(start: a)
         h.visit(b)
         h.visit(c)
         #expect(h.goBack() == b)
@@ -18,7 +18,7 @@ import Testing
     }
 
     @Test func visitingClearsForward() {
-        var h = NavigationHistory(start: a)
+        var h = NavigationHistory<Int>(start: a)
         h.visit(b)
         _ = h.goBack()
         h.visit(c)
@@ -27,9 +27,23 @@ import Testing
     }
 
     @Test func revisitingCurrentIsIgnored() {
-        var h = NavigationHistory(start: a)
+        var h = NavigationHistory<Int>(start: a)
         h.visit(a)
         #expect(!h.canGoBack)
+    }
+
+    @Test func savedStateComesBackWithItsPage() {
+        var h = NavigationHistory<Int>(start: a)
+        h.visit(b, leaving: 1)
+        #expect(h.saved == nil)
+        #expect(h.goBack(leaving: 2) == a)
+        #expect(h.saved == 1)
+        #expect(h.goForward() == b)
+        #expect(h.saved == 2)
+        // Leaving a search for its own folder is still a step back.
+        h.visit(b, leaving: 3)
+        #expect(h.goBack() == b)
+        #expect(h.saved == 3)
     }
 }
 
