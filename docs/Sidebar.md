@@ -10,8 +10,8 @@ Folders         a tree of your home folder
 ```
 
 Click anything to open it. Right-click for **Open in New Tab** and more. The folder you're in
-has the bright highlight (its pinned row if it's pinned, else its place in the tree), and the
-sidebar scrolls to show it. The row under the mouse gets a fainter highlight.
+has the bright highlight (the row you clicked, else its pinned row, else its place in the
+tree), and the sidebar scrolls to show it. The row under the mouse gets a fainter highlight.
 
 ## Pinned
 

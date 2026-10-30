@@ -16,6 +16,9 @@ struct SidebarView: View {
         Windows.snapshotFolder.map { URL(filePath: $0) } ?? model.home
     }
     @State private var tree = FolderTree()
+    /// The row last clicked: it keeps the highlight while its folder is open, so a recent or
+    /// tree row stays lit (and in view) rather than the highlight moving elsewhere.
+    @State private var clicked: SidebarTag?
     private var store: SidebarStore { .shared }
 
     var body: some View {
@@ -32,7 +35,7 @@ struct SidebarView: View {
                     .onMove { store.movePins(from: $0, to: $1) }
                     .onInsert(of: [.fileURL]) { index, providers in pinDropped(providers, at: index) }
                 }
-                let recent = store.recent.paths.filter { !store.pins.isPinned($0) }.prefix(8)
+                let recent = recentShown
                 if !recent.isEmpty {
                     Section("Recent") {
                         ForEach(Array(recent), id: \.self) { path in
@@ -95,21 +98,38 @@ struct SidebarView: View {
         Button("Open in New Tab") { model.openInNewTabs([URL(filePath: path)]) }
     }
 
-    /// Highlights the current folder (pinned or recent first, else its place in the tree);
-    /// picking a row opens it.
+    /// Highlights the current folder: the row it was opened from, else its pinned row, else
+    /// its place in the tree; picking a row opens it.
     private var selectionBinding: Binding<SidebarTag?> {
         Binding(
             get: {
                 let path = model.url.path
+                if let clicked, clicked.path == path, isShown(clicked) { return clicked }
                 if store.pins.isPinned(path) { return SidebarTag(section: .pinned, path: path) }
                 return SidebarTag(section: .tree, path: path)
             },
             set: { tag in
-                guard let tag, !URL(filePath: tag.path).isSameFile(as: model.url) else { return }
+                guard let tag else { return }
+                clicked = tag
+                guard !URL(filePath: tag.path).isSameFile(as: model.url) else { return }
                 model.navigate(to: URL(filePath: tag.path))
                 model.focusList()
             }
         )
+    }
+
+    /// The Recent section: the last eight folders that aren't pinned.
+    private var recentShown: ArraySlice<String> {
+        store.recent.paths.filter { !store.pins.isPinned($0) }.prefix(8)
+    }
+
+    /// Whether the row is still in the sidebar (a recent folder that's been pinned isn't).
+    private func isShown(_ tag: SidebarTag) -> Bool {
+        switch tag.section {
+        case .pinned: store.pins.isPinned(tag.path)
+        case .recent: recentShown.contains(tag.path)
+        case .tree: true
+        }
     }
 
     /// Folders dropped between pinned rows are pinned there.
