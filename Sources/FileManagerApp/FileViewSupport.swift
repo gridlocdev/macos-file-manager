@@ -53,24 +53,57 @@ import UniformTypeIdentifiers
     }
 }
 
-/// Folder and app icons are per item; plain files share one icon per extension.
+/// Folder and app icons are per item; plain files share one icon per type. One cache for every
+/// pane. A per-item icon is read from disk in the background (slow on a network share): until it
+/// arrives the generic folder, app or document icon shows, and `ready` gets the real one.
 @MainActor final class IconCache {
-    private var byPath: [String: NSImage] = [:]
-    private var byExtension: [String: NSImage] = [:]
+    static let shared = IconCache()
 
-    func icon(for item: FileItem) -> NSImage {
+    private let byPath: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.countLimit = 5000
+        return cache
+    }()
+    private var byType: [String: NSImage] = [:]
+    private var waiting: [String: [@MainActor (NSImage) -> Void]] = [:]
+
+    func icon(for item: FileItem, ready: (@MainActor (NSImage) -> Void)? = nil) -> NSImage {
         let ext = item.url.pathExtension.lowercased()
-        if item.isFolder || ext == "app" || ext.isEmpty {
-            if let cached = byPath[item.url.path] { return cached }
-            let icon = NSWorkspace.shared.icon(forFile: item.url.path)
-            byPath[item.url.path] = icon
-            return icon
+        guard item.isFolder || ext == "app" || ext.isEmpty else {
+            return typeIcon(ext, UTType(filenameExtension: ext) ?? .data)
         }
-        if let cached = byExtension[ext] { return cached }
-        let icon = NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
-        byExtension[ext] = icon
+        let path = item.url.path
+        if let cached = byPath.object(forKey: path as NSString) { return cached }
+        let placeholder =
+            item.isFolder ? typeIcon("/folder", .folder) : ext == "app" ? typeIcon("/app", .application) : typeIcon("", .data)
+        let first = waiting[path] == nil
+        waiting[path, default: []] += ready.map { [$0] } ?? []
+        if first {
+            Task.detached(priority: .utility) {
+                let icon = UncheckedImage(NSWorkspace.shared.icon(forFile: path))
+                await self.loaded(icon.image, for: path)
+            }
+        }
+        return placeholder
+    }
+
+    private func loaded(_ icon: NSImage, for path: String) {
+        byPath.setObject(icon, forKey: path as NSString)
+        for ready in waiting.removeValue(forKey: path) ?? [] { ready(icon) }
+    }
+
+    private func typeIcon(_ key: String, _ type: UTType) -> NSImage {
+        if let cached = byType[key] { return cached }
+        let icon = NSWorkspace.shared.icon(for: type)
+        byType[key] = icon
         return icon
     }
+}
+
+/// An image handed from the background to the main actor once, and not touched again there.
+private struct UncheckedImage: @unchecked Sendable {
+    let image: NSImage
+    init(_ image: NSImage) { self.image = image }
 }
 
 /// What a drop does, for the list, the icon view and the sidebar.

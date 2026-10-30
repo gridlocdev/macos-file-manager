@@ -136,7 +136,7 @@ struct FileListView: NSViewRepresentable {
         var isUpdating = false
         let rename: InlineRename
         let contextMenu: FileContextMenu
-        private let icons = IconCache()
+        private let icons = IconCache.shared
 
         init(model: BrowserModel) {
             self.model = model
@@ -197,7 +197,12 @@ struct FileListView: NSViewRepresentable {
             cell.alphaValue = cut.contains(item.url) ? 0.45 : item.isHidden ? 0.55 : 1
             cell.textField?.stringValue = FileFormat.value(item, column)
             if column == .name {
-                cell.imageView?.image = icons.icon(for: item)
+                cell.url = item.url
+                cell.imageView?.image = icons.icon(for: item) { [weak cell] image in
+                    // Still showing the same item once the icon arrives?
+                    guard let cell, cell.url == item.url else { return }
+                    cell.imageView?.image = image
+                }
                 cell.iconSize = iconSize
                 cell.showBadges(tags: item.tags, cloud: item.cloud)
             }
@@ -333,6 +338,8 @@ final class FileCell: NSTableCellView {
         cloudImage.isHidden = cloud == nil || cloud == .current
     }
 
+    /// The item shown, so an icon that arrives late goes only to its own row.
+    var url: URL?
     var iconSize: CGFloat = 16 {
         didSet {
             iconWidth?.constant = iconSize

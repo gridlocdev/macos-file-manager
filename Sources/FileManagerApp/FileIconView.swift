@@ -192,6 +192,13 @@ struct FileIconView: NSViewRepresentable {
         }
 
         func collectionView(
+            _ collectionView: NSCollectionView, didEndDisplaying item: NSCollectionViewItem,
+            forRepresentedObjectAt indexPath: IndexPath
+        ) {
+            if let url = (item as? FileIconItem)?.url { thumbnails.cancel(url) }
+        }
+
+        func collectionView(
             _ collectionView: NSCollectionView, viewForSupplementaryElementOfKind kind: NSCollectionView.SupplementaryElementKind,
             at indexPath: IndexPath
         ) -> NSView {
@@ -561,18 +568,22 @@ final class FileGroupHeader: NSView, NSCollectionViewElement {
         cache.totalCostLimit = 200 << 20
         return cache
     }()
-    private var pending: Set<String> = []
-    private let icons = IconCache()
+    /// Cells waiting for each thumbnail (the same item can be shown again before it's made).
+    private var waiting: [String: [@MainActor (NSImage) -> Void]] = [:]
+    /// Thumbnails being made, by item path, so scrolling past an item can cancel its request.
+    private var requests: [String: (key: String, request: QLThumbnailGenerator.Request)] = [:]
+    private let icons = IconCache.shared
 
     func image(for item: FileItem, size: CGFloat, ready: @escaping @MainActor (NSImage) -> Void) -> NSImage {
-        guard !item.isFolder, item.url.pathExtension.lowercased() != "app" else { return icons.icon(for: item) }
+        guard !item.isFolder, item.url.pathExtension.lowercased() != "app" else { return icons.icon(for: item, ready: ready) }
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         // Thumbnails are made at the next size up, so zooming between sizes rarely waits.
         let bucket = FolderView.iconSizes.first { CGFloat($0) >= size } ?? Int(size)
         let key = "\(item.url.path)|\(bucket)|\(item.modified?.timeIntervalSince1970 ?? 0)"
         if let cached = images.object(forKey: key as NSString) { return cached }
-        if !pending.contains(key) {
-            pending.insert(key)
+        let first = waiting[key] == nil
+        waiting[key, default: []].append(ready)
+        if first {
             // Pictures, movies and PDFs show their content; other documents (a text file's
             // thumbnail is a white page, invisible on the white grid) get Finder's document icon
             // with a peek at the content.
@@ -581,17 +592,28 @@ final class FileGroupHeader: NSView, NSCollectionViewElement {
             let request = QLThumbnailGenerator.Request(
                 fileAt: item.url, size: CGSize(width: bucket, height: bucket), scale: scale,
                 representationTypes: visual ? .thumbnail : .icon)
+            let path = item.url.path
+            requests[path] = (key, request)
             QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { thumbnail, _ in
                 let image = thumbnail?.nsImage
                 Task { @MainActor in
-                    self.pending.remove(key)
+                    if self.requests[path]?.key == key { self.requests[path] = nil }
+                    let waiting = self.waiting.removeValue(forKey: key) ?? []
                     guard let image else { return }
                     let pixels = image.representations.first.map { $0.pixelsWide * $0.pixelsHigh }
                     self.images.setObject(image, forKey: key as NSString, cost: (pixels ?? bucket * bucket) * 4)
-                    ready(image)
+                    for ready in waiting { ready(image) }
                 }
             }
         }
         return icons.icon(for: item)
+    }
+
+    /// The item scrolled out of view: stop making its thumbnail (scrolling fast through a big
+    /// folder would otherwise queue one for every item passed).
+    func cancel(_ url: URL) {
+        guard let (key, request) = requests.removeValue(forKey: url.path) else { return }
+        waiting[key] = nil
+        QLThumbnailGenerator.shared.cancel(request)
     }
 }
