@@ -17,64 +17,60 @@ struct SidebarView: View {
     }
     @State private var tree = FolderTree()
     /// The row last clicked: it keeps the highlight while its folder is open, so a recent or
-    /// tree row stays lit (and in view) rather than the highlight moving elsewhere.
+    /// tree row stays lit rather than the highlight moving elsewhere.
     @State private var clicked: SidebarTag?
     private var store: SidebarStore { .shared }
 
     var body: some View {
-        ScrollViewReader { scroller in
-            List(selection: selectionBinding) {
-                Section("Pinned") {
-                    ForEach(store.pins.paths, id: \.self) { path in
-                        row(URL(filePath: path), section: .pinned, symbol: Self.symbol(for: path), draggable: true)
+        List(selection: selectionBinding) {
+            Section("Pinned") {
+                ForEach(store.pins.paths, id: \.self) { path in
+                    row(URL(filePath: path), section: .pinned, symbol: Self.symbol(for: path), draggable: true)
+                        .contextMenu {
+                            openInNewTab(path)
+                            Button("Remove from Sidebar") { store.unpin(path) }
+                        }
+                }
+                .onMove { store.movePins(from: $0, to: $1) }
+                .onInsert(of: [.fileURL]) { index, providers in pinDropped(providers, at: index) }
+            }
+            let recent = recentShown
+            if !recent.isEmpty {
+                Section("Recent") {
+                    ForEach(Array(recent), id: \.self) { path in
+                        row(URL(filePath: path), section: .recent, symbol: "clock")
                             .contextMenu {
                                 openInNewTab(path)
-                                Button("Remove from Sidebar") { store.unpin(path) }
+                                Button("Add to Sidebar") { store.pin([path]) }
+                                Button("Remove from Recent") { store.forget(path) }
                             }
                     }
-                    .onMove { store.movePins(from: $0, to: $1) }
-                    .onInsert(of: [.fileURL]) { index, providers in pinDropped(providers, at: index) }
-                }
-                let recent = recentShown
-                if !recent.isEmpty {
-                    Section("Recent") {
-                        ForEach(Array(recent), id: \.self) { path in
-                            row(URL(filePath: path), section: .recent, symbol: "clock")
-                                .contextMenu {
-                                    openInNewTab(path)
-                                    Button("Add to Sidebar") { store.pin([path]) }
-                                    Button("Remove from Recent") { store.forget(path) }
-                                }
-                        }
-                    }
-                }
-                // Empty only in snapshot runs, which leave disks alone.
-                if !volumes.isEmpty {
-                    Section("Locations") {
-                        ForEach(volumes) { volume in
-                            FolderNode(
-                                url: volume.url, title: volume.name, symbol: volume.symbol, section: .tree,
-                                tree: tree, model: model, eject: volume.isEjectable ? { eject(volume) } : nil)
-                        }
-                    }
-                }
-                Section("Folders") {
-                    FolderNode(
-                        url: treeRoot, title: FileManager.default.displayName(atPath: treeRoot.path),
-                        symbol: Windows.isSnapshotRun ? "folder" : "house", section: .tree, tree: tree, model: model,
-                        eject: nil)
                 }
             }
-            .listStyle(.sidebar)
-            .onChange(of: model.url, initial: true) {
-                tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url))
-                // To the highlighted row: a pinned folder's own row, not its place in the tree.
-                if let tag = selectionBinding.wrappedValue { scroller.scrollTo(tag) }
+            // Empty only in snapshot runs, which leave disks alone.
+            if !volumes.isEmpty {
+                Section("Locations") {
+                    ForEach(volumes) { volume in
+                        FolderNode(
+                            url: volume.url, title: volume.name, symbol: volume.symbol, section: .tree,
+                            tree: tree, model: model, eject: volume.isEjectable ? { eject(volume) } : nil)
+                    }
+                }
             }
-            .onChange(of: volumes) { tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url)) }
-            .onChange(of: model.listingVersion) { tree.forget(model.url) }
-            .onChange(of: model.showHiddenFiles) { tree.forgetAll() }
+            Section("Folders") {
+                FolderNode(
+                    url: treeRoot, title: FileManager.default.displayName(atPath: treeRoot.path),
+                    symbol: Windows.isSnapshotRun ? "folder" : "house", section: .tree, tree: tree, model: model,
+                    eject: nil)
+            }
         }
+        .listStyle(.sidebar)
+        .onChange(of: model.url, initial: true) {
+            tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url))
+        }
+        .onChange(of: volumes) { tree.reveal(model.url, roots: [treeRoot] + volumes.map(\.url)) }
+        .onChange(of: model.listingVersion) { tree.forget(model.url) }
+        .onChange(of: model.showHiddenFiles) { tree.forgetAll() }
         .task { volumes = Volume.mounted() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in
             volumes = Volume.mounted()
@@ -93,7 +89,6 @@ struct SidebarView: View {
             .modifier(SidebarHover())
             .background { if draggable { Color.clear.fadedDragImage(title: title, symbol: symbol) } }
             .tag(SidebarTag(section: section, path: url.path))
-            .id(SidebarTag(section: section, path: url.path))
             .folderDropTarget(url, model: model)
     }
 
@@ -217,7 +212,6 @@ private struct FolderNode: View {
             }
             .modifier(SidebarHover())
             .tag(SidebarTag(section: section, path: url.path))
-            .id(SidebarTag(section: section, path: url.path))
             .folderDropTarget(url, model: model)
             .contextMenu {
                 Button("Open in New Tab") { model.openInNewTabs([url]) }

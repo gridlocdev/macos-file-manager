@@ -11,7 +11,7 @@ Folders         a tree of your home folder
 
 Click anything to open it. Right-click for **Open in New Tab** and more. The folder you're in
 has the bright highlight (the row you clicked, else its pinned row, else its place in the
-tree), and the sidebar scrolls to show it. The row under the mouse gets a fainter highlight.
+tree); the sidebar doesn't scroll to it, so it stays where you left it. The row under the mouse gets a fainter highlight.
 
 ## Pinned
 
