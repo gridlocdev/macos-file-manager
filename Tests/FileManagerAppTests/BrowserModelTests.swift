@@ -307,6 +307,53 @@ import Testing
     }
 }
 
+@MainActor @Suite struct ICloudDriveTests {
+    let sandbox: Sandbox
+    init() throws { sandbox = try Sandbox() }
+
+    /// The sandbox as Home, with iCloud Drive keeping Desktop and Documents and three apps'
+    /// containers: Numbers with documents, Pages empty (hidden) and Mail's private data.
+    private func makeHome() throws -> URL {
+        let home = sandbox.root, fm = FileManager.default
+        let containers = home.appending(path: "Library/Mobile Documents")
+        let drive = ICloudDrive.folder(home: home)
+        for path in ["Desktop", "Documents", "Downloads"] {
+            try fm.createDirectory(at: home.appending(path: path), withIntermediateDirectories: true)
+        }
+        try fm.createDirectory(at: drive.appending(path: "Downloads"), withIntermediateDirectories: true)
+        for name in ["com~apple~Numbers", "com~apple~Pages", "com~apple~mail"] {
+            try fm.createDirectory(at: containers.appending(path: name + "/Documents"), withIntermediateDirectories: true)
+        }
+        for name in ["com~apple~Pages", "com~apple~mail"] {
+            var url = containers.appending(path: name)
+            var values = URLResourceValues()
+            values.isHidden = true
+            try url.setResourceValues(values)
+        }
+        for name in ["Desktop", "Documents"] {
+            let link = drive.appending(path: name)
+            try fm.createSymbolicLink(at: link, withDestinationURL: home.appending(path: name))
+            #expect(lchflags(link.path, UInt32(UF_HIDDEN)) == 0)
+        }
+        return home
+    }
+
+    @Test func appFoldersAreTheVisibleContainersDocuments() throws {
+        let home = try makeHome()
+        let folders = ICloudDrive.appFolders(home: home).map(\.path)
+        #expect(folders == [home.appending(path: "Library/Mobile Documents/com~apple~Numbers/Documents").path])
+    }
+
+    @Test func desktopAndDocumentsLinksCountAsSyncedHomeFolders() throws {
+        let home = try makeHome()
+        let drive = ICloudDrive.folder(home: home)
+        #expect(ICloudDrive.isSyncedHomeFolder(drive.appending(path: "Desktop"), home: home))
+        #expect(ICloudDrive.isSyncedHomeFolder(drive.appending(path: "Documents"), home: home))
+        #expect(!ICloudDrive.isSyncedHomeFolder(drive.appending(path: "Downloads"), home: home))
+        #expect(!ICloudDrive.isSyncedHomeFolder(home.appending(path: "Desktop"), home: home))
+    }
+}
+
 @MainActor @Suite struct FileOperationsTests {
     let sandbox: Sandbox
     init() throws { sandbox = try Sandbox() }

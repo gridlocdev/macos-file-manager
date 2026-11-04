@@ -65,9 +65,10 @@ final class FileTableView: NSTableView, NSSpringLoadingDestination, FileBrowsing
         super.draggingExited(sender)
     }
 
+    // NSTableView has no draggingEnded of its own: calling super raises, which broke every
+    // drag that ended over the list.
     override func draggingEnded(_ sender: any NSDraggingInfo) {
         autoscroll.stop()
-        super.draggingEnded(sender)
     }
 
     override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {

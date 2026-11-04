@@ -30,6 +30,15 @@ enum DirectoryLoader {
                     items.append(
                         item(url, showAllExtensions: showAllExtensions, shownAs: folder.appending(path: url.lastPathComponent)))
                 }
+                if folder.realPath.isSameFile(as: ICloudDrive.folder(home: home).realPath) {
+                    for i in items.indices where ICloudDrive.isSyncedHomeFolder(items[i].url, home: home) {
+                        items[i].isHidden = false
+                    }
+                    for url in ICloudDrive.appFolders(home: home) {
+                        if Task.isCancelled { return .failure(CancellationError()) }
+                        items.append(item(url, showAllExtensions: showAllExtensions))
+                    }
+                }
                 return .success(items)
             } catch {
                 return .failure(error)
@@ -40,7 +49,7 @@ enum DirectoryLoader {
 
     /// `shownAs`: the URL the item is listed under, if not `url` (see `URL.replacingFolder`).
     static func item(_ url: URL, showAllExtensions: Bool, shownAs: URL? = nil) -> FileItem {
-        let guarded = url.isGuardedFolder(home: home)
+        let guarded = url.isGuardedFolder(home: home) || ICloudDrive.isSyncedHomeFolder(url, home: home)
         let values = try? url.resourceValues(forKeys: Set(guarded ? basicKeys : keys))
         var isFolder = (values?.isDirectory ?? false) && !(values?.isPackage ?? false)
         // A symlink to a folder opens like a folder.
@@ -102,6 +111,35 @@ enum DirectoryLoader {
             url.pathExtension.lowercased() != "app", !url.pathExtension.isEmpty
         else { return FileManager.default.displayName(atPath: url.path) }
         return url.lastPathComponent
+    }
+}
+
+/// What Finder shows in iCloud Drive beyond the folder's own contents on disk.
+enum ICloudDrive {
+    static func folder(home: URL) -> URL { home.appending(path: "Library/Mobile Documents/com~apple~CloudDocs") }
+
+    /// Desktop and Documents, when they're kept in iCloud: links in iCloud Drive to the real
+    /// folders in Home, marked hidden on disk but shown by Finder. Treated like the folders
+    /// they point to (asked only the basics, so listing iCloud Drive brings up no prompt).
+    static func isSyncedHomeFolder(_ url: URL, home: URL) -> Bool {
+        guard url.isDirectlyInside(folder(home: home)), ["Desktop", "Documents"].contains(url.lastPathComponent),
+            (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true
+        else { return false }
+        return url.resolvingSymlinksInPath().isGuardedFolder(home: home)
+    }
+
+    /// Apps' own iCloud folders (Numbers, TextEdit, Shortcuts…), which Finder lists in iCloud
+    /// Drive under the app's name: the Documents folder of each container next to iCloud
+    /// Drive's. iCloud marks hidden the containers Finder leaves out (apps' private data, and an
+    /// app's folder while it's empty).
+    static func appFolders(home: URL) -> [URL] {
+        let containers = home.appending(path: "Library/Mobile Documents")
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: containers, includingPropertiesForKeys: [.isHiddenKey], options: [.skipsHiddenFiles])) ?? []
+        return urls.filter { $0.lastPathComponent != "com~apple~CloudDocs" }
+            .map { containers.appending(path: $0.lastPathComponent + "/Documents") }
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
+            .map(\.normalized)
     }
 }
 

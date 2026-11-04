@@ -99,6 +99,9 @@ import UniformTypeIdentifiers
             home + "/Movies": "MovieFolderIcon", home + "/Music": "MusicFolderIcon",
             home + "/Library/Mobile Documents": "GenericFolderIcon",
             home + "/Library/Mobile Documents/com~apple~CloudDocs": "GenericFolderIcon",
+            // The links to Desktop and Documents in iCloud Drive (ICloudDrive.isSyncedHomeFolder).
+            home + "/Library/Mobile Documents/com~apple~CloudDocs/Desktop": "DesktopFolderIcon",
+            home + "/Library/Mobile Documents/com~apple~CloudDocs/Documents": "DocumentsFolderIcon",
         ]
     }()
 

@@ -327,7 +327,11 @@ read in the background with a generic icon meanwhile. Desktop, Documents and Dow
 Home, found with a freshly signed probe app timing each lookup. Their kind, localized name, iCloud
 state and icon (from CoreTypes.bundle) are skipped too, to be safe: after the first prompt is
 answered, later lookups no longer prompt, so the probe couldn't clear them.
-iCloud items opened, downloaded or evicted are polled by `BrowserModel.watchDownloads` (the
+Listing iCloud Drive adds what Finder shows there (`ICloudDrive` in DirectoryLoader.swift): the
+Desktop and Documents links (hidden on disk, treated as guarded folders) and the `Documents`
+folder of each container in `~/Library/Mobile Documents` that iCloud doesn't mark hidden.
+The list's `FileTableView.draggingEnded` must not call super: NSTableView doesn't implement it,
+and the exception broke drags. iCloud items opened, downloaded or evicted are polled by `BrowserModel.watchDownloads` (the
 folder's watcher sees nothing) until they settle. The icon view's `ThumbnailCache` is an
 `NSCache` limited by pixel bytes, and cancels a thumbnail when its item scrolls out of view. The
 address bar's › menus list their folder only when clicked (an `NSMenu`; a SwiftUI `Menu` builds
