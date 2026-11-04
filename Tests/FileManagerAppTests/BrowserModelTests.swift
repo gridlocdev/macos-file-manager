@@ -360,6 +360,22 @@ import Testing
         #expect(ICloudDrive.extraFolders(in: home, home: home).isEmpty)
     }
 
+    @Test func folderListsInICloudDriveSortTheAppsByName() throws {
+        let home = try makeHome()
+        let drive = ICloudDrive.folder(home: home)
+        let numbers = home.appending(path: "Library/Mobile Documents/com~apple~Numbers/Documents")
+        // Named as the system names it; a scratch container has no app, so its own name.
+        let numbersName = FileManager.default.displayName(atPath: numbers.path)
+        let sorted = ICloudDrive.sortedFolders([drive.appending(path: "Downloads").normalized], in: drive, home: home)
+        let expected = [("Desktop", drive.appending(path: "Desktop")), ("Documents", drive.appending(path: "Documents")),
+            ("Downloads", drive.appending(path: "Downloads")), (numbersName, numbers)]
+            .sorted { $0.0.localizedStandardCompare($1.0) == .orderedAscending }.map { $0.1.normalized.path }
+        #expect(sorted.map(\.path) == expected)
+        // Elsewhere, only the folder's own subfolders.
+        let projects = home.appending(path: "Projects").normalized
+        #expect(ICloudDrive.sortedFolders([projects], in: home, home: home) == [projects])
+    }
+
     @Test func watcherSeesAnAppFolderShownByICloud() async throws {
         let home = try makeHome()
         var changes = 0

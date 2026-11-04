@@ -274,20 +274,10 @@ final class FolderTree {
                 let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey]
                 let urls = (try? FileManager.default.contentsOfDirectory(
                     at: url, includingPropertiesForKeys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
-                let home = FileManager.default.homeDirectoryForCurrentUser
                 // iCloud Drive: Desktop, Documents and the apps' folders too, as in the file list.
-                let extras = ICloudDrive.extraFolders(in: url, home: home)
-                let folders = urls.filter { SidebarView.isFolder($0) }.map(\.normalized)
-                    .filter { folder in !extras.contains { $0.isSameFile(as: folder) } }
-                // Apps' folders sort by the app's name (they're all called "Documents" on disk).
-                return (folders + extras)
-                    .map { url -> (URL, String) in
-                        let isApp = url.lastPathComponent == "Documents" && !url.isDirectlyInside(ICloudDrive.folder(home: home))
-                            && extras.contains(url)
-                        return (url, isApp ? FileManager.default.displayName(atPath: url.path) : url.lastPathComponent)
-                    }
-                    .sorted { $0.1.localizedStandardCompare($1.1) == .orderedAscending }
-                    .map(\.0)
+                return ICloudDrive.sortedFolders(
+                    urls.filter { SidebarView.isFolder($0) }.map(\.normalized), in: url,
+                    home: FileManager.default.homeDirectoryForCurrentUser)
             }.value
             loading.remove(path)
             guard generation == self.generation, children[path] != folders else { return }

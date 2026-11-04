@@ -143,13 +143,26 @@ enum ICloudDrive {
             .map(\.normalized)
     }
 
-    /// What's in iCloud Drive for the sidebar's tree, which lists only folders: the links to
-    /// Desktop and Documents and the apps' folders.
+    /// What's in iCloud Drive for lists of folders only (the sidebar's tree, the breadcrumbs'
+    /// menus): the links to Desktop and Documents and the apps' folders.
     static func extraFolders(in folder: URL, home: URL) -> [URL] {
         guard folder.realPath.isSameFile(as: self.folder(home: home).realPath) else { return [] }
         let links = ["Desktop", "Documents"].map { folder.appending(path: $0).normalized }
             .filter { isSyncedHomeFolder($0, home: home) }
         return links + appFolders(home: home)
+    }
+
+    /// `subfolders` of `folder` (normalized), with `extraFolders` added in iCloud Drive, sorted
+    /// by name: an app's folder by the app's name (they're all called "Documents" on disk).
+    static func sortedFolders(_ subfolders: [URL], in folder: URL, home: URL) -> [URL] {
+        let extras = extraFolders(in: folder, home: home)
+        // The links are in iCloud Drive itself; the apps' folders aren't.
+        let apps = extras.filter { !$0.isDirectlyInside(folder) }
+        let folders = subfolders.filter { folder in !extras.contains { $0.isSameFile(as: folder) } } + extras
+        return folders
+            .map { url in (url, apps.contains(url) ? FileManager.default.displayName(atPath: url.path) : url.lastPathComponent) }
+            .sorted { $0.1.localizedStandardCompare($1.1) == .orderedAscending }
+            .map(\.0)
     }
 
     @MainActor private static var appNames: [String: String] = [:]

@@ -102,7 +102,7 @@ private struct Breadcrumbs: View {
                     .springLoaded(into: segment.url, model: model) {
                         if !segment.url.isSameFile(as: model.url) { model.navigate(to: segment.url) }
                     }
-                SubfolderMenu(folder: segment.url, showHidden: model.showHiddenFiles, current: model.url) { go($0) }
+                SubfolderMenu(folder: segment.url, title: segment.title, showHidden: model.showHiddenFiles, current: model.url) { go($0) }
             }
         }
         .fixedSize()
@@ -173,6 +173,8 @@ private struct CrumbButtonStyle: ButtonStyle {
 /// view, which listed every segment's folder (for every trail the bar tries) on each redraw.
 private struct SubfolderMenu: View {
     let folder: URL
+    /// As the breadcrumb shows it ("iCloud Drive", an app's name).
+    let title: String
     let showHidden: Bool
     let current: URL
     let go: (URL) -> Void
@@ -186,19 +188,20 @@ private struct SubfolderMenu: View {
         .buttonStyle(.borderless)
         .fixedSize()
         .pointerCursor()
-        .help("Folders in \(folder.lastPathComponent.isEmpty ? "/" : folder.lastPathComponent)")
+        .help("Folders in \(title)")
     }
 
     static func subfolders(of folder: URL, showHidden: Bool) -> [URL] {
         let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey, .isHiddenKey]
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: folder, includingPropertiesForKeys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
-        return urls.filter {
+        let folders = urls.filter {
             let values = try? $0.resourceValues(forKeys: Set(keys))
             return values?.isDirectory == true && values?.isPackage != true
         }
-        .map(\.normalized)
-        .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        // iCloud Drive: Desktop, Documents and the apps' folders too, as in the file list.
+        return ICloudDrive.sortedFolders(
+            folders.map(\.normalized), in: folder, home: FileManager.default.homeDirectoryForCurrentUser)
         .prefix(300)
         .map { $0 }
     }
@@ -218,7 +221,8 @@ private struct SubfolderMenu: View {
             menu.addItem(none)
         }
         for folder in folders {
-            let item = NSMenuItem(title: folder.lastPathComponent, action: #selector(pick(_:)), keyEquivalent: "")
+            let title = ICloudDrive.appName(folder: folder) ?? folder.lastPathComponent
+            let item = NSMenuItem(title: title, action: #selector(pick(_:)), keyEquivalent: "")
             item.target = target
             item.representedObject = folder
             // Mark the folder that's on the current path.

@@ -330,7 +330,7 @@ answered, later lookups no longer prompt, so the probe couldn't clear them.
 Listing iCloud Drive adds what Finder shows there (`ICloudDrive` in DirectoryLoader.swift): the
 Desktop and Documents links (hidden on disk, treated as guarded folders) and the `Documents`
 folder of each container in `~/Library/Mobile Documents` that iCloud doesn't mark hidden. The
-sidebar tree adds the same (`extraFolders`); breadcrumbs name them through
+sidebar tree and the breadcrumbs' › menus add the same (`ICloudDrive.sortedFolders`); breadcrumbs name them through
 `Breadcrumbs.segments(iCloudHome:appName:)`. iCloud shows or hides a container with a flag on it,
 which a folder watcher on the parent never sees, so iCloud Drive also runs an
 `AppFoldersWatcher` (one FSEvents stream over Mobile Documents, only container-level changes).
