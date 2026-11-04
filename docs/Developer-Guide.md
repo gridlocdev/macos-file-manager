@@ -414,6 +414,11 @@ are committed so builds don't need Inkscape.
 
 `scripts/bundle.sh` signs with the first Apple Development or Developer ID identity in your
 keychain, or ad hoc (`-`) if there isn't one. Override with `SIGN_IDENTITY="…" just install`.
+`just install` waits for the running copy to quit, then updates `~/Applications/File Manager.app`
+in place with `rsync -a --delete` and re-registers it with LaunchServices. Deleting it and copying
+a new one left a Dock pin pointing at the deleted app, since the Dock follows the app folder
+itself, not just its path. rsync writes each changed file anew, which matters for the
+executable: the kernel caches code signatures per file, so overwriting one in place gets it killed.
 With ad-hoc signing, macOS may treat each rebuild as a new app and ask for folder access again.
 
 ## Continuous integration and releases

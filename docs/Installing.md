@@ -54,7 +54,8 @@ update. See
 
 Download the new version and replace the old **File Manager.app** with it. If you build it
 yourself, pull the latest code and run `just install` again: it quits the running copy,
-replaces it, and opens the new one. Either way, your settings are kept.
+updates it in place, and opens the new one, so File Manager stays pinned in the Dock. Either
+way, your settings are kept.
 
 ## Uninstalling
 

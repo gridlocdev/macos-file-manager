@@ -27,12 +27,13 @@ run-attached: (bundle "debug")
     pkill -x FileManagerApp || true
     "{{app}}/Contents/MacOS/FileManagerApp"
 
-# Install a release build to ~/Applications
+# Install a release build to ~/Applications (updated in place, so a Dock pin keeps working)
 install: (bundle "release")
     pkill -x FileManagerApp || true
+    for _ in $(seq 50); do pgrep -x FileManagerApp >/dev/null || break; sleep 0.1; done
     mkdir -p ~/Applications
-    rm -rf ~/Applications/"File Manager.app"
-    cp -R "{{app}}" ~/Applications/
+    rsync -a --delete "{{app}}/" ~/Applications/"File Manager.app/"
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f ~/Applications/"File Manager.app"
     open ~/Applications/"File Manager.app"
     @echo "Installed ~/Applications/File Manager.app"
 
