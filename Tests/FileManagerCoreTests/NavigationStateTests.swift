@@ -19,6 +19,26 @@ import Testing
         #expect(segments.first?.url.path == "/Volumes/USB Stick")
     }
 
+    @Test func iCloudDriveAndAppFoldersByName() {
+        let home = URL(filePath: "/Users/me")
+        let base = "/Users/me/Library/Mobile Documents"
+        func titles(_ path: String) -> [String] {
+            Breadcrumbs.segments(
+                for: URL(filePath: path), volumes: [:], startupDiskName: "HD", home: home, iCloudHome: home,
+                appName: { $0 == "com~apple~Numbers" ? "Numbers" : nil }
+            ).map(\.title)
+        }
+        #expect(titles(base + "/com~apple~CloudDocs/Taxes") == ["iCloud Drive", "Taxes"])
+        #expect(titles(base + "/com~apple~Numbers/Documents/2026") == ["iCloud Drive", "Numbers", "2026"])
+        let numbers = Breadcrumbs.segments(
+            for: URL(filePath: base + "/com~apple~Numbers/Documents"), volumes: [:], startupDiskName: "HD",
+            iCloudHome: home, appName: { _ in "Numbers" })
+        #expect(numbers.map(\.url.path) == [base + "/com~apple~CloudDocs", base + "/com~apple~Numbers/Documents"])
+        // An app's private data, or no name for it: the plain path.
+        #expect(titles(base + "/com~apple~mail/Data") == ["~", "Library", "Mobile Documents", "com~apple~mail", "Data"])
+        #expect(titles(base + "/com~apple~Pages/Documents").count == 5)
+    }
+
     @Test func rootAlone() {
         let segments = Breadcrumbs.segments(for: URL(filePath: "/"), volumes: [:], startupDiskName: "HD")
         #expect(segments.map(\.title) == ["HD"])

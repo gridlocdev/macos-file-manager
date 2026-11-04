@@ -1,3 +1,4 @@
+import CoreServices
 import Foundation
 import FileManagerCore
 
@@ -140,6 +141,87 @@ enum ICloudDrive {
             .map { containers.appending(path: $0.lastPathComponent + "/Documents") }
             .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
             .map(\.normalized)
+    }
+
+    /// What's in iCloud Drive for the sidebar's tree, which lists only folders: the links to
+    /// Desktop and Documents and the apps' folders.
+    static func extraFolders(in folder: URL, home: URL) -> [URL] {
+        guard folder.realPath.isSameFile(as: self.folder(home: home).realPath) else { return [] }
+        let links = ["Desktop", "Documents"].map { folder.appending(path: $0).normalized }
+            .filter { isSyncedHomeFolder($0, home: home) }
+        return links + appFolders(home: home)
+    }
+
+    @MainActor private static var appNames: [String: String] = [:]
+
+    /// An app's name from its iCloud container's folder name ("com~apple~Numbers" → "Numbers"),
+    /// as the system names the container's Documents folder. Asked once per container.
+    @MainActor static func appName(container: String) -> String? {
+        guard container != "com~apple~CloudDocs" else { return nil }
+        if let name = appNames[container] { return name }
+        let documents = FileManager.default.homeDirectoryForCurrentUser
+            .appending(path: "Library/Mobile Documents/\(container)/Documents")
+        guard FileManager.default.fileExists(atPath: documents.path) else { return nil }
+        let name = FileManager.default.displayName(atPath: documents.path)
+        appNames[container] = name
+        return name
+    }
+
+    /// The app's name for an app's folder (an `appFolders` URL), nil for any other folder.
+    @MainActor static func appName(folder url: URL) -> String? {
+        let containers = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Mobile Documents")
+        let container = url.deletingLastPathComponent()
+        guard url.lastPathComponent == "Documents", container.isDirectlyInside(containers) else { return nil }
+        return appName(container: container.lastPathComponent)
+    }
+
+    /// Calls `onChange` (on the main actor, debounced) when an app's folder may have come or
+    /// gone: a container in Mobile Documents added, removed, or shown or hidden by iCloud (a
+    /// flag on the container, which the folder's own watcher doesn't see). One FSEvents stream
+    /// over Mobile Documents; changes deeper down (apps syncing their data) are ignored.
+    @MainActor final class AppFoldersWatcher {
+        private nonisolated(unsafe) var stream: FSEventStreamRef?
+        private let containers: String
+        private let onChange: @MainActor () -> Void
+        private let debounce = Debouncer()
+
+        init(home: URL, onChange: @escaping @MainActor () -> Void) {
+            containers = home.appending(path: "Library/Mobile Documents").realPath.path
+            self.onChange = onChange
+            var context = FSEventStreamContext(
+                version: 0, info: Unmanaged.passUnretained(self).toOpaque(), retain: nil, release: nil, copyDescription: nil)
+            let callback: FSEventStreamCallback = { _, info, count, paths, _, _ in
+                guard let info else { return }
+                let paths = unsafeBitCast(paths, to: NSArray.self) as? [String] ?? []
+                MainActor.assumeIsolated {
+                    Unmanaged<AppFoldersWatcher>.fromOpaque(info).takeUnretainedValue().changed(paths.prefix(count))
+                }
+            }
+            guard
+                let stream = FSEventStreamCreate(
+                    nil, callback, &context, [containers] as CFArray, FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
+                    0.3, FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagUseCFTypes))
+            else { return }
+            FSEventStreamSetDispatchQueue(stream, .main)
+            FSEventStreamStart(stream)
+            self.stream = stream
+        }
+
+        private func changed(_ paths: ArraySlice<String>) {
+            let containers = URL(filePath: containers)
+            let relevant = paths.contains {
+                let url = URL(filePath: $0)
+                return url.isDirectlyInside(containers) && url.lastPathComponent != "com~apple~CloudDocs"
+            }
+            if relevant { debounce.schedule(onChange) }
+        }
+
+        deinit {
+            guard let stream else { return }
+            FSEventStreamStop(stream)
+            FSEventStreamInvalidate(stream)
+            FSEventStreamRelease(stream)
+        }
     }
 }
 

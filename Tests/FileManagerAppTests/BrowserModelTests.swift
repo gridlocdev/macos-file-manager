@@ -352,6 +352,26 @@ import Testing
         #expect(!ICloudDrive.isSyncedHomeFolder(drive.appending(path: "Downloads"), home: home))
         #expect(!ICloudDrive.isSyncedHomeFolder(home.appending(path: "Desktop"), home: home))
     }
+
+    @Test func sidebarTreeGetsTheLinksAndAppFolders() throws {
+        let home = try makeHome()
+        let drive = ICloudDrive.folder(home: home)
+        #expect(ICloudDrive.extraFolders(in: drive, home: home).map(\.lastPathComponent) == ["Desktop", "Documents", "Documents"])
+        #expect(ICloudDrive.extraFolders(in: home, home: home).isEmpty)
+    }
+
+    @Test func watcherSeesAnAppFolderShownByICloud() async throws {
+        let home = try makeHome()
+        var changes = 0
+        let watcher = ICloudDrive.AppFoldersWatcher(home: home) { changes += 1 }
+        try await Task.sleep(for: .milliseconds(300))
+        var pages = home.appending(path: "Library/Mobile Documents/com~apple~Pages")
+        var values = URLResourceValues()
+        values.isHidden = false
+        try pages.setResourceValues(values)
+        try await eventually { changes > 0 }
+        withExtendedLifetime(watcher) {}
+    }
 }
 
 @MainActor @Suite struct FileOperationsTests {

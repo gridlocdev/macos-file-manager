@@ -55,7 +55,7 @@ private struct Breadcrumbs: View {
     var body: some View {
         let segments = FileManagerCore.Breadcrumbs.segments(
             for: model.url, volumes: VolumeNames.shared.names, startupDiskName: VolumeNames.shared.startupDisk,
-            home: shortenHomePath ? model.home : nil)
+            home: shortenHomePath ? model.home : nil, iCloudHome: model.home, appName: ICloudDrive.appName)
         HStack(spacing: 0) {
             // The longest tail of the path that fits; earlier folders go in a "…" menu.
             ViewThatFits(in: .horizontal) {

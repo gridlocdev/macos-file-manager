@@ -17,6 +17,8 @@ final class FolderListing {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var freeSpaceTask: Task<Void, Never>?
     @ObservationIgnored private var watcher: DirectoryWatcher?
+    /// In iCloud Drive: watches for apps' folders coming and going (see `ICloudDrive.appFolders`).
+    @ObservationIgnored private var appFoldersWatcher: ICloudDrive.AppFoldersWatcher?
 
     /// Reads `folder`, replacing any load still running, then calls `loaded`. `changed` is called
     /// whenever the folder changes on disk afterwards.
@@ -30,6 +32,7 @@ final class FolderListing {
             items = []
             error = nil
             watcher = nil
+            appFoldersWatcher = nil
         }
         self.folder = folder
         isLoading = true
@@ -38,6 +41,12 @@ final class FolderListing {
         if watcher == nil {
             watcher = DirectoryWatcher(url: folder) { [weak self] in
                 if let self, self.folder == folder, watcher != nil { changed() }
+            }
+        }
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        if appFoldersWatcher == nil, folder.realPath.isSameFile(as: ICloudDrive.folder(home: home).realPath) {
+            appFoldersWatcher = ICloudDrive.AppFoldersWatcher(home: home) { [weak self] in
+                if let self, self.folder == folder, appFoldersWatcher != nil { changed() }
             }
         }
         loadTask = Task {
@@ -62,6 +71,7 @@ final class FolderListing {
         loadTask?.cancel()
         freeSpaceTask?.cancel()
         watcher = nil
+        appFoldersWatcher = nil
     }
 
     /// Applies tags changed by a file operation. Returns true if any item here changed.

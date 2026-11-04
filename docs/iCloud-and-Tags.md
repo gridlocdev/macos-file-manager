@@ -4,8 +4,10 @@
 
 iCloud Drive is in the sidebar under Pinned (when you're signed in to iCloud). It lists what
 Finder does: your Desktop and Documents folders when they're kept in iCloud, and the folders
-apps keep there (Numbers, TextEdit, Shortcuts…) under the app's name. An app's folder shows
-up once it has something in it. Items that are
+apps keep there (Numbers, TextEdit, Shortcuts…) under the app's name, in the file list and when
+you open iCloud Drive in the sidebar. An app's folder shows up once it has something in it.
+The address bar names them as Finder does: "iCloud Drive › Numbers" rather than the folders'
+names on disk. Items that are
 only in iCloud, not on this Mac, show a cloud after the name in the details list and on the
 icon in the icon view:
 

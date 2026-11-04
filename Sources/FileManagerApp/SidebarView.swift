@@ -195,7 +195,8 @@ private struct FolderNode: View {
             if tree.isExpanded(url) {
                 ForEach(tree.children(of: url, showHidden: model.showHiddenFiles), id: \.self) { child in
                     FolderNode(
-                        url: child, title: child.lastPathComponent, symbol: "folder", section: section, tree: tree,
+                        url: child, title: ICloudDrive.appName(folder: child) ?? child.lastPathComponent, symbol: "folder",
+                        section: section, tree: tree,
                         model: model, eject: nil)
                 }
             }
@@ -273,9 +274,20 @@ final class FolderTree {
                 let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey]
                 let urls = (try? FileManager.default.contentsOfDirectory(
                     at: url, includingPropertiesForKeys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
-                return urls.filter { SidebarView.isFolder($0) }
-                    .map(\.normalized)
-                    .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+                let home = FileManager.default.homeDirectoryForCurrentUser
+                // iCloud Drive: Desktop, Documents and the apps' folders too, as in the file list.
+                let extras = ICloudDrive.extraFolders(in: url, home: home)
+                let folders = urls.filter { SidebarView.isFolder($0) }.map(\.normalized)
+                    .filter { folder in !extras.contains { $0.isSameFile(as: folder) } }
+                // Apps' folders sort by the app's name (they're all called "Documents" on disk).
+                return (folders + extras)
+                    .map { url -> (URL, String) in
+                        let isApp = url.lastPathComponent == "Documents" && !url.isDirectlyInside(ICloudDrive.folder(home: home))
+                            && extras.contains(url)
+                        return (url, isApp ? FileManager.default.displayName(atPath: url.path) : url.lastPathComponent)
+                    }
+                    .sorted { $0.1.localizedStandardCompare($1.1) == .orderedAscending }
+                    .map(\.0)
             }.value
             loading.remove(path)
             guard generation == self.generation, children[path] != folders else { return }

@@ -10,10 +10,16 @@ public enum Breadcrumbs {
     /// - volumes: mount point path → disk name, for disks other than the startup disk.
     /// - startupDiskName: the title for "/".
     /// - home: when given, the home folder and everything above it are one "~" segment.
+    /// - iCloudHome: when given (the home folder), iCloud Drive and the apps' folders in it go by
+    ///   name, as in Finder: "iCloud Drive › Numbers" rather than "Library › Mobile Documents ›
+    ///   com~apple~Numbers › Documents".
+    /// - appName: an app's name from its iCloud container's folder name ("com~apple~Numbers").
     public static func segments(
-        for url: URL, volumes: [String: String], startupDiskName: String, home: URL? = nil
+        for url: URL, volumes: [String: String], startupDiskName: String, home: URL? = nil,
+        iCloudHome: URL? = nil, appName: (String) -> String? = { _ in nil }
     ) -> [Segment] {
         let path = url.standardizedFileURL.path
+        if let iCloudHome, let segments = iCloudSegments(path, home: iCloudHome, appName: appName) { return segments }
         if let home {
             let homePath = home.standardizedFileURL.path
             if homePath != "/", path == homePath || path.hasPrefix(homePath + "/") {
@@ -44,6 +50,32 @@ public enum Breadcrumbs {
         for part in rest {
             current = (current as NSString).appendingPathComponent(String(part))
             segments.append(Segment(title: String(part), url: URL(filePath: current)))
+        }
+        return segments
+    }
+
+    /// Nil when `path` isn't in iCloud Drive or an app's folder in it.
+    private static func iCloudSegments(_ path: String, home: URL, appName: (String) -> String?) -> [Segment]? {
+        let containers = home.standardizedFileURL.path + "/Library/Mobile Documents"
+        guard path.hasPrefix(containers + "/") else { return nil }
+        let parts = path.dropFirst(containers.count + 1).split(separator: "/").map(String.init)
+        let drive = containers + "/com~apple~CloudDocs"
+        var segments = [Segment(title: "iCloud Drive", url: URL(filePath: drive))]
+        var current: String
+        var rest: ArraySlice<String>
+        if parts.first == "com~apple~CloudDocs" {
+            current = drive
+            rest = parts.dropFirst()
+        } else if parts.count >= 2, parts[1] == "Documents", let name = appName(parts[0]) {
+            current = containers + "/" + parts[0] + "/Documents"
+            segments.append(Segment(title: name, url: URL(filePath: current)))
+            rest = parts.dropFirst(2)
+        } else {
+            return nil
+        }
+        for part in rest {
+            current += "/" + part
+            segments.append(Segment(title: part, url: URL(filePath: current)))
         }
         return segments
     }
