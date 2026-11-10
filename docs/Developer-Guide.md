@@ -238,7 +238,7 @@ back reloads while the field is open, since a reload would throw the edit away.
   1.5 s within 40 pt of the top (below the header inset) or bottom, at the Settings speed.
 - **Right-click menu**: `table.menu` with the coordinator as `NSMenuDelegate`;
   `menuNeedsUpdate` builds an item menu or a folder menu from `Action`s, plus Open With
-  (`NSWorkspace.urlsForApplications(toOpen:)`) and Share (`standardShareMenuItem`). Shift+F10
+  (`NSWorkspace.urlsForApplications(toOpen:)`; the folder menu's opens the folder itself) and Share (`standardShareMenuItem`). Shift+F10
   pops the same menu under the first selected row. Services come from `FileTableView` being an
   `NSServicesMenuRequestor` for file URLs.
 - **Quick Look**: `FileTableView` takes control of `QLPreviewPanel` and is its data source;

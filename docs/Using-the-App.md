@@ -118,7 +118,8 @@ it. If it isn't already selected, it's selected first.
 
 Right-clicking empty space in the list deselects everything and shows a menu for the folder
 itself: **New Folder**, **New Text File**, **Paste**, **Sort By**, **Show Hidden Files**,
-**Refresh**, **Open Terminal Here**, **Copy Path**, **Get Info** and **Show in Finder**.
+**Refresh**, **Open With** (open the folder you're in with another app, such as a code editor),
+**Open Terminal Here**, **Copy Path**, **Get Info** and **Show in Finder**.
 
 ## Quick Look
 

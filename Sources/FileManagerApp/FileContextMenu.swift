@@ -39,7 +39,7 @@ import FileManagerCore
         add(.open, to: menu)
         if model.canPerform(.openContainingFolder) { add(.openContainingFolder, to: menu) }
         if selected.contains(where: \.isFolder) { add(.openInNewTab, to: menu) }
-        menu.addItem(openWithItem(for: first))
+        menu.addItem(openWithItem(for: urls))
         add(.quickLook, to: menu)
         menu.addItem(.separator())
         add(.cut, to: menu)
@@ -89,6 +89,7 @@ import FileManagerCore
         add(.toggleHiddenFiles, to: menu).state = model.showHiddenFiles ? .on : .off
         add(.refresh, to: menu)
         menu.addItem(.separator())
+        menu.addItem(openWithItem(for: [model.url]))
         add(.openTerminal, to: menu)
         add(.copyPath, to: menu)
         add(.getInfo, to: menu)
@@ -179,10 +180,13 @@ import FileManagerCore
         return item
     }
 
-    /// Open With: apps that can open the first item, the default first.
-    private func openWithItem(for first: URL) -> NSMenuItem {
+    /// Open With: apps that can open the first of `targets` (the selection, or the folder itself
+    /// from empty space), the default first. Each entry opens all of `targets`.
+    private func openWithItem(for targets: [URL]) -> NSMenuItem {
         let item = NSMenuItem(title: "Open With", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
+        openWithTargets = targets
+        guard let first = targets.first else { return item }
         let defaultApp = NSWorkspace.shared.urlForApplication(toOpen: first)
         var apps = NSWorkspace.shared.urlsForApplications(toOpen: first)
         if let defaultApp {
@@ -232,10 +236,17 @@ import FileManagerCore
         TerminalLauncher.open(folder)
     }
 
+    /// What Open With opens, set when the menu is built (the selection may change before a pick).
+    private var openWithTargets: [URL] = []
+
+    private func open(_ targets: [URL], with app: URL) {
+        NSWorkspace.shared.open(targets, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+        model.watchDownloads(model.items.filter { targets.contains($0.url) })
+    }
+
     @objc func openWith(_ sender: NSMenuItem) {
         guard let app = sender.representedObject as? URL else { return }
-        NSWorkspace.shared.open(model.selectedURLs, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
-        model.watchDownloads(model.selectedItems)
+        open(openWithTargets, with: app)
     }
 
     @objc func openWithOther(_ sender: NSMenuItem) {
@@ -243,9 +254,8 @@ import FileManagerCore
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.prompt = "Open"
-        let items = model.selectedItems
+        let targets = openWithTargets
         guard panel.runModal() == .OK, let app = panel.url else { return }
-        NSWorkspace.shared.open(items.map(\.url), withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
-        model.watchDownloads(items)
+        open(targets, with: app)
     }
 }
