@@ -58,7 +58,7 @@ final class KeymapStore {
     static let starter = """
         {
           "_about": ["Each action gets exactly the shortcuts listed; [] removes them.",
-                     "Remove the _ from an example to use it. Action names: Custom-Shortcuts in the docs.",
+                     "Remove the _ from an example to use it. Action names: custom-shortcuts.md in the docs.",
                      "Then choose Reload in File Manager > Settings > Keyboard."],
           "_rename": ["F2"],
           "_compress": ["Ctrl+Cmd+Z"],

@@ -120,8 +120,8 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(replacing: .help) {
-            Button("File Manager Help") { openDocs("Home") }
-            Button("Keyboard Shortcuts") { openDocs("Keyboard-Shortcuts") }
+            Button("File Manager Help") { openDocs("README") }
+            Button("Keyboard Shortcuts") { openDocs("controls") }
         }
     }
 

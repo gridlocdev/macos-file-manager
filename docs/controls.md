@@ -1,17 +1,12 @@
-# Keyboard shortcuts
+# Controls
 
-Every shortcut File Manager has. Where there's more than one, they all work; the menu bar shows
-the first one with Cmd in it. The last column is what you'd press in Windows Explorer or a Linux
-file manager (Nautilus, Dolphin) for the same thing.
+Every shortcut File Manager has. Where there's more than one, they all work; the menu bar shows the first one with Cmd in it. The last column is what you'd press in Windows Explorer or a Linux file manager (Nautilus, Dolphin) for the same thing.
 
-On a Mac keyboard, **Opt** is the Option (⌥) key, which sits where Alt is on a PC keyboard.
-**Backspace** is the key labelled *delete* (⌫), and **Delete** is forward delete (⌦), which is
-**fn+delete** on a MacBook. The F keys may need **fn** held down too, depending on System
-Settings → Keyboard.
+On a Mac keyboard, **Opt** is the Option (⌥) key, which sits where Alt is on a PC keyboard. **Backspace** is the key labelled *delete* (⌫), and **Delete** is forward delete (⌦), which is **fn+delete** on a MacBook. The F keys may need **fn** held down too, depending on System Settings → Keyboard.
 
 ## Opening and moving around
 
-| Action | Keys | Windows / Linux |
+|  | Keys | Windows / Linux |
 |---|---|---|
 | Open | Cmd+O, Cmd+Down, Cmd+Return, double-click | Enter, double-click |
 | Back | Cmd+[, Opt+Left, mouse back button | Alt+Left |
@@ -24,7 +19,7 @@ Settings → Keyboard.
 
 ## Windows and tabs
 
-| Action | Keys | Windows / Linux |
+|  | Keys | Windows / Linux |
 |---|---|---|
 | New Window | Cmd+N | Ctrl+N |
 | New Tab | Cmd+T | Ctrl+T |
@@ -48,7 +43,7 @@ Settings → Keyboard.
 
 ## Going to a place
 
-| Action | Keys | Windows / Linux |
+|  | Keys | Windows / Linux |
 |---|---|---|
 | Home | Shift+Cmd+H | Alt+Home |
 | Desktop | Shift+Cmd+D | |
@@ -61,7 +56,7 @@ Settings → Keyboard.
 
 ## Working with files
 
-| Action | Keys | Windows / Linux |
+|  | Keys | Windows / Linux |
 |---|---|---|
 | New Folder | Shift+Cmd+N | Ctrl+Shift+N |
 | New Text File | Opt+Cmd+N | New → Text Document |
@@ -84,7 +79,7 @@ Settings → Keyboard.
 
 ## Looking at files
 
-| Action | Keys | Windows / Linux |
+|  | Keys | Windows / Linux |
 |---|---|---|
 | Quick Look | Space | Space (Nautilus, PowerToys Peek) |
 | Get Info | Cmd+I, Opt+Return | Alt+Enter |
@@ -94,7 +89,7 @@ Settings → Keyboard.
 
 ## In the file list
 
-| Action | Keys | Windows / Linux |
+|  | Keys | Windows / Linux |
 |---|---|---|
 | Select All | Cmd+A | Ctrl+A |
 | Invert Selection | Shift+Cmd+I | Ctrl+Shift+I (Nautilus), Ctrl+I (Total Commander) |
@@ -105,16 +100,13 @@ Settings → Keyboard.
 | Show Hidden Files | Cmd+H, Shift+Cmd+. | Ctrl+H (Linux) |
 | Open Terminal Here | Opt+Cmd+T, F4 | F4 (Dolphin), Ctrl+Alt+T |
 
-Return, F2, Space, Delete, Shift+Delete, Shift+F10 and Esc only act on files while the file list has
-the keyboard focus, so pressing Return in the sidebar doesn't rename anything.
+Return, F2, Space, Delete, Shift+Delete, Shift+F10 and Esc only act on files while the file list has the keyboard focus, so pressing Return in the sidebar doesn't rename anything.
 
-While you're typing in the address bar or renaming, Cmd+X, Cmd+C, Cmd+V, Cmd+A, Cmd+Z and
-Cmd+Backspace work on the text instead of on files, and Cmd+Up and the other arrow shortcuts
-move the cursor instead of leaving the folder.
+While you're typing in the address bar or renaming, Cmd+X, Cmd+C, Cmd+V, Cmd+A, Cmd+Z and Cmd+Backspace work on the text instead of on files, and Cmd+Up and the other arrow shortcuts move the cursor instead of leaving the folder.
 
 ## Views
 
-| Action | Keys | Windows / Linux |
+|  | Keys | Windows / Linux |
 |---|---|---|
 | as Icons | Opt+Cmd+1 | Ctrl+Shift+2 (Explorer, large icons); Cmd+1 in Finder |
 | as Details | Opt+Cmd+2 | Ctrl+Shift+6 (Explorer); Cmd+2 in Finder |
@@ -123,11 +115,11 @@ move the cursor instead of leaving the folder.
 | Actual Size | Cmd+0 | Ctrl+0 |
 | Preview Pane | Opt+P | Alt+P (Explorer), F3 in Nautilus |
 
-See [Views and columns](Views-and-Columns.md).
+See [Views and columns](views-and-columns.md).
 
 ## In the address bar
 
-| Action | Keys |
+|  | Keys |
 |---|---|
 | Go to the typed path | Return |
 | Complete a folder name | Tab |
@@ -135,33 +127,31 @@ See [Views and columns](Views-and-Columns.md).
 
 ## In the find bar
 
-| Action | Keys |
+|  | Keys |
 |---|---|
 | Go to the results | Down arrow, Return |
 | Select the typed text again | Cmd+F |
 | Close it | Esc |
 
-See [Searching and selecting](Searching-and-Selecting.md).
+See [Searching and selecting](searching-and-selecting.md).
 
 ## While renaming
 
-| Action | Keys |
+|  | Keys |
 |---|---|
 | Save the new name | Return, or click elsewhere |
 | Cancel | Esc |
 
 ## Your own shortcuts
 
-Every shortcut on this page can be changed, and menu-only commands can be given one. See
-[Custom shortcuts](Custom-Shortcuts.md).
+Every shortcut on this page can be changed, and menu-only commands can be given one. See [Custom shortcuts](custom-shortcuts.md).
 
 ## Window
 
-| Action | Keys |
+|  | Keys |
 |---|---|
 | Settings | Cmd+, |
 | Hide Others | Opt+Cmd+H |
 | Quit | Cmd+Q |
 
-**Hide File Manager** is still in the File Manager menu, but without a shortcut: Cmd+H shows
-hidden files instead. See [Coming from Windows and Linux](Coming-from-Windows-and-Linux.md).
+**Hide File Manager** is still in the File Manager menu, but without a shortcut: Cmd+H shows hidden files instead. See [Coming from Windows and Linux](coming-from-windows-and-linux.md).

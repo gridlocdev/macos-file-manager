@@ -2,7 +2,7 @@
 
 macOS file manager with Explorer/Linux keybindings (SwiftPM, no Xcode project). App name in the
 menu bar: "File Manager". Users: README.md and docs/. Technical overview:
-docs/Developer-Guide.md.
+docs/development.md and docs/architecture.md.
 
 - Build with `xcrun swift build` / `just …`, never bare `swift` (swiftly toolchain breaks on the current SDK).
 - Must stay maintainable in VS Code: no Xcode project, everything through SwiftPM and the justfile.
@@ -11,11 +11,11 @@ docs/Developer-Guide.md.
   Model behaviour that needs the app target is tested in `FileManagerAppTests` with a `Sandbox`
   (scratch folder, own UserDefaults suite, fake Trash); pass dependencies in through
   `BrowserServices` rather than reaching for `.shared`.
-- Every command is an `Action`; shortcuts live only in `Keymap.standard`. Menus and `KeyMonitor` read it through `KeymapStore` (which layers the user's Shortcuts.json on top). Never add a `.keyboardShortcut` or key handler outside the keymap. `docs/Custom-Shortcuts.md` must list every action name (a test checks).
+- Every command is an `Action`; shortcuts live only in `Keymap.standard`. Menus and `KeyMonitor` read it through `KeymapStore` (which layers the user's Shortcuts.json on top). Never add a `.keyboardShortcut` or key handler outside the keymap. `docs/custom-shortcuts.md` must list every action name (a test checks).
 - Modifier is Cmd (where Windows/Linux use Ctrl), Opt for Alt. Return is reserved for rename; Cmd+H toggles hidden files.
 - The file list is AppKit `NSTableView` (SwiftUI `Table` eats Return/Backspace). Don't switch it to SwiftUI.
 - No third-party dependencies; ask before adding any.
-- User docs live in `docs/` (wiki-style: `Home.md`, `_Sidebar.md`, flat hyphenated pages, relative `.md` links). Update the page describing a behaviour in the same commit that changes it. `docs/Keyboard-Shortcuts.md` must list every keymap chord (a test checks).
+- Docs live in `docs/`: lowercase kebab-case pages with relative `.md` links, indexed by `docs/README.md` (list a new page there), and the README stays a short front page. The Help menu opens `docs/README.md` and `docs/controls.md`, so don't rename those. Update the page describing a behaviour in the same commit that changes it. `docs/controls.md` must list every keymap chord (a test checks).
 - Every file change goes through `FileStep`s run by `FileStepExecutor` (via `FileOperations`), so it's undoable and shows progress. Never call FileManager copy/move/remove elsewhere. Replace trashes rather than deletes.
 - Tabs are native window tabs; each tab is a `WindowGroup(for: WindowSpec.self)` window with its own `BrowserModel` (see `Windows.swift`). Keep `BrowserModel.init` free of work.
 - SwiftUI gotchas seen here: menu items don't refresh from model state (keep them enabled, fixed titles, no Toggles); `DisclosureGroup` builds closed content (guard with `isExpanded`); only write observed state on real changes. `.onHover` never fires in the toolbar: use `onMouseOver` (Hover.swift).

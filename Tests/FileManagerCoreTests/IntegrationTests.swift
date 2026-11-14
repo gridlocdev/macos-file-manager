@@ -98,7 +98,7 @@ import Testing
     @Test func docsListEveryActionName() throws {
         let page = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("docs/Custom-Shortcuts.md")
+            .appendingPathComponent("docs/custom-shortcuts.md")
         let text = try String(contentsOf: page, encoding: .utf8)
         for action in Action.allCases {
             #expect(text.contains("`\(action.rawValue)`"), "\(action.rawValue) missing")

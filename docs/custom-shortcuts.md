@@ -1,14 +1,10 @@
 # Custom shortcuts
 
-You can change any shortcut, give one to a command that has none (Compress, say), or take a
-shortcut away, with a small text file. File Manager reads it at launch, on top of its standard
-shortcuts.
+You can change any shortcut, give one to a command that has none (Compress, say), or take a shortcut away, with a small text file. File Manager reads it at launch, on top of its standard shortcuts.
 
 ## Editing the file
 
-1. Open **File Manager → Settings → Keyboard** and click **Edit Shortcuts File…**. The first
-   time, this makes a starter file and opens it in TextEdit. The file is
-   `~/Library/Application Support/File Manager/Shortcuts.json`.
+1. Open **File Manager → Settings → Keyboard** and click **Edit Shortcuts File…**. The first time, this makes a starter file and opens it in TextEdit. The file is `~/Library/Application Support/File Manager/Shortcuts.json`.
 2. Add a line for each command you want to change, using the names in the table below:
 
    ```json
@@ -19,25 +15,15 @@ shortcuts.
    }
    ```
 
-3. Save the file and click **Reload** in Settings. Keys in the file list change straight away;
-   the shortcuts shown in the menu bar change the next time you open File Manager. Until then,
-   a shortcut the menu bar still shows keeps doing what the menu says.
+3. Save the file and click **Reload** in Settings. Keys in the file list change straight away; the shortcuts shown in the menu bar change the next time you open File Manager. Until then, a shortcut the menu bar still shows keeps doing what the menu says.
 
-Each command you list gets exactly the shortcuts you give it, and loses the rest: the example
-above makes F2 the only rename key (Return stops renaming) and stops Backspace going up a folder.
-An empty list, `"refresh": []`, takes all of a command's shortcuts away. Commands you don't list
-keep their standard shortcuts.
+Each command you list gets exactly the shortcuts you give it, and loses the rest: the example above makes F2 the only rename key (Return stops renaming) and stops Backspace going up a folder. An empty list, `"refresh": []`, takes all of a command's shortcuts away. Commands you don't list keep their standard shortcuts.
 
-If you give a command a shortcut another command has, the other one loses it. Settings lists
-each shortcut that moved, and anything in the file that couldn't be used: a misspelt command, a
-shortcut it can't read, or an entry that isn't a list (`"rename": "F2"` rather than
-`"rename": ["F2"]`). The rest of the file still works. Names starting with `_` are ignored, which is how the starter file's
-examples stay switched off until you remove the `_`.
+If you give a command a shortcut another command has, the other one loses it. Settings lists each shortcut that moved, and anything in the file that couldn't be used: a misspelt command, a shortcut it can't read, or an entry that isn't a list (`"rename": "F2"` rather than `"rename": ["F2"]`). The rest of the file still works. Names starting with `_` are ignored, which is how the starter file's examples stay switched off until you remove the `_`.
 
 ## Writing shortcuts
 
-Write them the way the [Keyboard shortcuts](Keyboard-Shortcuts.md) page does: modifiers, then the
-key, joined with `+`.
+Write them the way the [Controls](controls.md) page does: modifiers, then the key, joined with `+`.
 
 | Part | Written as |
 |---|---|
@@ -45,19 +31,14 @@ key, joined with `+`.
 | Letters, digits, symbols | the key itself: `N`, `2`, `=`, `[`, `.` |
 | Other keys | `Return`, `Backspace` (⌫), `Delete` (⌦), `Tab`, `Space`, `Esc`, `Up`, `Down`, `Left`, `Right`, `F1`…`F20` |
 
-Upper and lower case don't matter. For a shifted symbol, write the unshifted key with Shift:
-`Shift+Cmd+=`, not `Cmd++`.
+Upper and lower case don't matter. For a shifted symbol, write the unshifted key with Shift: `Shift+Cmd+=`, not `Cmd++`.
 
 Some things to know:
 
-- The menu bar can only show one shortcut per command: the first one with Cmd in it. The others
-  still work.
-- Keys without Cmd (Return, F2, Delete, Space) act on files only while the file list or icon view
-  has the keyboard focus, as the standard ones do.
-- Ctrl+Tab and Ctrl+Shift+Tab are handled by macOS itself, so changing **Show Next Tab** and
-  **Show Previous Tab** has no effect.
-- Cmd+Q, Cmd+W, Cmd+, and the text-editing shortcuts in the address bar aren't File Manager
-  commands and can't be changed here.
+- The menu bar can only show one shortcut per command: the first one with Cmd in it. The others still work.
+- Keys without Cmd (Return, F2, Delete, Space) act on files only while the file list or icon view has the keyboard focus, as the standard ones do.
+- Ctrl+Tab and Ctrl+Shift+Tab are handled by macOS itself, so changing **Show Next Tab** and **Show Previous Tab** has no effect.
+- Cmd+Q, Cmd+W, Cmd+, and the text-editing shortcuts in the address bar aren't File Manager commands and can't be changed here.
 
 ## Command names
 
@@ -135,4 +116,4 @@ Some things to know:
 | `openTerminal` | Open Terminal Here | Opt+Cmd+T, F4 |
 
 ---
-Next: [Settings](Settings.md)
+Next: [Settings](settings.md)

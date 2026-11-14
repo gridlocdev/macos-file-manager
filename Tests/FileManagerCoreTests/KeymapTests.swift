@@ -83,12 +83,12 @@ import Testing
         #expect(KeyChord(.delete).description == "Backspace")
     }
 
-    /// docs/Keyboard-Shortcuts.md lists every action with all of its keys, so the page can't
+    /// docs/controls.md lists every action with all of its keys, so the page can't
     /// drift from the keymap.
     @Test func shortcutsPageMatchesKeymap() throws {
         let page = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("docs/Keyboard-Shortcuts.md")
+            .appendingPathComponent("docs/controls.md")
         let text = try String(contentsOf: page, encoding: .utf8)
         let rows = text.split(separator: "\n").map(String.init).filter { $0.hasPrefix("|") }
         for action in Action.allCases {
