@@ -193,8 +193,8 @@ private struct SubfolderMenu: View {
 
     static func subfolders(of folder: URL, showHidden: Bool) -> [URL] {
         let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey, .isHiddenKey]
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: folder, includingPropertiesForKeys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
+        let urls = (try? DirectoryLoader.contents(
+            of: folder, keys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
         let folders = urls.filter {
             let values = try? $0.resourceValues(forKeys: Set(keys))
             return values?.isDirectory == true && values?.isPackage != true

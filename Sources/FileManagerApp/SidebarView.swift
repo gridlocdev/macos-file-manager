@@ -272,8 +272,8 @@ final class FolderTree {
         Task {
             let folders = await Task.detached(priority: .userInitiated) {
                 let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey]
-                let urls = (try? FileManager.default.contentsOfDirectory(
-                    at: url, includingPropertiesForKeys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
+                let urls = (try? DirectoryLoader.contents(
+                    of: url, keys: keys, options: showHidden ? [] : [.skipsHiddenFiles])) ?? []
                 // iCloud Drive: Desktop, Documents and the apps' folders too, as in the file list.
                 return ICloudDrive.sortedFolders(
                     urls.filter { SidebarView.isFolder($0) }.map(\.normalized), in: url,

@@ -21,8 +21,11 @@ enum DirectoryLoader {
         let read = Task.detached(priority: .userInitiated) { () -> Result<[FileItem], Error> in
             do {
                 // Home's prefetch would ask the guarded folders everything; the rest is read per item.
+                // Read at the real path: a folder opened by a symlink (iCloud Drive's link to
+                // Documents) otherwise fails with "Not a directory".
                 let urls = try FileManager.default.contentsOfDirectory(
-                    at: folder, includingPropertiesForKeys: folder.isSameFile(as: home) ? basicKeys : keys, options: [])
+                    at: folder.realPath, includingPropertiesForKeys: folder.isSameFile(as: home) ? basicKeys : keys,
+                    options: [])
                 var items: [FileItem] = []
                 items.reserveCapacity(urls.count)
                 for url in urls {
@@ -46,6 +49,15 @@ enum DirectoryLoader {
             }
         }
         return await withTaskCancellationHandler { await read.value } onCancel: { read.cancel() }
+    }
+
+    /// `folder`'s items under the path it was opened by. Read at its real path, as in `list`, so
+    /// a folder opened by a symlink lists too.
+    static func contents(of folder: URL, keys: [URLResourceKey], options: FileManager.DirectoryEnumerationOptions)
+        throws -> [URL]
+    {
+        try FileManager.default.contentsOfDirectory(at: folder.realPath, includingPropertiesForKeys: keys, options: options)
+            .map { folder.appending(path: $0.lastPathComponent) }
     }
 
     /// `shownAs`: the URL the item is listed under, if not `url` (see `URL.replacingFolder`).

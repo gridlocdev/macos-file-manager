@@ -106,6 +106,16 @@ import Testing
         #expect(sandbox.names(model).contains(".hidden"))
     }
 
+    @Test func aFolderOpenedByASymlinkListsUnderTheLink() async throws {
+        let link = sandbox.root.appending(path: "Link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: sandbox.root.appending(path: "Projects"))
+        let model = try await started(at: link)
+        #expect(model.errorMessage == nil)
+        #expect(model.items.map(\.url) == [link.appending(path: "plan.txt")])
+        // The breadcrumbs' menus and the sidebar's tree list it the same way.
+        #expect(try DirectoryLoader.contents(of: link, keys: [], options: []) == [link.appending(path: "plan.txt")])
+    }
+
     @Test func goingUpSelectsTheFolderYouCameFrom() async throws {
         let model = try await started()
         model.navigate(to: sandbox.root.appending(path: "Projects/"))
